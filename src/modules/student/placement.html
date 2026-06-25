@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>Register Placement | TTU IAMS</title>
+  <meta name="description" content="Register your industrial attachment placement — offline-capable, auto-saved to your device.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+
+<div id="app-shell"></div>
+
+<main id="page-content" class="page-content">
+
+  <!-- ── Loading overlay ─────────────────────────────────────── -->
+  <div id="page-loading" class="page-loading-overlay">
+    <div class="spinner-lg"></div>
+  </div>
+
+  <!-- ── Private browsing banner ─────────────────────────────── -->
+  <div id="incognito-banner" class="alert-banner alert-banner--warning" style="display:none">
+    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span>You appear to be in private / incognito mode. Your draft cannot be saved offline — please switch to a regular browser window for full offline support.</span>
+  </div>
+
+  <!-- ── Window closed banner ────────────────────────────────── -->
+  <div id="window-closed-banner" class="alert-banner alert-banner--error" style="display:none">
+    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    <span id="window-closed-msg">The placement registration window is not currently open.</span>
+  </div>
+
+  <!-- ── Pending sync badge ───────────────────────────────────── -->
+  <div id="pending-badge" class="status-badge status-badge--warning" style="display:none">
+    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Pending sync — will submit when you're back online.
+  </div>
+
+  <!-- ── Submitted state ─────────────────────────────────────── -->
+  <div id="submitted-state" class="success-card" style="display:none">
+    <div class="success-card-icon">
+      <svg viewBox="0 0 24 24" width="32" height="32" stroke="#16a34a" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2 class="success-card-title">Placement Registered</h2>
+    <p class="success-card-text">Your placement has been submitted successfully. The Industrial Liaison Office will review and assign you to a zone. You'll see your zone assignment on your dashboard once it's done.</p>
+    <div id="submitted-summary" class="submitted-summary"></div>
+  </div>
+
+  <!-- ── Page header ─────────────────────────────────────────── -->
+  <div class="page-header" id="form-header">
+    <div>
+      <h1 class="page-title">Register Placement</h1>
+      <p class="page-subtitle">Tell us where you'll be doing your industrial attachment. Your data is auto-saved locally.</p>
+    </div>
+  </div>
+
+  <!-- ── Placement form ──────────────────────────────────────── -->
+  <div class="card" id="placement-card">
+    <form id="placement-form" novalidate>
+
+      <div class="form-section-title">Company Information</div>
+
+      <!-- Company Name -->
+      <div class="field" id="field-company_name">
+        <label class="field-label" for="company_name">Company / Organisation Name <span class="required">*</span></label>
+        <input type="text" id="company_name" name="company_name" class="field-input"
+          placeholder="e.g. Ghana Ports and Harbours Authority" required autocomplete="organization">
+        <div class="field-error" id="err-company_name"></div>
+      </div>
+
+      <!-- Nature of Business -->
+      <div class="field" id="field-nature_of_business">
+        <label class="field-label" for="nature_of_business">Nature of Business <span class="required">*</span></label>
+        <input type="text" id="nature_of_business" name="nature_of_business" class="field-input"
+          placeholder="e.g. Port Operations & Logistics" required>
+        <div class="field-error" id="err-nature_of_business"></div>
+      </div>
+
+      <div class="form-section-title" style="margin-top:20px">Location</div>
+
+      <!-- Region -->
+      <div class="field" id="field-region">
+        <label class="field-label" for="region">Region <span class="required">*</span></label>
+        <select id="region" name="region" class="field-input" required>
+          <option value="">— Select a region —</option>
+          <option>Ahafo</option><option>Ashanti</option><option>Bono</option>
+          <option>Bono East</option><option>Central</option><option>Eastern</option>
+          <option>Greater Accra</option><option>North East</option><option>Northern</option>
+          <option>Oti</option><option>Savannah</option><option>Upper East</option>
+          <option>Upper West</option><option>Volta</option>
+          <option selected>Western</option><option>Western North</option>
+        </select>
+        <div class="field-error" id="err-region"></div>
+      </div>
+
+      <!-- City/Town -->
+      <div class="field" id="field-city_town">
+        <label class="field-label" for="city_town">City / Town <span class="required">*</span></label>
+        <input type="text" id="city_town" name="city_town" class="field-input"
+          placeholder="e.g. Takoradi" required>
+        <div class="field-error" id="err-city_town"></div>
+      </div>
+
+      <!-- Street/Landmark -->
+      <div class="field" id="field-street_landmark">
+        <label class="field-label" for="street_landmark">Street / Landmark <span class="required">*</span></label>
+        <input type="text" id="street_landmark" name="street_landmark" class="field-input"
+          placeholder="e.g. Harbour Road, off Commercial Street" required>
+        <div class="field-error" id="err-street_landmark"></div>
+      </div>
+
+      <div class="form-section-title" style="margin-top:20px">Contact Details</div>
+
+      <!-- Contact Person -->
+      <div class="field" id="field-contact_person">
+        <label class="field-label" for="contact_person">Contact Person <span class="required">*</span></label>
+        <input type="text" id="contact_person" name="contact_person" class="field-input"
+          placeholder="e.g. Mr. Ebo Turkson" required>
+        <div class="field-error" id="err-contact_person"></div>
+      </div>
+
+      <!-- Company Phone -->
+      <div class="field" id="field-company_contact_phone">
+        <label class="field-label" for="company_contact_phone">Company Phone <span class="required">*</span></label>
+        <input type="tel" id="company_contact_phone" name="company_contact_phone" class="field-input"
+          placeholder="e.g. 0312000100" required>
+        <div class="field-error" id="err-company_contact_phone"></div>
+      </div>
+
+      <div class="form-section-title" style="margin-top:20px">Attachment Period</div>
+
+      <div class="field-row-2col">
+        <!-- Start Date -->
+        <div class="field" id="field-start_date">
+          <label class="field-label" for="start_date">Start Date <span class="required">*</span></label>
+          <input type="date" id="start_date" name="start_date" class="field-input" required>
+          <div class="field-error" id="err-start_date"></div>
+        </div>
+
+        <!-- End Date -->
+        <div class="field" id="field-end_date">
+          <label class="field-label" for="end_date">End Date <span class="required">*</span></label>
+          <input type="date" id="end_date" name="end_date" class="field-input" required>
+          <div class="field-error" id="err-end_date"></div>
+        </div>
+      </div>
+
+      <!-- GPS info -->
+      <div class="info-box" style="margin-top:8px">
+        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>We'll try to capture your company's GPS coordinates when you submit. If GPS is unavailable, your location will be marked as "manual" and the office will follow up.</span>
+      </div>
+
+      <!-- Form-level error -->
+      <div class="form-error-banner" id="form-error" style="display:none">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="form-error-msg"></span>
+      </div>
+
+      <!-- GPS status -->
+      <div id="gps-status" class="gps-status" style="display:none">
+        <div class="spinner-sm"></div>
+        <span id="gps-status-msg">Capturing GPS location…</span>
+      </div>
+
+      <button type="submit" id="submit-btn" class="btn btn-primary btn-full" style="margin-top:20px" disabled>
+        <span class="btn-spinner" id="submit-spinner" style="display:none"></span>
+        <svg id="submit-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Submit Placement
+      </button>
+
+    </form>
+  </div>
+
+</main>
+
+<script type="module" src="./placement.js"></script>
+</body>
+</html>

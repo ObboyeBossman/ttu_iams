@@ -1,0 +1,1513 @@
+/* =============================================================================
+   IAMS — shell/shell.css
+   Shell component styles — STANDALONE, no dependency on theme.css.
+   Can be loaded as the only stylesheet for shell-only contexts, or alongside
+   theme.css (shell.css tokens will take precedence where they overlap).
+   Load order when used with theme.css:
+     1. /style/theme.css   (tokens, reset, components)
+     2. /shell/shell.css   (this file — overrides where needed)
+     3. ./page.css         (page-specific overrides)
+   =============================================================================
+
+   ALL TOKENS are defined directly here — both TTU brand palette and every
+   semantic/spacing/typography token previously inherited from theme.css.
+   Values are hard-coded literals; no var() references into theme.css remain.
+   Override in page.css if needed.
+   ============================================================================= */
+
+/* ── Light mode tokens (default) ────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* ── TTU core palette ───────────────────────────────────────────────────── */
+  --ttu-blue: #1A4B8E;
+  /* Primary brand blue                        */
+  --ttu-blue-dark: #13386B;
+  /* Darker blue — hover states, shadows       */
+  --ttu-blue-mid: #1E559E;
+  /* Mid blue — hover overlay on sidebar       */
+  --ttu-blue-surface: #E8F0FA;
+  /* Light blue tint — chips, avatars          */
+
+  --ttu-gold: #F0A500;
+  /* Primary gold — CTA, active indicator      */
+  --ttu-gold-dark: #7A5000;
+  /* Darker gold — icon contrast on gold bg    */
+  --ttu-gold-surface: rgba(240, 165, 0, 0.12);
+  /* Gold tint for promo/badges */
+  --ttu-gold-border: rgba(240, 165, 0, 0.35);
+  /* Gold outline               */
+
+  --ttu-red: #B22222;
+  /* Danger / alert red                        */
+  --ttu-white: #FFFFFF;
+
+  /* ── Sidebar chrome ─────────────────────────────────────────────────────── */
+  --sidebar-bg: #1A4B8E;
+  --sidebar-text: #FFFFFF;
+  --sidebar-subtext: #93B4DA;
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-active-bg: rgba(240, 165, 0, 0.20);
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.10);
+
+  /* ── Backgrounds (inlined from theme.css light) ─────────────────────────── */
+  --bg-page: #EEF3FC;
+  --bg-card: #FFFFFF;
+  --bg-hover: rgba(26, 58, 140, 0.06);
+  --bg-danger: #FADBD8;
+  --bg-info: #EEF3FC;
+
+  /* ── Text (inlined from theme.css light) ────────────────────────────────── */
+  --text-primary: #1A202C;
+  --text-secondary: #5D6D8A;
+  --text-muted: #8FABD4;
+  --text-link: #1A3A8C;
+
+  /* ── Borders (inlined from theme.css light) ─────────────────────────────── */
+  --border-default: #C5D4EF;
+
+  /* ── Focus (inlined from theme.css light) ───────────────────────────────── */
+  --focus-ring: rgba(26, 58, 140, 0.15);
+}
+
+/* ── Dark mode token overrides ───────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* ── Backgrounds ────────────────────────────────────────────────────────── */
+  --bg-page: #0A0F1A;
+  --bg-card: #111827;
+  --bg-hover: rgba(58, 92, 176, 0.15);
+  --bg-danger: rgba(192, 57, 43, 0.12);
+  --bg-info: rgba(26, 58, 140, 0.15);
+
+  /* ── Text ───────────────────────────────────────────────────────────────── */
+  --text-primary: #EEF3FC;
+  --text-secondary: #8FABD4;
+  --text-muted: #5D6D8A;
+  --text-link: #8FABD4;
+
+  /* ── Borders ────────────────────────────────────────────────────────────── */
+  --border-default: #1A3A8C;
+
+  /* ── Focus ──────────────────────────────────────────────────────────────── */
+  --focus-ring: rgba(143, 171, 212, 0.20);
+}
+
+/* ── Static tokens (theme-invariant, defined once) ───────────────────────────── */
+:root {
+  /* Neutral primitive */
+  --n800: #111827;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Elevation */
+  --shadow-overlay: 0 8px 24px rgba(26, 58, 140, 0.14);
+
+  /* Typography */
+  --text-xs: 0.785rem;
+  /* ~11px */
+  --text-sm: 0.857rem;
+  /* ~12px */
+  --text-base: 1rem;
+  /* 14px  */
+  --text-lg: 1.142rem;
+  /* ~16px */
+  --text-h2: 17px;
+  --line-height-body: 1.7;
+}
+
+/* -------------------------------------------------------------
+   ROOT LAYOUT
+   ------------------------------------------------------------- */
+
+body {
+  overflow: hidden; /* Prevent full-page scroll */
+}
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  height: 100%;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — base + scrollbar hiding
+   ------------------------------------------------------------- */
+
+.sidebar {
+  position: relative;
+  width: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 var(--space-md) var(--space-lg);
+  background: var(--sidebar-bg);
+  transition: width 0.22s ease, background-color 0.2s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex-shrink: 0;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar.collapsed {
+  width: 76px;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — top brand area (radial light bloom)
+   ------------------------------------------------------------- */
+
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  margin: 0 calc(-1 * var(--space-md)) var(--space-lg);
+  padding: 28px var(--space-md) 20px;
+  /* Soft radial glow — brighter centre fades to sidebar blue at edges */
+  background: radial-gradient(ellipse 110% 85% at 50% 44%,
+      rgba(255, 255, 255, 0.50) 0%,
+      rgba(255, 255, 255, 0.22) 40%,
+      rgba(255, 255, 255, 0.00) 75%);
+  border: none;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-top {
+  margin: 0 calc(-1 * var(--space-md)) var(--space-lg);
+  padding: 20px var(--space-md) 16px;
+  background: radial-gradient(ellipse 130% 90% at 50% 40%,
+      rgba(255, 255, 255, 0.40) 0%,
+      rgba(255, 255, 255, 0.00) 72%);
+}
+
+/* Logo row: logo + collapse/dismiss btn in one horizontal line */
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-sm);
+}
+
+.sidebar.collapsed .sidebar-brand-row {
+  justify-content: center;
+}
+
+/* --- Brand lockup: crest | divider | wordmark in one horizontal row --- */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  text-decoration: none;
+}
+
+.sidebar-brand-mark {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  overflow: visible;
+}
+
+/* University seal / crest */
+.brand-mark-crest {
+  height: 66px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* Vertical rule between crest and wordmark */
+.brand-mark-divider {
+  width: 1.5px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.28);
+  flex-shrink: 0;
+  margin: 0 12px;
+  border-radius: 2px;
+}
+
+/* Stacked university name */
+.brand-mark-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.brand-mark-wordmark span {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.28;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Expand toggle — hidden in expanded mode, shown on collapsed hover */
+.brand-mark-toggle-icon {
+  display: none;
+}
+
+/* Fallback if crest image fails */
+.brand-mark-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ttu-gold);
+  color: var(--ttu-blue-dark);
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+/* Portal label — below the logo row (e.g. "Admin Portal") */
+.sidebar-brand-tagline {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ttu-gold);
+  text-align: center;
+  white-space: normal;
+  line-height: 1.4;
+  margin-top: 10px;
+  width: 100%;
+  text-shadow: 0 1px 6px rgba(212, 160, 23, 0.25);
+}
+
+.sidebar.collapsed .sidebar-brand-tagline {
+  display: none;
+}
+
+/* Collapsed: show portal label initials */
+.sidebar-brand-initials {
+  display: none;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ttu-gold);
+  text-align: center;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-brand-initials {
+  display: block;
+}
+
+/* --- Collapsed state: show only the crest; hover → expand icon --- */
+.sidebar.collapsed .sidebar-brand {
+  cursor: pointer;
+}
+
+.sidebar.collapsed .sidebar-brand-mark {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  position: relative;
+  justify-content: center;
+}
+
+/* Hide divider + wordmark when collapsed */
+.sidebar.collapsed .brand-mark-divider,
+.sidebar.collapsed .brand-mark-wordmark {
+  display: none;
+}
+
+/* Crest fills the collapsed mark box */
+.sidebar.collapsed .brand-mark-crest {
+  position: absolute;
+  inset: 0;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  transition: opacity 0.12s ease;
+}
+
+/* Toggle expand icon stacked above crest */
+.sidebar.collapsed .brand-mark-toggle-icon {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  color: var(--sidebar-text);
+  background: var(--ttu-blue-mid);
+  border-radius: 8px;
+  transition: opacity 0.12s ease;
+}
+
+.sidebar.collapsed .brand-mark-toggle-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+
+/* Hover: swap crest for expand icon */
+.sidebar.collapsed .sidebar-brand:hover .brand-mark-crest {
+  opacity: 0;
+}
+
+.sidebar.collapsed .sidebar-brand:hover .brand-mark-toggle-icon {
+  opacity: 1;
+}
+
+
+/* --- Collapse button (desktop only — sits right of logo in brand row) --- */
+.sidebar-collapse-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--sidebar-item-hover-bg);
+  color: var(--sidebar-text);
+}
+
+.sidebar-collapse-btn:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar-collapse-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+/* Hide in collapsed state — clicking the logo re-expands */
+.sidebar.collapsed .sidebar-collapse-btn {
+  display: none;
+}
+
+/* --- Mobile dismiss button (hidden on desktop, shown ≤900 px) --- */
+.sidebar-dismiss-btn {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sidebar-subtext);
+  border: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.sidebar-dismiss-btn:hover {
+  background: var(--sidebar-item-hover-bg);
+  color: var(--sidebar-text);
+}
+
+.sidebar-dismiss-btn:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar-dismiss-btn svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — tooltip (single fixed-position pill, toggled by JS)
+   Using a fixed element rather than CSS ::after because
+   overflow-y:auto on .sidebar clips any child that pokes past
+   the right edge.
+   ------------------------------------------------------------- */
+
+.sidebar-tooltip {
+  position: fixed;
+  z-index: 400;
+  background: var(--ttu-white);
+  color: var(--n800);
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--shadow-overlay);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.sidebar-tooltip.visible {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — season switcher
+   ------------------------------------------------------------- */
+
+.sidebar-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid var(--sidebar-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--sidebar-text);
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.12s;
+  margin-bottom: var(--space-lg);
+  flex-shrink: 0;
+}
+
+.sidebar-switcher:hover {
+  background: var(--sidebar-item-hover-bg);
+}
+
+.sidebar-switcher-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--ttu-gold);
+  color: var(--ttu-gold-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-switcher-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-switcher-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-switcher-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sidebar-text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-switcher-subtitle {
+  font-size: 11px;
+  color: var(--sidebar-subtext);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-switcher-chevron {
+  color: var(--sidebar-subtext);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.sidebar-switcher-chevron svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.sidebar-switcher.menu-open .sidebar-switcher-chevron {
+  transform: rotate(180deg);
+}
+
+.sidebar.collapsed .sidebar-switcher-text,
+.sidebar.collapsed .sidebar-switcher-chevron {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-switcher {
+  justify-content: center;
+  padding: 10px;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — nav items
+   ------------------------------------------------------------- */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* Separate nav groups (MENU, QUICK LINKS…) */
+.sidebar-nav+.sidebar-nav {
+  margin-top: var(--space-md);
+}
+
+/* Section label — "MENU", "QUICK LINKS", etc. */
+.sidebar-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.40);
+  padding: var(--space-md) 16px var(--space-xs);
+}
+
+.sidebar.collapsed .sidebar-label {
+  display: none;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-left-color 0.1s ease;
+  font-family: inherit;
+  border: none;
+  border-left: 4px solid transparent;
+  background: transparent;
+  width: 100%;
+  text-decoration: none;
+}
+
+.sidebar-item:hover {
+  color: var(--sidebar-text);
+  background: var(--sidebar-hover-bg);
+  border-left-color: rgba(240, 165, 0, 0.45);
+}
+
+.sidebar-item.active {
+  background: rgba(240, 165, 0, 0.12);
+  color: var(--ttu-gold);
+  font-weight: 600;
+  border-left: 4px solid var(--ttu-gold);
+}
+
+.sidebar-item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-item.active svg {
+  color: var(--ttu-gold);
+}
+
+.sidebar-item-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item .sidebar-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Collapsed rail — centered icon, no text/badge */
+.sidebar.collapsed .sidebar-item {
+  justify-content: center;
+  padding: 12px;
+  position: relative;
+  border-left: none;
+  border-radius: var(--radius-md);
+}
+
+.sidebar.collapsed .sidebar-item-text,
+.sidebar.collapsed .sidebar-item .sidebar-badge {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-item.active {
+  padding: 12px;
+  background: rgba(240, 165, 0, 0.18);
+  border-left: none;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — promo banner
+   ------------------------------------------------------------- */
+
+.sidebar-promo {
+  background: var(--ttu-gold-surface);
+  border: 0.5px solid var(--ttu-gold-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin: var(--space-md) 0;
+  flex-shrink: 0;
+}
+
+.sidebar-promo-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.sidebar-promo-top svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ttu-gold);
+}
+
+.sidebar-promo-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ttu-white);
+}
+
+.sidebar-promo-text {
+  font-size: 12px;
+  color: var(--sidebar-subtext);
+  line-height: 1.5;
+  margin-bottom: var(--space-sm);
+}
+
+.sidebar-promo-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.sidebar.collapsed .sidebar-promo {
+  display: none;
+}
+
+/* "Integrity & Excellence" motto */
+.sidebar-integrity {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+  margin-top: 8px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-integrity {
+  display: none;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — season switcher
+   ------------------------------------------------------------- */
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--space-sm);
+  border-top: 0.5px solid var(--sidebar-border);
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------
+   SIDEBAR — mobile scrim + responsive breakpoints
+   ------------------------------------------------------------- */
+
+.sidebar-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 26, 0.5);
+  z-index: 250;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.sidebar-scrim.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-collapse-btn {
+    display: none;
+  }
+
+  .sidebar-dismiss-btn {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 901px) {
+  .sidebar-scrim {
+    display: none;
+  }
+}
+
+
+
+/* -------------------------------------------------------------
+   TOPBAR — header bar
+   ------------------------------------------------------------- */
+
+.topbar {
+  height: 76px;
+  background: var(--bg-card);
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: 0 var(--space-xl);
+  flex-shrink: 0;
+}
+
+/* Left: mobile hamburger + brand title */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ttu-blue);
+  display: flex;
+  align-items: center;
+}
+
+/* Full brand name — visible on wider screens */
+.topbar-brand-full {
+  display: inline;
+}
+
+/* Short initials — visible only on very narrow screens */
+.topbar-brand-initials {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .topbar-brand-full {
+    display: none;
+  }
+
+  .topbar-brand-initials {
+    display: inline;
+  }
+}
+
+/* Mobile hamburger — hidden on desktop */
+.mobile-menu-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+}
+
+.mobile-menu-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Search bar — pill shape, grey fill, pushes right */
+.topbar-search {
+  flex: 1;
+  max-width: 380px;
+  margin-left: auto;
+  position: relative;
+}
+
+.topbar-search .inp {
+  padding-left: 38px;
+  border-radius: var(--radius-pill);
+  background: #F0F4FA;
+  border: none;
+  height: 38px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .topbar-search .inp {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topbar-search .inp:focus {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  box-shadow: none;
+}
+
+.topbar-search-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  pointer-events: none;
+}
+
+.topbar-search-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 640px) {
+  .topbar-search {
+    display: none;
+  }
+}
+
+/* Right-side actions */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+/* Bell / icon button */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s, color 0.12s;
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-btn .badge-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ttu-red);
+  border: 1.5px solid var(--bg-card);
+}
+
+.topbar-divider {
+  display: none;
+}
+
+/* Avatar + name/ID block */
+.topbar-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px 4px 4px;
+  border-radius: var(--radius-md);
+  transition: background 0.12s;
+  font-family: inherit;
+}
+
+.topbar-avatar-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* Name + ID stacked vertically */
+.topbar-avatar-info {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .topbar-avatar-info {
+    display: flex;
+  }
+}
+
+.topbar-avatar-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.topbar-avatar-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Hide old chevron */
+.topbar-avatar-btn svg.chev {
+  display: none;
+}
+
+/* Topbar responsive padding */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 var(--space-md);
+  }
+}
+
+/* -------------------------------------------------------------
+   TOPBAR TABS
+   ------------------------------------------------------------- */
+
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-xl);
+  height: 44px;
+  border-bottom: 0.5px solid var(--border-default);
+  background: var(--bg-card);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.topbar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s;
+}
+
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tab.active {
+  background: var(--ttu-blue-surface);
+  color: var(--ttu-blue);
+}
+
+[data-theme="dark"] .tab.active {
+  background: var(--bg-info);
+  color: var(--text-link);
+}
+
+/* -------------------------------------------------------------
+   POPOVERS (profile + season switcher)
+   ------------------------------------------------------------- */
+
+.popover {
+  position: fixed;
+  z-index: 900;
+  width: 280px;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+  padding: var(--space-sm);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+}
+
+.popover.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.popover-header strong {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.popover-header small {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.popover-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.popover-item:hover {
+  background: var(--bg-hover);
+}
+
+.popover-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.popover-divider {
+  height: 0.5px;
+  background: var(--border-default);
+  margin: var(--space-xs) 0;
+}
+
+.popover-section-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: var(--space-sm) 10px 4px;
+}
+
+/* --- Appearance swatches (inside profile popover) --- */
+.appearance-row {
+  display: flex;
+  gap: var(--space-sm);
+  padding: 4px 10px 10px;
+}
+
+.appearance-swatch {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+
+.appearance-swatch-preview {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.appearance-swatch[data-mode="light"] .appearance-swatch-preview {
+  background: #FFFFFF;
+}
+
+.appearance-swatch[data-mode="dark"] .appearance-swatch-preview {
+  background: #1A202C;
+}
+
+.appearance-swatch[data-mode="system"] .appearance-swatch-preview {
+  background: linear-gradient(135deg, #FFFFFF 50%, #1A202C 50%);
+}
+
+.appearance-swatch-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.appearance-swatch.active .appearance-swatch-preview {
+  border-color: var(--ttu-blue);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.appearance-check {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ttu-blue);
+  color: var(--ttu-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appearance-check svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* --- Logout button (profile popover) --- */
+.popover-logout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--ttu-red);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.popover-logout:hover {
+  background: var(--bg-danger);
+}
+
+.popover-logout svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Season options (season popover) --- */
+.season-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.season-option:hover {
+  background: var(--bg-hover);
+}
+
+.season-option.active {
+  color: var(--ttu-blue);
+  font-weight: 600;
+}
+
+.season-option svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ttu-blue);
+}
+
+/* -------------------------------------------------------------
+   LOGOUT CONFIRM OVERLAY
+   ------------------------------------------------------------- */
+
+@keyframes lcFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lcSlideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+#lc-overlay {
+  animation: lcFadeIn 0.2s ease-out;
+}
+
+.lc-modal {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 32px 28px 28px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 40px rgba(10, 26, 72, 0.30);
+  animation: lcSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lc-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-danger);
+  color: var(--ttu-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-md);
+}
+
+.lc-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.lc-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.lc-msg {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  line-height: var(--line-height-body);
+}
+
+.lc-actions {
+  display: flex;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.lc-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lc-btn-cancel {
+  background: transparent;
+  border: 0.5px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.lc-btn-cancel:hover {
+  background: var(--bg-hover);
+}
+
+.lc-btn-confirm {
+  background: var(--ttu-red);
+  border: none;
+  color: var(--ttu-white);
+}
+
+.lc-btn-confirm:hover {
+  filter: brightness(0.9);
+}
+
+.lc-btn-confirm:active {
+  transform: scale(0.98);
+}
+
+/* -------------------------------------------------------------
+   CONTENT AREA + PAGE TRANSITION
+   ------------------------------------------------------------- */
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.content-area::-webkit-scrollbar {
+  display: none;
+}
+
+.page-view {
+  display: none;
+}
+
+.page-view.active {
+  display: block;
+  animation: pageIn 0.18s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -------------------------------------------------------------
+   TOASTS
+   ------------------------------------------------------------- */
+
+.toast-host {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-xl);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.toast {
+  background: var(--n800);
+  color: var(--ttu-white);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: lcSlideUp 0.2s ease-out;
+}
+
+.toast svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ttu-gold);
+  flex-shrink: 0;
+}

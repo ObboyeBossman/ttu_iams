@@ -1,0 +1,159 @@
+/* -------------------------------------------------------------
+   Pill Tab Row (Logbook weeks/months selector)
+   ------------------------------------------------------------- */
+.pill-tab-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  margin-bottom: 20px;
+}
+.pill-tab-row::-webkit-scrollbar { display: none; }
+
+.week-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.week-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.week-chip.active {
+  background: var(--ttu-blue);
+  border-color: var(--ttu-blue);
+  color: #fff;
+}
+.week-chip.completed {
+  border-color: var(--ttu-gold);
+  color: var(--ttu-gold-dark);
+}
+[data-theme="dark"] .week-chip.completed {
+  color: var(--ttu-gold);
+}
+.week-chip.locked {
+  border-color: var(--border-default);
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.7;
+}
+.week-chip-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* -------------------------------------------------------------
+   Logbook Tab Interface
+   ------------------------------------------------------------- */
+.logbook-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 24px;
+}
+.logbook-tab {
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.logbook-tab:hover { color: var(--text-primary); }
+.logbook-tab.active {
+  color: var(--ttu-blue);
+  border-bottom-color: var(--ttu-gold);
+}
+.logbook-tab:disabled,
+.logbook-tab.tab-disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.logbook-tab-panel { display: none; }
+.logbook-tab-panel.active { display: block; }
+
+/* Logbook daily entry rows */
+.logbook-day-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+.logbook-day-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+}
+.logbook-day-table td {
+  padding: 6px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-default);
+}
+.logbook-day-table tr:last-child td { border-bottom: none; }
+.logbook-day-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding-top: 10px;
+  width: 80px;
+}
+.logbook-activity-ta {
+  width: 100%;
+  min-height: 52px;
+  max-height: 160px;
+  resize: vertical;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  line-height: 1.5;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+}
+.logbook-activity-ta:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.logbook-activity-ta:read-only {
+  background: var(--bg-prefix);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+/* Week status bar */
+.week-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--border-default);
+  flex-wrap: wrap;
+}

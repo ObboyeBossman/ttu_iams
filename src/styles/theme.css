@@ -1,0 +1,351 @@
+@import url('./components.css');
+
+/* =============================================================================
+   IAMS — Industrial Attachment Management System
+   Theme — generated from ttu_iams_design_system.html
+   Institution: Takoradi Technical University, Dept. of Computer Science
+   ============================================================================= */
+
+/* -------------------------------------------------------------
+   1. PRIMITIVE TOKENS — raw TTU brand palette & scales
+   ------------------------------------------------------------- */
+:root {
+
+  /* TTU Brand */
+  --ttu-blue:         #1A3A8C;   /* Royal blue — primary */
+  --ttu-blue-dark:    #122D70;   /* Sidebar, navbar dark */
+  --ttu-blue-mid:     #3A5CB0;   /* Hover states */
+  --ttu-blue-surface: #EEF3FC;   /* Page / card backgrounds */
+  --ttu-gold:         #F0A500;   /* Accent — CTA, highlights */
+  --ttu-gold-light:   #FFF4D9;   /* Gold tint backgrounds */
+  --ttu-gold-dark:    #7A5000;   /* Gold text on light */
+  --ttu-red:          #C0392B;   /* Crest ring — danger / alerts */
+  --ttu-white:        #FFFFFF;
+
+  /* Blue scale */
+  --blue-50:   #EEF3FC;
+  --blue-100:  #C5D4EF;
+  --blue-200:  #8FABD4;
+  --blue-300:  #3A5CB0;
+  --blue-500:  #1A3A8C;
+  --blue-700:  #122D70;
+  --blue-900:  #0A1A48;
+
+  /* Gold scale */
+  --gold-50:   #FFF4D9;
+  --gold-100:  #F5D07A;
+  --gold-500:  #F0A500;
+  --gold-700:  #7A5000;
+
+  /* Red scale */
+  --red-50:    #FADBD8;
+  --red-100:   #F5B7B1;
+  --red-500:   #C0392B;
+  --red-700:   #7B241C;
+
+  /* Neutral scale */
+  --n50:   #F6F8FA;
+  --n100:  #E8EBF0;
+  --n200:  #D0D8E8;
+  --n300:  #A0AABB;
+  --n400:  #5D6D8A;
+  --n500:  #4A5568;
+  --n600:  #2D3748;
+  --n700:  #1A202C;
+  --n800:  #111827;
+  --n900:  #0A0F1A;
+
+  /* Semantic primitives */
+  --green:        #1A7A4A;   /* GPS verified / success */
+  --green-bg:     #D5F0E3;
+  --green-bg-dim: rgba(26, 122, 74, 0.12);
+  --amber:        #E67E22;   /* Flagged / anomaly */
+  --amber-bg:     #FDEBD0;
+  --amber-bg-dim: rgba(230, 126, 34, 0.12);
+  --slate:        #5D6D8A;   /* Pending / neutral */
+  --slate-bg:     #E8EBF0;
+}
+
+/* -------------------------------------------------------------
+   2. SEMANTIC / ALIAS TOKENS — light mode (default)
+   ------------------------------------------------------------- */
+:root,
+[data-theme="light"] {
+
+  /* Backgrounds */
+  --bg-page:    #EEF3FC;
+  --bg-card:    #FFFFFF;
+  --bg-nav:     #1A3A8C;
+  --bg-sidebar: #122D70;
+  --bg-input:   #FFFFFF;
+  --bg-prefix:  #EEF3FC;
+  --bg-hover:   rgba(26, 58, 140, 0.06);
+  --bg-danger:  #FADBD8;
+  --bg-info:    #EEF3FC;
+  --bg-success: #D5F0E3;
+  --bg-warning: #FDEBD0;
+  --bg-gold:    #FFF4D9;
+
+  /* Text */
+  --text-primary:     #1A202C;
+  --text-secondary:   #5D6D8A;
+  --text-muted:       #8FABD4;
+  --text-link:        #1A3A8C;
+  --text-danger:      #C0392B;
+  --text-success:     #1A7A4A;
+  --text-warning:     #E67E22;
+  --text-on-brand:    #FFFFFF;
+  --text-on-gold:     #7A5000;
+  --text-placeholder: var(--n300);
+
+  /* Borders */
+  --border-default:  #C5D4EF;
+  --border-strong:   #8FABD4;
+  --border-focus:    #1A3A8C;
+  --border-danger:   #C0392B;
+  --border-hover:    var(--blue-300);
+  --border-selected: #1A3A8C;
+
+  /* Accent */
+  --accent: #F0A500;
+  --link:   #1A3A8C;
+
+  /* Focus rings */
+  --focus-ring:        rgba(26, 58, 140, 0.15);
+  --focus-ring-bg:     #EEF3FC;
+  --focus-ring-danger: rgba(192, 57, 43, 0.12);
+
+  /* Tab */
+  --tab-active:    #1A202C;
+  --tab-indicator: #F0A500;
+  --tab-inactive:  #5D6D8A;
+
+  /* Alerts */
+  --alert-info-bg:        #EEF3FC;
+  --alert-info-fg:        #1A3A8C;
+  --alert-info-border:    rgba(26, 58, 140, 0.20);
+  --alert-warning-bg:     #FDEBD0;
+  --alert-warning-fg:     #E67E22;
+  --alert-warning-border: rgba(230, 126, 34, 0.25);
+}
+
+/* -------------------------------------------------------------
+   3. DARK MODE TOKENS
+   ------------------------------------------------------------- */
+[data-theme="dark"] {
+
+  /* Backgrounds */
+  --bg-page:    #0A0F1A;
+  --bg-card:    #111827;
+  --bg-nav:     #0A1A48;
+  --bg-sidebar: #080F30;
+  --bg-input:   #111827;
+  --bg-prefix:  #1A202C;
+  --bg-hover:   rgba(58, 92, 176, 0.15);
+  --bg-danger:  rgba(192, 57, 43, 0.12);
+  --bg-info:    rgba(26, 58, 140, 0.15);
+  --bg-success: rgba(26, 122, 74, 0.15);
+  --bg-warning: rgba(230, 126, 34, 0.12);
+  --bg-gold:    rgba(240, 165, 0, 0.10);
+
+  /* Text */
+  --text-primary:     #EEF3FC;
+  --text-secondary:   #8FABD4;
+  --text-muted:       #5D6D8A;
+  --text-link:        #8FABD4;
+  --text-danger:      #F5B7B1;
+  --text-success:     #A8DFC0;
+  --text-warning:     #FAD7A0;
+  --text-on-brand:    #FFFFFF;
+  --text-on-gold:     #7A5000;
+  --text-placeholder: #5D6D8A;
+
+  /* Borders */
+  --border-default:  #1A3A8C;
+  --border-strong:   #3A5CB0;
+  --border-focus:    #8FABD4;
+  --border-danger:   #F5B7B1;
+  --border-hover:    #3A5CB0;
+  --border-selected: #8FABD4;
+
+  /* Accent */
+  --accent: #F0A500;
+  --link:   #8FABD4;
+
+  /* Focus rings */
+  --focus-ring:        rgba(143, 171, 212, 0.20);
+  --focus-ring-bg:     rgba(143, 171, 212, 0.08);
+  --focus-ring-danger: rgba(245, 183, 177, 0.20);
+
+  /* Tab */
+  --tab-active:    #EEF3FC;
+  --tab-indicator: #F0A500;
+  --tab-inactive:  #8FABD4;
+
+  /* Alerts */
+  --alert-info-bg:        rgba(26, 58, 140, 0.20);
+  --alert-info-fg:        #8FABD4;
+  --alert-info-border:    rgba(143, 171, 212, 0.20);
+  --alert-warning-bg:     rgba(230, 126, 34, 0.15);
+  --alert-warning-fg:     #FAD7A0;
+  --alert-warning-border: rgba(230, 126, 34, 0.25);
+}
+
+/* -------------------------------------------------------------
+   4. TYPOGRAPHY TOKENS
+   ------------------------------------------------------------- */
+:root {
+
+  /* Font stacks */
+  --font-sans:  'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono:  'SF Mono', Consolas, 'Courier New', monospace;
+
+  /* Type scale — from design system */
+  --font-size-base: 14px;
+
+  --text-display: 26px;   /* Page metric value */
+  --text-h1:      22px;   /* Page heading */
+  --text-h2:      17px;   /* Section heading */
+  --text-h3:      15px;   /* Card title */
+  --text-body-lg: 14px;   /* Body — line-height 1.7 */
+  --text-body:    13px;   /* Default body / captions */
+  --text-small:   12px;   /* Caption */
+  --text-label:   11px;   /* Section labels / meta */
+  --text-mono:    12px;   /* Monospace / code */
+
+  /* rem aliases */
+  --text-xs:   0.785rem;  /* ~11px */
+  --text-sm:   0.857rem;  /* ~12px */
+  --text-base: 1rem;      /* 14px  */
+  --text-md:   1.071rem;  /* 15px  */
+  --text-lg:   1.142rem;  /* 16px  */
+  --text-xl:   1.214rem;  /* 17px  */
+  --text-2xl:  1.571rem;  /* 22px  */
+  --text-3xl:  1.857rem;  /* 26px  */
+
+  --line-height-base: 1.5;
+  --line-height-body: 1.7;
+}
+
+/* -------------------------------------------------------------
+   5. SPACING TOKENS (4 px base)
+   ------------------------------------------------------------- */
+:root {
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  --space-4xl: 64px;
+
+  /* sp- aliases */
+  --sp-xs:  var(--space-xs);
+  --sp-sm:  var(--space-sm);
+  --sp-md:  var(--space-md);
+  --sp-lg:  var(--space-lg);
+  --sp-xl:  var(--space-xl);
+  --sp-2xl: var(--space-2xl);
+  --sp-3xl: var(--space-3xl);
+  --sp-4xl: var(--space-4xl);
+}
+
+/* -------------------------------------------------------------
+   6. BORDER-RADIUS TOKENS
+   ------------------------------------------------------------- */
+:root {
+  --radius-none: 2px;
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-pill: 9999px;
+}
+
+/* -------------------------------------------------------------
+   7. ELEVATION / SHADOW TOKENS
+   ------------------------------------------------------------- */
+:root {
+  --shadow-flat:    none;
+  --shadow-raised:  0 1px 3px rgba(26, 58, 140, 0.08);
+  --shadow-overlay: 0 8px 24px rgba(26, 58, 140, 0.14);
+}
+
+/* -------------------------------------------------------------
+   8. STATUS TOKENS — attendance & logbook states
+   ------------------------------------------------------------- */
+:root {
+
+  /* Attendance */
+  --status-present-fg:  #1A7A4A;
+  --status-present-bg:  #D5F0E3;
+  --status-absent-fg:   #C0392B;
+  --status-absent-bg:   #FADBD8;
+  --status-flagged-fg:  #E67E22;
+  --status-flagged-bg:  #FDEBD0;
+  --status-pending-fg:  #5D6D8A;
+  --status-pending-bg:  #E8EBF0;
+
+  /* Logbook */
+  --status-draft-fg:      #5D6D8A;
+  --status-draft-bg:      #E8EBF0;
+  --status-submitted-fg:  #1A3A8C;
+  --status-submitted-bg:  #EEF3FC;
+  --status-reviewed-fg:   #7A5000;
+  --status-reviewed-bg:   #FFF4D9;
+  --status-finalized-fg:  #C5D4EF;
+  --status-finalized-bg:  #1A3A8C;
+  --status-certified-fg:  #1A5E3A;
+  --status-certified-bg:  #D5F0E3;
+}
+
+/* -------------------------------------------------------------
+   9. TAILWIND CSS VARIABLE BRIDGE
+      Maps IAMS tokens into Tailwind CSS custom-property names
+      so @apply and inline tw: classes resolve correctly.
+   ------------------------------------------------------------- */
+:root {
+  /* Tailwind color extensions */
+  --color-ttu-blue:         var(--ttu-blue);
+  --color-ttu-blue-dark:    var(--ttu-blue-dark);
+  --color-ttu-blue-mid:     var(--ttu-blue-mid);
+  --color-ttu-blue-surface: var(--ttu-blue-surface);
+  --color-ttu-gold:         var(--ttu-gold);
+  --color-ttu-gold-light:   var(--ttu-gold-light);
+  --color-ttu-red:          var(--ttu-red);
+
+  /* Semantic surface aliases for Tailwind */
+  --color-page:    var(--bg-page);
+  --color-card:    var(--bg-card);
+  --color-nav:     var(--bg-nav);
+  --color-sidebar: var(--bg-sidebar);
+}
+
+/* -------------------------------------------------------------
+   10. BASE RESET & GLOBAL STYLES
+   ------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100vh;
+}

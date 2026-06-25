@@ -1,0 +1,70 @@
+/* -------------------------------------------------------------
+   Profile — Inline Edit
+   ------------------------------------------------------------- */
+.profile-field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border-default);
+}
+.profile-field-row:last-child { border-bottom: none; }
+.profile-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  width: 110px;
+  flex-shrink: 0;
+}
+.profile-field-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+}
+.profile-edit-btn {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.profile-edit-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.profile-inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+}
+.profile-inline-form .inp {
+  height: 32px;
+  font-size: 13px;
+}
+
+/* Change password inline section */
+.change-pw-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default);
+  display: none;
+}
+.change-pw-form.open { display: block; }
+.change-pw-form .form-row {
+  margin-bottom: 14px;
+}
+.change-pw-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>Supervisor Dashboard | TTU IAMS</title>
+  <meta name="description" content="School supervisor dashboard.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+<div id="app-shell"></div>
+
+<main id="page-content" class="page-content">
+  <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Supervisor Dashboard</h1>
+      <p class="page-subtitle" id="welcome-msg">Welcome</p>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="stat-card">
+      <div class="stat-card-title">My Zones</div>
+      <div class="stat-card-value" id="stat-zones">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-title">Assigned Placements</div>
+      <div class="stat-card-value" id="stat-placements">0</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <div class="card-header-row">
+      <h2 class="card-title">My Assigned Zones</h2>
+    </div>
+    <div id="zones-list" style="padding:16px">Loading…</div>
+  </div>
+</main>
+
+<script type="module" src="./dashboard.js"></script>
+</body>
+</html>

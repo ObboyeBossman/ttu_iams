@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>Verify Attachment Letter | TTU IAMS</title>
+  <meta name="description" content="Verify the authenticity of a Takoradi Technical University industrial attachment letter using the verification code printed on the document.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f0f9ff 100%);
+      color: #1a2540;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: #003087;
+      padding: 0 24px;
+      box-shadow: 0 2px 12px rgba(0,48,135,0.20);
+    }
+    .header-inner {
+      max-width: 900px; margin: 0 auto;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0;
+    }
+    .header-logo {
+      width: 40px; height: 40px; flex-shrink: 0;
+      background: rgba(255,255,255,0.15); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-logo svg { width: 22px; height: 22px; fill: #fff; }
+    .header-text .name { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+    .header-text .sub  { font-size: 11px; color: rgba(200,220,255,0.80); margin-top: 1px; }
+
+    /* ── Page wrapper ───────────────────────────────────────── */
+    .page { max-width: 560px; margin: 48px auto; padding: 0 20px 64px; }
+
+    /* ── Intro ──────────────────────────────────────────────── */
+    .page-intro { text-align: center; margin-bottom: 36px; }
+    .verify-icon {
+      width: 64px; height: 64px; border-radius: 16px;
+      background: linear-gradient(135deg, #1d4ed8, #003087);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(0,48,135,0.25);
+    }
+    .verify-icon svg { width: 32px; height: 32px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .page-intro h1 { font-size: 22px; font-weight: 700; color: #1a2540; letter-spacing: -0.02em; }
+    .page-intro p  { font-size: 13.5px; color: #64748b; margin-top: 8px; line-height: 1.6; }
+
+    /* ── Verify card ─────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+      padding: 28px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Input row ──────────────────────────────────────────── */
+    .input-row { display: flex; gap: 10px; }
+    .code-input {
+      flex: 1; height: 48px;
+      border: 2px solid #e2e8f0; border-radius: 10px;
+      padding: 0 16px;
+      font-family: 'Inter', monospace; font-size: 16px;
+      letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+      color: #1a2540; background: #f8fafc;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .code-input::placeholder { font-size: 13px; letter-spacing: 0.02em; font-weight: 400; color: #94a3b8; text-transform: none; }
+    .code-input:focus { border-color: #003087; box-shadow: 0 0 0 3px rgba(0,48,135,0.10); background: #fff; }
+    .btn-verify {
+      height: 48px; padding: 0 22px;
+      background: #003087; color: #fff;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.15s, box-shadow 0.15s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-verify:hover { background: #1d4ed8; box-shadow: 0 4px 16px rgba(0,48,135,0.25); }
+    .btn-verify:disabled { opacity: 0.65; cursor: default; }
+    .btn-verify svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Spinner (inline) ───────────────────────────────────── */
+    .spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result states ──────────────────────────────────────── */
+    #result { display: none; margin-top: 20px; }
+
+    .result-valid {
+      border-radius: 12px;
+      border: 1.5px solid #bbf7d0;
+      background: #f0fdf4;
+      padding: 20px;
+    }
+    .result-valid-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .result-valid-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #16a34a; color: #fff;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+      padding: 4px 12px; border-radius: 99px;
+    }
+    .result-valid-badge svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .result-title { font-size: 15px; font-weight: 700; color: #14532d; }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detail-item label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #16a34a; margin-bottom: 3px; }
+    .detail-item span  { font-size: 13.5px; font-weight: 500; color: #1a2540; }
+
+    .result-invalid {
+      border-radius: 12px;
+      border: 1.5px solid #fecaca;
+      background: #fff5f5;
+      padding: 20px;
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .result-invalid svg { width: 20px; height: 20px; flex-shrink: 0; stroke: #dc2626; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+    .result-invalid h3 { font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+    .result-invalid p  { font-size: 12.5px; color: #b91c1c; line-height: 1.5; }
+
+    /* ── Help text ──────────────────────────────────────────── */
+    .help-text {
+      text-align: center; font-size: 12px; color: #94a3b8; line-height: 1.6;
+      margin-top: 8px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      text-align: center; padding: 24px; font-size: 11.5px; color: #94a3b8;
+      border-top: 1px solid #e2e8f0; margin-top: 40px;
+    }
+    footer a { color: #003087; text-decoration: none; }
+
+    @media (max-width: 480px) {
+      .page { margin-top: 28px; }
+      .input-row { flex-direction: column; }
+      .btn-verify { width: 100%; justify-content: center; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V6L12 2z"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <div class="name">Takoradi Technical University</div>
+      <div class="sub">Industrial Attachment Management System</div>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+  <div class="page-intro">
+    <div class="verify-icon">
+      <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V6L12 2z"/></svg>
+    </div>
+    <h1>Verify Attachment Letter</h1>
+    <p>Enter the 8-character code printed at the bottom of the student's official attachment letter to confirm its authenticity.</p>
+  </div>
+
+  <div class="card">
+    <div class="input-row">
+      <input
+        type="text"
+        id="code-input"
+        class="code-input"
+        placeholder="e.g. A3F9B1C2"
+        maxlength="8"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        aria-label="Verification code"
+      >
+      <button id="verify-btn" class="btn-verify" type="button">
+        <span id="btn-label">Verify</span>
+        <svg id="btn-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="spinner" id="btn-spinner"></span>
+      </button>
+    </div>
+
+    <div id="result">
+      <!-- populated by verify.js -->
+    </div>
+  </div>
+
+  <p class="help-text">
+    The verification code consists of 8 uppercase letters and numbers.<br>
+    It uniquely identifies each letter issued by TTU's Industrial Liaison Office.
+  </p>
+</div>
+
+<footer>
+  &copy; 2026 Takoradi Technical University &mdash; Industrial Liaison Office &nbsp;|&nbsp;
+  <a href="/src/modules/auth/login.html">Staff Portal</a>
+</footer>
+
+<script type="module" src="./verify.js"></script>
+</body>
+</html>

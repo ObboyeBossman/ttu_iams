@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>Attendance & Check-In | TTU IAMS</title>
+  <meta name="description" content="Daily GPS attendance check-in and check-out for industrial attachment students.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+
+<div id="app-shell"></div>
+
+<main id="page-content" class="page-content">
+  <div id="page-loading" class="page-loading-overlay">
+    <div class="spinner-lg"></div>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Attendance &amp; Check-In</h1>
+      <p class="page-subtitle" id="today-date">Loading…</p>
+    </div>
+  </div>
+
+  <!-- Coming Soon card -->
+  <div class="coming-soon-card coming-soon-card--green">
+    <div class="coming-soon-illustration">
+      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="56" fill="#dcfce7" stroke="#86efac" stroke-width="2"/>
+        <circle cx="60" cy="48" r="14" fill="#16a34a" opacity="0.15" stroke="#16a34a" stroke-width="2"/>
+        <path d="M60 62 C60 62 40 80 40 92 a20 20 0 0 0 40 0 C80 80 60 62 60 62Z" fill="#16a34a" opacity="0.12" stroke="#16a34a" stroke-width="2"/>
+        <circle cx="60" cy="48" r="6" fill="#16a34a"/>
+        <path d="M52 72 Q60 85 68 72" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="38" cy="60" r="4" fill="#bbf7d0"/>
+        <circle cx="82" cy="56" r="5" fill="#bbf7d0"/>
+        <circle cx="45" cy="82" r="3" fill="#86efac"/>
+        <circle cx="78" cy="78" r="3.5" fill="#86efac"/>
+      </svg>
+    </div>
+    <div class="coming-soon-content">
+      <div class="coming-soon-badge">Phase 2 Feature</div>
+      <h2 class="coming-soon-title">GPS Check-In Coming Soon</h2>
+      <p class="coming-soon-text">
+        Daily attendance tracking with GPS verification will be available in Phase 2.
+        You'll be able to check in and out each day, and your location will be
+        automatically compared to your registered placement address.
+      </p>
+      <ul class="coming-soon-features">
+        <li>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 4 6 11 3 8"/></svg>
+          One-tap GPS check-in and check-out
+        </li>
+        <li>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 4 6 11 3 8"/></svg>
+          Automatic distance verification from your placement
+        </li>
+        <li>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 4 6 11 3 8"/></svg>
+          Attendance history and absence reporting
+        </li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="./attendance.js"></script>
+</body>
+</html>

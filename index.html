@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>IAMS — Takoradi Technical University</title>
+  <meta name="description" content="Industrial Attachment Management System — Takoradi Technical University. Sign in to manage your industrial attachment.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; font-family: 'Inter', system-ui, sans-serif;
+      background: #f4f6fc; color: #1a2540;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .splash {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 20px; padding: 32px; text-align: center;
+    }
+    .splash-logo {
+      width: 72px; height: 72px;
+      background: #003087; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 32px rgba(0,48,135,0.24);
+    }
+    .splash-logo svg { width: 40px; height: 40px; fill: #fff; }
+    .splash h1 { font-size: 18px; font-weight: 700; color: #1a2540; letter-spacing: -0.01em; }
+    .splash p { font-size: 13px; color: #64748b; }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(0,48,135,0.15);
+      border-top-color: #003087;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="splash">
+    <div class="splash-logo">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V6L12 2z"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Takoradi Technical University</h1>
+      <p>Industrial Attachment Management System</p>
+    </div>
+    <div class="spinner" aria-label="Loading…"></div>
+  </div>
+
+  <script type="module">
+    import { redirectIfAlreadyAuthenticated, redirectToLogin } from '/src/modules/auth/auth-guard.js';
+
+    (async () => {
+      try {
+        await redirectIfAlreadyAuthenticated();
+        // If not already authenticated, redirectIfAlreadyAuthenticated does nothing,
+        // so we redirect to login ourselves.
+        redirectToLogin();
+      } catch (e) {
+        console.error('[index] redirect error:', e);
+        redirectToLogin();
+      }
+    })();
+  </script>
+</body>
+</html>

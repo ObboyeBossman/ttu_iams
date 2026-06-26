@@ -142,6 +142,12 @@ export async function syncPlacement(row) {
 
   const payload = { ...row, status: 'submitted' };
   const { data, error } = await supabase.from('placements').insert(payload).select().single();
+  
+  if (error && error.code === '23505' && error.message.includes('placements_draft_id_key')) {
+    const { data: existing, error: fetchErr } = await supabase.from('placements').select('*').eq('draft_id', row.draft_id).single();
+    return { data: existing, error: fetchErr };
+  }
+  
   return { data, error };
 }
 

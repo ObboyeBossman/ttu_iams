@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -169,85 +169,253 @@
 
       <!-- ── REGISTER PLACEMENT ────────────────────────────────────────── -->
       <section id="view-register-placement" class="page-view">
-        <div class="page-container">
-          <div class="page-header">
+        <!-- Animated ambient backgrounds -->
+        <div class="ambient-glow-1"></div>
+        <div class="ambient-glow-2"></div>
+        <div class="wizard-shell">
+          <div class="page-header" style="margin-bottom: 24px;">
             <div>
-              <h1 class="page-title">Register Placement</h1>
-              <p class="page-subtitle">Enter your accepted company's details. Fill this out while physically at the company.</p>
+              <h1 class="page-title">Placement Registration</h1>
+              <p class="page-subtitle">Complete your industrial attachment registration to secure your placement.</p>
             </div>
-            <div id="rp-sync-badge"></div>
           </div>
-          <div class="alert alert-warning hidden" id="rp-window-closed" style="margin-bottom:20px;">
-            The placement submission window is currently closed. Registration is only accepted while the season window is open.
-          </div>
-          <div class="alert alert-info hidden" id="rp-submitted-notice" style="margin-bottom:20px;">
-            <strong id="rp-notice-title">Placement submitted.</strong>
-            <span id="rp-notice-body"></span>
-          </div>
-          <div class="card" style="max-width:640px;" id="rp-form-card">
-            <form id="rp-form" novalidate>
-              <div class="form-section-title">Company Information</div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-company">Company Name <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-company" required>
-                <div class="field-error hidden" id="rp-company-err">Company name is required.</div>
-              </div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-nature">Nature of Business <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-nature" placeholder="e.g. Oil &amp; gas exploration" required>
-                <div class="field-error hidden" id="rp-nature-err">Nature of business is required.</div>
-              </div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-contact">Contact Person <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-contact" required>
-                <div class="field-error hidden" id="rp-contact-err">Contact person is required.</div>
-              </div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-phone">Company Phone <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="tel" id="rp-phone" required>
-                <div class="field-error hidden" id="rp-phone-err">Company phone is required.</div>
-              </div>
-              <div class="form-section-title" style="margin-top:20px;">Company Address</div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-region">Region <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-region" required>
-                <div class="field-error hidden" id="rp-region-err">Region is required.</div>
-              </div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-city">City / Town <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-city" required>
-                <div class="field-error hidden" id="rp-city-err">City / town is required.</div>
-              </div>
-              <div style="margin-bottom:16px;">
-                <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-street">Street / Landmark <span style="color:var(--ttu-red)">*</span></label>
-                <input class="inp" type="text" id="rp-street" required>
-                <div class="field-error hidden" id="rp-street-err">Street or landmark is required.</div>
-              </div>
-              <div class="form-section-title" style="margin-top:20px;">Attachment Period</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                <div>
-                  <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-start">Start Date <span style="color:var(--ttu-red)">*</span></label>
-                  <input class="inp" type="date" id="rp-start" required>
-                  <div class="field-error hidden" id="rp-start-err">Start date is required.</div>
-                </div>
-                <div>
-                  <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="rp-end">End Date <span style="color:var(--ttu-red)">*</span></label>
-                  <input class="inp" type="date" id="rp-end" required>
-                  <div class="field-error hidden" id="rp-end-err">End date is required.</div>
+
+          <!-- ============ MAIN WORKSPACE GRID ============ -->
+          <div class="main-workspace-grid">
+            
+            <!-- LEFT PANEL: Primary registration form operations -->
+            <div class="left-workspace-column">
+              
+              <!-- ============ WINDOW CLOSED STATE ============ -->
+              <div class="placement-stage-view" id="view-window-closed">
+                <div class="wizard-panel" style="text-align: center; padding: var(--space-4xl) var(--space-xl);">
+                  <div style="background: var(--bg-warning); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-lg); color: var(--amber);">
+                    <i data-lucide="calendar-x" style="width: 32px; height: 32px;"></i>
+                  </div>
+                  <h2 style="font-size: 20px; font-weight: 700; margin-bottom: var(--space-sm);">Placement Registration is Closed</h2>
+                  <p style="color: var(--text-secondary); max-width: 440px; margin: 0 auto; font-size: 13.5px;">The placement submission window is currently not active. Please coordinate with the Liaison Office or check announcement boards for scheduled window timings.</p>
                 </div>
               </div>
-              <div id="rp-gps-status" style="margin-bottom:20px;font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:8px;">
-                <i data-lucide="map-pin"></i>
-                <span id="rp-gps-label">Location capture will run when you submit.</span>
+
+              <!-- ============ ACTIVE WIZARD PANEL ============ -->
+              <div class="placement-stage-view active" id="view-wizard">
+                
+                <div class="resume-banner hidden" id="resumeBanner">
+                  <i data-lucide="rotate-ccw" style="flex-shrink:0;"></i>
+                  <span>We found a previously stored local draft — your input details have been successfully restored.</span>
+                </div>
+
+                <div class="private-browsing-banner hidden" id="privateBanner">
+                  <i data-lucide="eye-off" style="flex-shrink:0;"></i>
+                  <span>You appear to be in private browsing mode. Your placement coordinates and company details might not survive a tab reload.</span>
+                </div>
+
+                <div class="wizard-panel">
+                  <!-- Confetti Splash Container -->
+                  <div class="confetti-container" id="confettiContainer"></div>
+
+                  <!-- Stage indicator dots -->
+                  <div class="stage-indicator">
+                    <div class="stage-dot-row" id="stageDotRow"></div>
+                  </div>
+                  <div class="stage-labels" id="stageLabelsRow"></div>
+
+                  <!-- ===== STAGE 1: Company details ===== -->
+                  <div class="placement-stage-view active" id="stage-1">
+                    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Company Placement Details</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: var(--space-xl); font-size: 13px;">Please complete the details of the industry partner where you have gained acceptance. Each placement is evaluated individually.</p>
+
+                    <form id="form-stage1" novalidate>
+                      <div class="form-grid">
+                        <div class="span-2">
+                          <label class="lbl">Company name <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-company_name" placeholder="e.g. Volta Aluminium Company Ltd">
+                        </div>
+                        <div class="span-2">
+                          <label class="lbl">Nature of business <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-nature_of_business" placeholder="e.g. Aluminium smelting and processing">
+                        </div>
+                        <div>
+                          <label class="lbl">Region <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-region" placeholder="e.g. Western Region">
+                        </div>
+                        <div>
+                          <label class="lbl">City / Town <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-city_town" placeholder="e.g. Takoradi">
+                        </div>
+                        <div class="span-2">
+                          <label class="lbl">Street / Landmark <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-street_landmark" placeholder="e.g. Plot 14, Harbour Road">
+                        </div>
+                        <div>
+                          <label class="lbl">Contact Person (Supervisor) <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="text" class="inp" id="f-contact_person" placeholder="e.g. Mr. Kwame Mensah">
+                        </div>
+                        <div>
+                          <label class="lbl">Contact Phone Number <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="tel" class="inp" id="f-company_contact_phone" placeholder="e.g. 0244000000">
+                        </div>
+                        <div>
+                          <label class="lbl">Start Date <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="date" class="inp" id="f-start_date">
+                        </div>
+                        <div>
+                          <label class="lbl">End Date <span style="color:var(--ttu-red)">*</span></label>
+                          <input type="date" class="inp" id="f-end_date">
+                        </div>
+                      </div>
+                    </form>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-2xl);">
+                      <span class="hint" id="autosaveHint"><i data-lucide="save" style="width:14px;height:14px;vertical-align:middle;"></i> Saved locally as draft</span>
+                      <button class="btn btn-primary" id="btn-stage1-next">Next Step: Geo-Location <i data-lucide="arrow-right"></i></button>
+                    </div>
+                  </div>
+
+                  <!-- ===== STAGE 2: Location and Coordinates ===== -->
+                  <div class="placement-stage-view" id="stage-2">
+                    <div class="onsite-banner">
+                      <i data-lucide="map-pin" style="flex-shrink:0; color:var(--ttu-blue); width: 20px; height: 20px;"></i>
+                      <div>
+                        <strong id="onsiteBannerCompany">On-site Verification Required</strong>
+                        <span style="display:block; margin-top:2px;">Our placement registry captures geographical coordinates live. Kindly complete this step while physically present on site. Avoid capturing from home.</span>
+                      </div>
+                    </div>
+
+                    <div class="gps-stage-box" id="gpsStageBox">
+                      <!-- Rendered via javascript based on gpsState state machine -->
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-2xl);">
+                      <button class="btn btn-ghost" id="btn-stage2-back"><i data-lucide="arrow-left"></i> Back</button>
+                      <button class="btn btn-primary" id="btn-stage2-next" disabled>Next Step: Final Review <i data-lucide="arrow-right"></i></button>
+                    </div>
+                  </div>
+
+                  <!-- ===== STAGE 3: Review and Submit ===== -->
+                  <div class="placement-stage-view" id="stage-3">
+                    <div class="submitted-pill hidden" id="submittedPill" style="padding: 12px; border-radius: var(--radius-md); background: var(--bg-success); color: var(--green); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                      <i data-lucide="check-circle-2"></i>
+                      <span>Your industrial placement has been registered successfully for <strong id="submittedCompanyName">the company</strong></span>
+                    </div>
+
+                    <div class="edit-deadline-banner hidden" id="editDeadlineBanner">
+                      <i data-lucide="clock" style="flex-shrink:0;"></i>
+                      <span>You have access to modify these details until <strong id="editDeadlineText">—</strong>. It will then lock for administrative verification.</span>
+                    </div>
+
+                    <div class="edit-closed-banner hidden" id="editClosedBanner">
+                      <i data-lucide="lock" style="flex-shrink:0;"></i>
+                      <span><strong>Placement Locked. </strong>Liaison verification window closed modification permissions on <span id="editClosedDateText">—</span>.</span>
+                    </div>
+
+                    <div class="sync-banner hidden" id="syncBanner"></div>
+
+                    <div id="reviewDetails">
+                      <div class="review-section">
+                        <div class="review-section-title">
+                          <span class="title-text"><i data-lucide="building-2"></i> Company details</span>
+                          <button class="review-edit-link" data-jump-stage="1"><i data-lucide="pencil"></i> Edit</button>
+                        </div>
+                        <div id="reviewCompanyRows"></div>
+                      </div>
+
+                      <div class="review-section">
+                        <div class="review-section-title">
+                          <span class="title-text"><i data-lucide="map-pin"></i> Geographical verification</span>
+                          <button class="review-edit-link" data-jump-stage="2"><i data-lucide="pencil"></i> Edit</button>
+                        </div>
+                        <div id="reviewLocationRows"></div>
+                      </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-2xl);" id="reviewActions">
+                      <button class="btn btn-ghost" id="btn-stage3-back"><i data-lucide="arrow-left"></i> Back to Location</button>
+                      <button class="btn btn-primary" id="btn-submit"><i data-lucide="send"></i> Confirm & Submit Placement</button>
+                    </div>
+                    <p class="locked-overlay-note hidden" id="lockedNote" style="text-align: center; color: var(--text-muted); margin-top: var(--space-lg); font-weight: 600;">This registration is locked for administrative audit and cannot be modified.</p>
+                  </div>
+
+                </div>
               </div>
-              <div class="alert alert-danger hidden" id="rp-banner" style="margin-bottom:16px;">
-                <span id="rp-banner-msg"></span>
+
+            </div>
+
+            <!-- RIGHT PANEL: Live Attachment Letter Ticket Preview + Information Guide -->
+            <div class="sidebar-panel">
+              
+              <!-- Interactive Letterhead ticket preview -->
+              <div class="preview-card" id="interactiveTicketCard">
+                <span class="ttu-badge">Live Registration Ticket</span>
+                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: var(--space-sm);">Takoradi Technical University</h3>
+                <p style="font-size: 11px; opacity: 0.8; margin-bottom: var(--space-lg);">Industrial Attachment Liaison Office</p>
+                
+                <div style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: var(--space-md);">
+                  <div class="live-ticket">
+                    <div class="live-ticket-row">
+                      <span class="live-ticket-label">Student Name:</span>
+                      <span class="live-ticket-value" id="p-student-name">—</span>
+                    </div>
+                    <div class="live-ticket-row">
+                      <span class="live-ticket-label">Company Placement:</span>
+                      <span id="p-company" class="live-ticket-value">—</span>
+                    </div>
+                    <div class="live-ticket-row">
+                      <span class="live-ticket-label">Industry Sector:</span>
+                      <span id="p-nature" class="live-ticket-value">—</span>
+                    </div>
+                    <div class="live-ticket-row">
+                      <span class="live-ticket-label">Region/City:</span>
+                      <span id="p-region-city" class="live-ticket-value">—</span>
+                    </div>
+                    <div class="live-ticket-row">
+                      <span class="live-ticket-label">GPS Match:</span>
+                      <span id="p-gps" class="live-ticket-value">—</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button type="submit" class="btn btn-primary" id="rp-submit" style="width:100%;">
-                <i data-lucide="send"></i>
-                Submit Placement
-              </button>
-            </form>
+
+              <!-- Guidance Accordion -->
+              <div class="guidance-box">
+                <div class="guidance-title">
+                  <i data-lucide="info" style="color:var(--ttu-gold);"></i>
+                  <span>Liaison Registration Guidelines</span>
+                </div>
+                
+                <div class="guidance-item active" onclick="this.classList.toggle('active')">
+                  <div class="guidance-q">
+                    <span>Why is GPS location recorded?</span>
+                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                  </div>
+                  <div class="guidance-a">
+                    Our audit system utilizes device-recorded geolocation to confirm physical presence during company placement setups. This helps supervisors schedule verification visits efficiently.
+                  </div>
+                </div>
+
+                <div class="guidance-item" onclick="this.classList.toggle('active')">
+                  <div class="guidance-q">
+                    <span>Can I register before arriving at the company?</span>
+                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                  </div>
+                  <div class="guidance-a">
+                    No. We strongly advise that you complete Step 2 only once you are fully situated inside the organization premises to guarantee coordinate alignment.
+                  </div>
+                </div>
+
+                <div class="guidance-item" onclick="this.classList.toggle('active')">
+                  <div class="guidance-q">
+                    <span>What if my browser blocks GPS permissions?</span>
+                    <i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                  </div>
+                  <div class="guidance-a">
+                    If the system fails to grab coordinates after 4 automatic attempts, it will dynamically enable a manual override option so you don't get stuck.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
       </section>

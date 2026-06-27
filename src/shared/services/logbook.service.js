@@ -217,7 +217,7 @@ export async function assessMonthlySummary(summaryId, { assessment, rating, supe
   const { data, error } = await supabase
     .from('logbook_monthly_summaries')
     .update({
-      company_supervisor_assessment:  assessment,
+      supervisor_feedback:  assessment,
       company_supervisor_rating:      rating,
       company_supervisor_name:        supervisorName,
       company_supervisor_assessed_at: now,

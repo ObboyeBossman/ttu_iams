@@ -97,6 +97,14 @@
   transition: max-height .36s cubic-bezier(.25,.8,.25,1), opacity .3s ease, margin-top .3s ease;
 }
 #view-attendance .att-absence-overlay.active { max-height: 250px; opacity: 1; margin-top: 12px; }
+
+#view-attendance .att-biometric-overlay {
+  transform-origin: top center; max-height: 0; overflow: hidden; opacity: 0;
+  display: block !important;
+  transition: max-height .36s cubic-bezier(.25,.8,.25,1), opacity .3s ease, margin-top .3s ease;
+}
+#view-attendance .att-biometric-overlay.active { max-height: 500px; opacity: 1; margin-top: 12px; }
+
 #view-attendance .att-select {
   width: 100%; height: 40px; border-radius: 6px;
   border: 1px solid var(--border-default);

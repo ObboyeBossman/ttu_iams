@@ -37,7 +37,7 @@ export async function getTodayLog(studentId, seasonId) {
  *
  * Check-in distance threshold: > 500m → flagged_location status.
  */
-export async function checkIn({ studentId, placementId, seasonId, lat, lon, locationSource, distanceM }) {
+export async function checkIn({ studentId, placementId, seasonId, lat, lon, locationSource, distanceM, biometricMethod = 'none', biometricVerified = false }) {
   const now   = new Date().toISOString();
   const today = now.split('T')[0];
   const status = distanceM !== null && distanceM > 500 ? 'flagged_location' : 'present';
@@ -55,6 +55,8 @@ export async function checkIn({ studentId, placementId, seasonId, lat, lon, loca
       check_in_location_source:   locationSource,
       distance_from_placement_m:  distanceM,
       status,
+      biometric_method:           biometricMethod,
+      biometric_verified:         biometricVerified,
     })
     .select()
     .single();

@@ -59,7 +59,7 @@ export async function initPlacement(userId, season, existingPlacement, studentPr
   if (_existingPlacement) {
     // Merge existing placement into draft
     draft = { ...draft, ..._existingPlacement };
-    draft.sync_status = 'submitted';
+    draft.sync_status = _existingPlacement.status;
     draft.location_source = _existingPlacement.location_source || 'manual';
     // If window is closed and we have a placement, we can view it but not edit.
     if (!windowOpen) {
@@ -88,7 +88,7 @@ export async function initPlacement(userId, season, existingPlacement, studentPr
   populateFormFromDraft();
   
   // Set initial stage
-  if (draft.sync_status === 'submitted') {
+  if (['submitted', 'assigned', 'flagged', 'rejected'].includes(draft.sync_status)) {
     goToStage('3');
   } else {
     goToStage('1');
@@ -416,18 +416,30 @@ function renderSubmissionBanner() {
     banner.className = 'sync-banner error';
     banner.innerHTML = '<i data-lucide="alert-circle"></i><span>' + (draft.lastErrorMessage || 'Server rejected registration request.') + '</span>';
     banner.classList.remove('hidden');
+  } else if (draft.sync_status === 'flagged') {
+    banner.className = 'sync-banner error';
+    banner.innerHTML = '<i data-lucide="alert-triangle"></i><span>Submission flagged by Liaison office. Check remarks.</span>';
+    banner.classList.remove('hidden');
+  } else if (draft.sync_status === 'rejected') {
+    banner.className = 'sync-banner error';
+    banner.innerHTML = '<i data-lucide="x-circle"></i><span>Registration rejected. Please report to the Liaison office immediately.</span>';
+    banner.classList.remove('hidden');
+  } else if (draft.sync_status === 'assigned') {
+    banner.className = 'sync-banner success';
+    banner.innerHTML = '<i data-lucide="check-circle-2"></i><span>Placement assigned and approved.</span>';
+    banner.classList.remove('hidden');
   } else {
     banner.classList.add('hidden');
   }
 
-  if (draft.sync_status === 'submitted') {
+  if (['submitted', 'assigned', 'flagged', 'rejected'].includes(draft.sync_status)) {
     pill.classList.remove('hidden');
     document.getElementById('submittedCompanyName').textContent = draft.company_name || 'selected provider';
   } else {
     pill.classList.add('hidden');
   }
 
-  submissionLocked = draft.sync_status === 'submitted' && isEditingClosed();
+  submissionLocked = ['assigned', 'flagged', 'rejected'].includes(draft.sync_status) || (draft.sync_status === 'submitted' && isEditingClosed());
 
   if (draft.sync_status === 'submitted' && !submissionLocked) {
     document.getElementById('editDeadlineText').textContent = formatEditDeadline(EDIT_DEADLINE);
@@ -523,6 +535,9 @@ async function handleSubmit() {
     showToast('Placement registration confirmed securely!', 'success');
     launchConfetti();
     localStorage.removeItem('placement_draft_' + _userId); // Clear draft
+    setTimeout(() => {
+      window.location.reload();
+    }, 3500); // Reload after confetti to update global state
   }
   renderSubmissionBanner();
 }

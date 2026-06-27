@@ -71,6 +71,22 @@ export async function initAttendance(studentId, seasonId, placement, studentName
   if (!placement || placement.status !== 'assigned') {
     noPlacement?.classList.remove('hidden');
     portal?.classList.add('hidden');
+    
+    if (placement) {
+      const title = noPlacement.querySelector('.empty-state-title');
+      const msg = noPlacement.querySelector('.empty-state-message');
+      const btn = noPlacement.querySelector('.btn');
+      
+      if (placement.status === 'submitted' || placement.status === 'flagged') {
+        if (title) title.textContent = 'Placement Pending Assignment';
+        if (msg) msg.textContent = 'Your placement is currently being reviewed. You can start checking in once it is assigned by the Liaison Office.';
+        if (btn) btn.classList.add('hidden');
+      } else if (placement.status === 'rejected') {
+        if (title) title.textContent = 'Placement Rejected';
+        if (msg) msg.textContent = 'Your placement was rejected. Please contact the Liaison Office.';
+        if (btn) btn.classList.add('hidden');
+      }
+    }
     return;
   }
   noPlacement?.classList.add('hidden');
@@ -127,6 +143,68 @@ function _wireEvents() {
   });
   document.getElementById('att-absence-submit-btn')?.addEventListener('click', _handleLogAbsence);
 
+  // Biometric Events
+  document.getElementById('att-bio-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('att-biometric-overlay')?.classList.remove('active');
+    _setRadar(false);
+    _setSensorText('Sensors Idle', 'Coordinate trace stamps occur in background');
+    _dailyState = 'pending';
+    _updateButtons();
+  });
+
+  document.getElementById('att-bio-face-btn')?.addEventListener('click', () => {
+    document.getElementById('att-face-scanner')?.classList.remove('hidden');
+    document.getElementById('att-finger-scanner')?.classList.add('hidden');
+  });
+
+  document.getElementById('att-bio-finger-btn')?.addEventListener('click', () => {
+    document.getElementById('att-finger-scanner')?.classList.remove('hidden');
+    document.getElementById('att-face-scanner')?.classList.add('hidden');
+  });
+
+  // Simulate Passport Upload & Face Match
+  const passportInput = document.getElementById('att-passport-input');
+  passportInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('att-passport-preview').src = e.target.result;
+        document.getElementById('att-passport-preview').style.display = 'block';
+        document.getElementById('att-face-icon').style.display = 'none';
+        
+        const status = document.getElementById('att-face-status');
+        if (status) {
+          status.textContent = 'Analyzing face biometrics...';
+          status.style.color = 'var(--ttu-gold)';
+          setTimeout(() => {
+            status.textContent = 'Face Matched Successfully!';
+            status.style.color = 'var(--green)';
+            setTimeout(() => _finalizeCheckIn('face'), 1000);
+          }, 1500);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Simulate Fingerprint Match
+  document.getElementById('att-finger-pad')?.addEventListener('click', () => {
+    const icon = document.getElementById('att-finger-icon');
+    const status = document.getElementById('att-finger-status');
+    if (icon) icon.style.color = 'var(--ttu-gold)';
+    if (status) {
+      status.textContent = 'Scanning fingerprint...';
+      status.style.color = 'var(--ttu-gold)';
+      setTimeout(() => {
+        if (icon) icon.style.color = 'var(--green)';
+        status.textContent = 'Fingerprint Verified!';
+        status.style.color = 'var(--green)';
+        setTimeout(() => _finalizeCheckIn('fingerprint'), 1000);
+      }, 1500);
+    }
+  });
+
   // Calendar nav
   document.getElementById('att-cal-prev')?.addEventListener('click', () => {
     _calViewDate.setMonth(_calViewDate.getMonth() - 1);
@@ -172,6 +250,8 @@ function _getPos() {
 }
 
 // ── Check-In flow ────────────────────────────────────────────────────────────
+let pendingCheckInCoords = null;
+
 async function _handleCheckIn() {
   if (_dailyState !== 'pending') return;
   _dailyState = 'checking_in';
@@ -204,9 +284,43 @@ async function _handleCheckIn() {
     distanceM !== null ? `~${distanceM}m from placement` : 'Location captured',
   );
 
+  // Store coordinates and prompt for biometric verification
+  pendingCheckInCoords = { lat, lng, distanceM };
+  
+  // Show biometric overlay
+  const overlay = document.getElementById('att-biometric-overlay');
+  if (overlay) {
+    overlay.classList.add('active');
+    
+    // Reset scanner UI states
+    document.getElementById('att-face-scanner')?.classList.add('hidden');
+    document.getElementById('att-finger-scanner')?.classList.add('hidden');
+    
+    const faceIcon = document.getElementById('att-face-icon');
+    if (faceIcon) faceIcon.style.display = 'block';
+    const passportPreview = document.getElementById('att-passport-preview');
+    if (passportPreview) passportPreview.style.display = 'none';
+    const faceStatus = document.getElementById('att-face-status');
+    if (faceStatus) faceStatus.textContent = '';
+    
+    const fingerIcon = document.getElementById('att-finger-icon');
+    if (fingerIcon) fingerIcon.style.color = 'var(--text-muted)';
+    const fingerStatus = document.getElementById('att-finger-status');
+    if (fingerStatus) fingerStatus.textContent = '';
+  }
+}
+
+async function _finalizeCheckIn(method) {
+  const overlay = document.getElementById('att-biometric-overlay');
+  if (overlay) overlay.classList.remove('active');
+
+  if (!pendingCheckInCoords) return;
+  const { lat, lng, distanceM } = pendingCheckInCoords;
+
   const { data: log, error } = await checkIn({
     studentId: _studentId, placementId: _placement.id, seasonId: _seasonId,
     lat, lon: lng, locationSource: 'gps', distanceM,
+    biometricMethod: method, biometricVerified: true
   });
 
   if (error) {

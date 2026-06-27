@@ -52,6 +52,7 @@
   position: absolute; inset: 0;
   opacity: 0;
   transition: opacity 0.15s;
+  pointer-events: none;
 }
 .report-path-card.path-ai::before {
   background: linear-gradient(135deg, rgba(240,165,0,0.06) 0%, transparent 60%);

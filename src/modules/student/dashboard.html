@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/theme.css">
   <link rel="stylesheet" href="/shell/shell.css">
+  <script src="https://js.paystack.co/v1/inline.js"></script>
 </head>
 <body>
 
@@ -79,6 +80,18 @@
               <div id="dash-attendance-count"
                    style="font-size:var(--text-display);font-weight:700;color:var(--text-primary);margin:8px 0 4px;">—</div>
               <div id="dash-attendance-label" style="font-size:12px;color:var(--text-secondary);">days checked in</div>
+            </div>
+            <div class="card metric-card">
+              <div class="sec-label">Logbook Progress</div>
+              <div id="dash-logbook-weeks"
+                   style="font-size:var(--text-display);font-weight:700;color:var(--text-primary);margin:8px 0 4px;">—</div>
+              <div style="font-size:12px;color:var(--text-secondary);">weeks submitted</div>
+            </div>
+            <div class="card metric-card">
+              <div class="sec-label">Report Status</div>
+              <div id="dash-report-status"
+                   style="font-size:14px;font-weight:600;color:var(--text-primary);margin:10px 0 4px;text-transform:capitalize;">—</div>
+              <div id="dash-report-path" style="font-size:12px;color:var(--text-secondary);">not started</div>
             </div>
           </div>
 
@@ -506,6 +519,49 @@
                   </div>
                 </div>
 
+                <!-- Biometric Overlay -->
+                <div class="att-biometric-overlay" id="att-biometric-overlay">
+                  <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Biometric Verification</h3>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Please verify your identity to finalize check-in.</p>
+                  
+                  <div style="display:flex;gap:12px;margin-bottom:16px;">
+                    <button class="btn btn-outline" id="att-bio-face-btn" style="flex:1;">
+                      <i data-lucide="camera"></i> Face Match
+                    </button>
+                    <button class="btn btn-outline" id="att-bio-finger-btn" style="flex:1;">
+                      <i data-lucide="fingerprint"></i> Fingerprint
+                    </button>
+                  </div>
+
+                  <!-- Face Scanner UI -->
+                  <div id="att-face-scanner" class="hidden" style="text-align:center;margin-bottom:16px;">
+                    <div style="width:120px;height:120px;border-radius:50%;border:2px dashed var(--ttu-gold);margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+                      <i data-lucide="user" style="width:48px;height:48px;color:var(--text-muted);" id="att-face-icon"></i>
+                      <img id="att-passport-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                    </div>
+                    <div style="margin-top:12px;">
+                      <label class="btn btn-ghost" style="font-size:12px;padding:6px 12px;cursor:pointer;">
+                        <i data-lucide="upload"></i> Upload Passport Pic
+                        <input type="file" id="att-passport-input" accept="image/*" style="display:none;">
+                      </label>
+                    </div>
+                    <div id="att-face-status" style="font-size:12px;color:var(--ttu-gold);margin-top:8px;font-weight:700;"></div>
+                  </div>
+
+                  <!-- Fingerprint Scanner UI -->
+                  <div id="att-finger-scanner" class="hidden" style="text-align:center;margin-bottom:16px;">
+                    <div id="att-finger-pad" style="width:80px;height:100px;border:2px solid var(--border-strong);border-radius:20px;margin:0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg-prefix);transition:all 0.3s;box-shadow:inset 0 0 10px rgba(0,0,0,0.1);">
+                      <i data-lucide="fingerprint" style="width:40px;height:40px;color:var(--text-muted);" id="att-finger-icon"></i>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">Touch sensor to verify</p>
+                    <div id="att-finger-status" style="font-size:12px;color:var(--ttu-gold);margin-top:8px;font-weight:700;"></div>
+                  </div>
+
+                  <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-ghost" id="att-bio-cancel-btn" style="padding:8px 16px;font-size:12px;">Cancel</button>
+                  </div>
+                </div>
+
                 <!-- Metrics Row -->
                 <div class="att-metric-row" id="att-metric-row">
                   <div class="att-metric-tile">
@@ -884,7 +940,7 @@
                     <i data-lucide="sparkles" style="width:12px; height:12px;"></i> AI-Generated
                   </div>
                   <h3 class="path-card-title">AI Attachment Assistant</h3>
-                  <p class="path-card-desc">Automatically compile your daily activities, weekly logs, and supervisor feedback into a structured, academic report using DeepSeek-V3.</p>
+                  <p class="path-card-desc">Automatically compile your daily activities, weekly logs, and supervisor feedback into a structured, academic report using our advanced AI model.</p>
                   <ul class="path-card-features">
                     <li><i data-lucide="check"></i> 4 structured academic chapters</li>
                     <li><i data-lucide="check"></i> Grounded in your real logbook data</li>
@@ -922,7 +978,7 @@
                 <div style="text-align: center;">
                   <span class="path-card-badge ai-badge" style="margin-bottom:8px;">AI Path Activation</span>
                   <h2>Attachment Report Generator</h2>
-                  <div class="payment-amount">GH¢ 50.00</div>
+                  <div class="payment-amount">GH¢ 40.00</div>
                   <div class="payment-per">one-time payment per season</div>
                 </div>
                 <ul class="payment-features" style="padding-left:0;">
@@ -932,23 +988,11 @@
                 </ul>
                 
                 <form id="paymentForm" novalidate style="margin-top: 20px;">
-                  <div class="report-field-group">
-                    <label class="report-field-label">Mobile Network Selector <span style="color:var(--ttu-red)">*</span></label>
-                    <select class="select-box" id="payNetwork" style="width: 100%; margin-bottom: 12px; height:42px; border: 1.5px solid var(--border-default); border-radius:10px; background:var(--bg-card); color:var(--text-primary); padding:0 12px;">
-                      <option value="mtn">MTN Mobile Money</option>
-                      <option value="telecel">Telecel Cash</option>
-                      <option value="at">AT Money</option>
-                    </select>
-                  </div>
-                  <div class="report-field-group">
-                    <label class="report-field-label">Mobile Money Wallet Number <span style="color:var(--ttu-red)">*</span></label>
-                    <input type="tel" class="inp" id="payPhone" placeholder="e.g. 0244000000" style="width: 100%; height:42px; border-radius:10px; box-sizing:border-box;">
-                    <div class="field-error hidden" id="payPhoneErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">A valid Ghanaian MoMo phone number is required.</div>
-                  </div>
+                  <p style="font-size:13px; color:var(--text-secondary); margin-bottom: 24px;">Click below to authorize your one-time payment securely via Paystack. All major networks and cards are supported.</p>
                   
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
                     <button type="button" class="btn btn-ghost" id="btnPaymentBack"><i data-lucide="arrow-left"></i> Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btnPaymentSubmit"><i data-lucide="credit-card"></i> Authorize Payment</button>
+                    <button type="submit" class="btn btn-primary" id="btnPaymentSubmit"><i data-lucide="credit-card"></i> Pay with Paystack</button>
                   </div>
                 </form>
               </div>
@@ -964,48 +1008,44 @@
                 
                 <form id="supplementaryForm" novalidate>
                   <div class="report-field-group">
-                    <label class="report-field-label">1. Brief Overview of Organization Structure <span style="color:var(--ttu-red)">*</span></label>
+                    <label class="report-field-label">1. Brief Overview of Organization Structure (Optional)</label>
                     <span class="report-field-hint">Describe the organization's setup, core departments, and leadership hierarchy.</span>
-                    <textarea class="report-textarea" id="supOrgOverview" required placeholder="e.g. The company is organized into three main divisions: Engineering, Operations, and Maintenance. The department has a flat reporting hierarchy with 15 engineers reporting directly to the Chief Technical Director..."></textarea>
-                    <div class="field-error hidden" id="supOrgOverviewErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">This field is required (minimum 20 characters).</div>
+                    <textarea class="report-textarea" id="supOrgOverview" placeholder="e.g. The company is organized into three main divisions: Engineering, Operations, and Maintenance. The department has a flat reporting hierarchy with 15 engineers reporting directly to the Chief Technical Director..."></textarea>
+                    <div class="field-error hidden" id="supOrgOverviewErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">Minimum 20 characters if provided.</div>
                   </div>
                   <div class="report-field-group">
-                    <label class="report-field-label">2. Key Technical Challenges &amp; Resolutions <span style="color:var(--ttu-red)">*</span></label>
+                    <label class="report-field-label">2. Key Technical Challenges &amp; Resolutions (Optional)</label>
                     <span class="report-field-hint">What technical bottlenecks did you face? Outline how you went about solving them.</span>
-                    <textarea class="report-textarea" id="supChallenges" required placeholder="e.g. During the second week, I encountered difficulties when setting up the database connection pool which led to high latency. I resolved this by reviewing postgres configurations, optimizing query indexes, and resizing the pool size from 10 to 50 connections..."></textarea>
-                    <div class="field-error hidden" id="supChallengesErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">This field is required (minimum 20 characters).</div>
+                    <textarea class="report-textarea" id="supChallenges" placeholder="e.g. During the second week, I encountered difficulties when setting up the database connection pool which led to high latency. I resolved this by reviewing postgres configurations, optimizing query indexes, and resizing the pool size from 10 to 50 connections..."></textarea>
+                    <div class="field-error hidden" id="supChallengesErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">Minimum 20 characters if provided.</div>
                   </div>
                   <div class="report-field-group">
-                    <label class="report-field-label">3. Classroom Relevance &amp; Course Application <span style="color:var(--ttu-red)">*</span></label>
+                    <label class="report-field-label">3. Classroom Relevance &amp; Course Application (Optional)</label>
                     <span class="report-field-hint">Detail how specific courses at TTU (e.g. Data Structures, Database Systems) directly assisted your work.</span>
-                    <textarea class="report-textarea" id="supClassroom" required placeholder="e.g. The database theories learned in Relational Databases were heavily applied when managing client data tables. Also, networking classes helped me understand routing configurations when building internal API endpoints..."></textarea>
-                    <div class="field-error hidden" id="supClassroomErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">This field is required (minimum 20 characters).</div>
+                    <textarea class="report-textarea" id="supClassroom" placeholder="e.g. The database theories learned in Relational Databases were heavily applied when managing client data tables. Also, networking classes helped me understand routing configurations when building internal API endpoints..."></textarea>
+                    <div class="field-error hidden" id="supClassroomErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">Minimum 20 characters if provided.</div>
                   </div>
                   <div class="report-field-group">
-                    <label class="report-field-label">4. Key Recommendations <span style="color:var(--ttu-red)">*</span></label>
+                    <label class="report-field-label">4. Key Recommendations (Optional)</label>
                     <span class="report-field-hint">Provide suggestions for both the department at TTU and the host organization.</span>
-                    <textarea class="report-textarea" id="supRecommendations" required placeholder="e.g. For the department: I recommend integrating more hands-on docker training in the curriculum. For the company: I recommend establishing structured mentorship program for interns..."></textarea>
-                    <div class="field-error hidden" id="supRecommendationsErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">This field is required (minimum 20 characters).</div>
+                    <textarea class="report-textarea" id="supRecommendations" placeholder="e.g. For the department: I recommend integrating more hands-on docker training in the curriculum. For the company: I recommend establishing structured mentorship program for interns..."></textarea>
+                    <div class="field-error hidden" id="supRecommendationsErr" style="color:var(--ttu-red); font-size:12px; margin-top:4px;">Minimum 20 characters if provided.</div>
                   </div>
                   
                   <div class="report-field-group">
-                    <label class="report-field-label">5. Optional Technical Figure / Diagram (Image)</label>
-                    <span class="report-field-hint">Upload a network diagram, project photo, system architecture, or workspace diagram (Max 5MB). It will be rendered inside your final compiled PDF report.</span>
+                    <label class="report-field-label">5. Optional Technical Figures / Diagrams (Up to 5 Images)</label>
+                    <span class="report-field-hint">Upload network diagrams, project photos, system architectures, or workspace diagrams (Max 5MB each). They will be rendered inside your final compiled PDF report.</span>
                     <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
                       <button type="button" class="btn btn-ghost" id="btnUploadFigure" style="font-size:12px; padding:6px 12px; display:flex; align-items:center; gap:6px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                        Upload Image
+                        Upload Images
                       </button>
-                      <input type="file" id="supFigureInput" accept="image/png, image/jpeg, image/jpg" style="display:none;">
-                      <span id="supFigureName" style="font-size:12px; color:var(--text-muted);">No image selected</span>
+                      <input type="file" id="supFigureInput" accept="image/png, image/jpeg, image/jpg" style="display:none;" multiple>
+                      <span id="supFigureName" style="font-size:12px; color:var(--text-muted);">No images selected</span>
                     </div>
                     
-                    <div id="supFigurePreviewContainer" class="hidden" style="margin-top:12px; border:1px solid var(--border-default); border-radius:10px; padding:10px; display:inline-block; max-width:260px; background:var(--bg-hover);">
-                      <img id="supFigurePreview" src="" style="max-width:100%; max-height:140px; border-radius:6px; display:block; object-fit:contain; background:#fff; border:1px solid var(--border-default);">
-                      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:8px;">
-                        <input type="text" class="inp" id="supFigureCaption" placeholder="Figure caption (e.g. System Topology)" style="height:32px; font-size:12px; padding:0 8px; box-sizing:border-box; width:80%;">
-                        <button type="button" id="btnRemoveFigure" style="border:none; background:transparent; color:var(--ttu-red); cursor:pointer; padding:6px; display:flex; align-items:center; justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-                      </div>
+                    <div id="supFiguresListContainer" style="margin-top:12px; display:flex; flex-direction:column; gap:12px;">
+                      <!-- Dynamically populated previews -->
                     </div>
                   </div>
                   

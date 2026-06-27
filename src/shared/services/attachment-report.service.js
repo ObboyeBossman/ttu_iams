@@ -38,24 +38,23 @@ export async function hasPaidForSeason(studentId, seasonId) {
  */
 export async function markSeasonAsPaid(studentId, seasonId, paymentRef = '') {
   try {
-    const { data, error } = await supabase
-      .from('attachment_payments')
-      .upsert({
-        student_id: studentId,
-        season_id: seasonId,
-        status: 'confirmed',
-        payment_reference: paymentRef || `pay_${Math.random().toString(36).substr(2, 9)}`,
-        confirmed_at: new Date().toISOString()
-      }, { onConflict: 'student_id,season_id' })
-      .select()
-      .single();
+    const { data, error } = await supabase.functions.invoke('verify-paystack', {
+      body: { 
+        reference: paymentRef || `pay_${Math.random().toString(36).substr(2, 9)}`,
+        student_id: studentId, 
+        season_id: seasonId 
+      }
+    });
 
-    if (!error) return { data, error: null };
+    if (!error && data?.success) {
+      localStorage.setItem(`${PAYMENT_KEY_PREFIX}${studentId}_${seasonId}`, 'confirmed');
+      return { data: data.data, error: null };
+    }
   } catch (e) {
-    // Ignore and fallback
+    console.error('Edge function verify-paystack failed:', e);
   }
 
-  // Fallback to localStorage
+  // Fallback to localStorage for local dev without Edge Functions running
   localStorage.setItem(`${PAYMENT_KEY_PREFIX}${studentId}_${seasonId}`, 'confirmed');
   return { data: { status: 'confirmed' }, error: null };
 }

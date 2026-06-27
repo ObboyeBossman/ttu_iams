@@ -502,8 +502,8 @@ comment on column public.letters.verification_code is
 create table public.settings (
   id              int         primary key default 1,
   letterhead_path text,       -- storage path for TTU letterhead image
-  stamp_path      text,       -- storage path for official stamp image
-  signature_path  text,       -- storage path for authorised signature image
+  stamp_path      text,       -- storage path for combined signature+stamp image
+  footer_path     text,       -- storage path for TTU footer bar image
   updated_at      timestamptz,
   updated_by      uuid        references public.profiles (id) on delete set null,
 

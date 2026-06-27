@@ -10,12 +10,16 @@ import { getLetterCountForSeason, generateLetter, listLetters } from '/shared/se
 import { getOwnPlacementForSeason, syncPlacement } from '/shared/services/placements.js';
 import { letterCountTier, formatDate, formatAddress, generateUuid } from '/shared/utils.js';
 import { listAttendanceLogs }               from '/shared/services/attendance.service.js';
-import { initAttendance }                  from './sections/attendance-section.js';
-import { initLogbook }                     from './sections/logbook-section.js';
-import { initProfile }                     from './sections/profile-section.js';
-import { initSettings, applyStoredTheme }  from './sections/settings-section.js';
-import { downloadPdfLetter }               from './sections/generate-letter-pdf.js';
-import './sections/dashboard-widgets.css';
+import { initAttendance }                  from './attendance/attendance.js';
+import { initLogbook }                     from './logbook/logbook.js';
+import { initProfile }                     from './profile/profile.js';
+import { initSettings, applyStoredTheme }  from './settings/settings.js';
+import { generateAndDownloadLetter }       from '/shared/pdf/generate-letter.js';
+import './dashboard-widgets.css';
+import './placement/placement.css';
+import { initPlacement }                   from './placement/placement.js';
+import { initReport }                      from './report/report.js';
+import './report/report.css';
 
 // ── 1. Auth guard ────────────────────────────────────────────────────────────
 const role = await requireRole(['student']);
@@ -38,7 +42,7 @@ applyStoredTheme();
 await renderShell('student', 'dashboard', { name: fullName, initials, email: '' });
 
 // ── 4. Page routing ──────────────────────────────────────────────────────────
-const PAGE_KEYS = ['dashboard', 'generate-letter', 'register-placement', 'attendance', 'logbook', 'profile', 'settings'];
+const PAGE_KEYS = ['dashboard', 'generate-letter', 'register-placement', 'attendance', 'logbook', 'attachment-report', 'profile', 'settings'];
 
 function showPage(page) {
   PAGE_KEYS.forEach(key => {
@@ -55,6 +59,7 @@ window.addEventListener('hashchange', () => {
     if (page === 'register-placement') loadRegisterPlacement();
     if (page === 'attendance')         loadAttendancePage();
     if (page === 'logbook')            loadLogbookPage();
+    if (page === 'attachment-report')  loadReportPage();
     if (page === 'profile')            loadProfilePage();
     if (page === 'settings')           loadSettingsPage();
   }
@@ -272,7 +277,7 @@ document.addEventListener('click', async (e) => {
       .select('*')
       .eq('id', userId)
       .single();
-    await downloadPdfLetter(letter, studentProfile);
+    await generateAndDownloadLetter(letter, studentProfile, _season);
     showToast(`Downloaded letter for ${letter.company_name}.`, 'success');
   } catch (err) {
     console.error('PDF Generation Error:', err);
@@ -348,7 +353,7 @@ async function handleGenerateLetter(e) {
       .select('*')
       .eq('id', userId)
       .single();
-    await downloadPdfLetter(letter, studentProfile);
+    await generateAndDownloadLetter(letter, studentProfile, _season);
     showToast(`Letter for ${letter.company_name} recorded and downloaded.`, 'success');
   } catch (err) {
     console.error('PDF Generation Error:', err);
@@ -364,128 +369,7 @@ let _rpLoaded = false;
 async function loadRegisterPlacement() {
   if (_rpLoaded) return;
   _rpLoaded = true;
-
-  const windowOpen = isPlacementWindowOpen(_season);
-
-  // If already submitted, show notice and lock form
-  if (_placement) {
-    document.getElementById('rp-submitted-notice').classList.remove('hidden');
-    document.getElementById('rp-notice-title').textContent =
-      `Placement ${_placement.status}.`;
-    document.getElementById('rp-notice-body').textContent =
-      ` ${_placement.company_name} · ${formatAddress(_placement)}`;
-
-    if (_placement.status !== 'submitted') {
-      // Terminal status — form is irrelevant
-      document.getElementById('rp-form-card').classList.add('hidden');
-      return;
-    }
-    // submitted but window closed — read-only view
-    if (!windowOpen) {
-      document.getElementById('rp-form').querySelectorAll('input').forEach(i => i.disabled = true);
-      document.getElementById('rp-submit').disabled = true;
-    }
-    // Pre-fill form with existing data
-    document.getElementById('rp-company').value = _placement.company_name       ?? '';
-    document.getElementById('rp-nature').value  = _placement.nature_of_business ?? '';
-    document.getElementById('rp-contact').value = _placement.contact_person     ?? '';
-    document.getElementById('rp-phone').value   = _placement.company_contact_phone ?? '';
-    document.getElementById('rp-region').value  = _placement.region             ?? '';
-    document.getElementById('rp-city').value    = _placement.city_town          ?? '';
-    document.getElementById('rp-street').value  = _placement.street_landmark    ?? '';
-    document.getElementById('rp-start').value   = _placement.start_date         ?? '';
-    document.getElementById('rp-end').value     = _placement.end_date           ?? '';
-    return;
-  }
-
-  if (!windowOpen) {
-    document.getElementById('rp-window-closed').classList.remove('hidden');
-    document.getElementById('rp-form').querySelectorAll('input').forEach(i => i.disabled = true);
-    document.getElementById('rp-submit').disabled = true;
-    return;
-  }
-
-  document.getElementById('rp-form').addEventListener('submit', handleRegisterPlacement);
-}
-
-function rpFieldErr(id, show) {
-  document.getElementById(id).classList.toggle('hidden', !show);
-}
-
-async function handleRegisterPlacement(e) {
-  e.preventDefault();
-  document.getElementById('rp-banner').classList.add('hidden');
-
-  const company_name          = document.getElementById('rp-company').value.trim();
-  const nature_of_business    = document.getElementById('rp-nature').value.trim();
-  const contact_person        = document.getElementById('rp-contact').value.trim();
-  const company_contact_phone = document.getElementById('rp-phone').value.trim();
-  const region                = document.getElementById('rp-region').value.trim();
-  const city_town             = document.getElementById('rp-city').value.trim();
-  const street_landmark       = document.getElementById('rp-street').value.trim();
-  const start_date            = document.getElementById('rp-start').value;
-  const end_date              = document.getElementById('rp-end').value;
-
-  let ok = true;
-  rpFieldErr('rp-company-err', !company_name);      if (!company_name)          ok = false;
-  rpFieldErr('rp-nature-err',  !nature_of_business); if (!nature_of_business)   ok = false;
-  rpFieldErr('rp-contact-err', !contact_person);    if (!contact_person)        ok = false;
-  rpFieldErr('rp-phone-err',   !company_contact_phone); if (!company_contact_phone) ok = false;
-  rpFieldErr('rp-region-err',  !region);            if (!region)                ok = false;
-  rpFieldErr('rp-city-err',    !city_town);         if (!city_town)             ok = false;
-  rpFieldErr('rp-street-err',  !street_landmark);   if (!street_landmark)       ok = false;
-  rpFieldErr('rp-start-err',   !start_date);        if (!start_date)            ok = false;
-  rpFieldErr('rp-end-err',     !end_date);          if (!end_date)              ok = false;
-  if (!ok) return;
-
-  const btn = document.getElementById('rp-submit');
-  btn.disabled = true;
-  btn.textContent = 'Submitting…';
-
-  // Attempt GPS capture (non-blocking, 8 s timeout)
-  let latitude = null, longitude = null, location_source = 'manual';
-  const gpsLabel = document.getElementById('rp-gps-label');
-  gpsLabel.textContent = 'Capturing location…';
-  try {
-    const pos = await new Promise((res, rej) => {
-      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 0 });
-    });
-    latitude        = pos.coords.latitude;
-    longitude       = pos.coords.longitude;
-    location_source = 'gps';
-    gpsLabel.textContent = `Location captured (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-  } catch {
-    gpsLabel.textContent = 'Location unavailable — submitting with address only.';
-  }
-
-  const { data: saved, error } = await syncPlacement({
-    draft_id:    generateUuid(),
-    student_id:  userId,
-    season_id:   _season.id,
-    company_name, nature_of_business, contact_person, company_contact_phone,
-    region, city_town, street_landmark, start_date, end_date,
-    latitude, longitude, location_source,
-  });
-
-  btn.disabled = false;
-  btn.innerHTML = '<i data-lucide="send"></i> Submit Placement';
-
-  if (error) {
-    document.getElementById('rp-banner-msg').textContent = error.message;
-    document.getElementById('rp-banner').classList.remove('hidden');
-    return;
-  }
-
-  _placement = saved;
-  showToast('Placement submitted successfully.', 'success');
-
-  // Refresh notice
-  document.getElementById('rp-submitted-notice').classList.remove('hidden');
-  document.getElementById('rp-notice-title').textContent = 'Placement submitted.';
-  document.getElementById('rp-notice-body').textContent =
-    ` ${saved.company_name} · ${formatAddress(saved)}`;
-  document.getElementById('rp-form').querySelectorAll('input').forEach(i => i.disabled = true);
-  document.getElementById('rp-submit').disabled = true;
+  await initPlacement(userId, _season, _placement, profile);
 }
 
 // ── 9. Phase 2 section loaders ───────────────────────────────────────────────
@@ -497,14 +381,12 @@ let _settingsLoaded   = false;
 async function loadAttendancePage() {
   if (_attendanceLoaded) return;
   _attendanceLoaded = true;
-  await initAttendance(userId, _season?.id ?? null, _placement);
+  await initAttendance(userId, _season?.id ?? null, _placement, fullName);
 }
 
 async function loadLogbookPage() {
   if (_logbookLoaded) return;
   _logbookLoaded = true;
-  const seasonLabel = document.getElementById('lb-season-label');
-  if (seasonLabel && _season) seasonLabel.textContent = `Season: ${_season.name}`;
   await initLogbook(userId, _season?.id ?? null, _placement);
 }
 
@@ -520,6 +402,13 @@ async function loadSettingsPage() {
   await initSettings();
 }
 
+let _reportLoaded = false;
+async function loadReportPage() {
+  if (_reportLoaded) return;
+  _reportLoaded = true;
+  await initReport(userId, _season?.id ?? null, _placement);
+}
+
 // Legacy name used by existing code (generate-letter, register-placement still call loadProfile)
 async function loadProfile() { await loadProfilePage(); }
 
@@ -528,5 +417,6 @@ if (initialPage === 'generate-letter')    loadGenerateLetter();
 if (initialPage === 'register-placement') loadRegisterPlacement();
 if (initialPage === 'attendance')         loadAttendancePage();
 if (initialPage === 'logbook')            loadLogbookPage();
+if (initialPage === 'attachment-report')  loadReportPage();
 if (initialPage === 'profile')            loadProfilePage();
 if (initialPage === 'settings')           loadSettingsPage();

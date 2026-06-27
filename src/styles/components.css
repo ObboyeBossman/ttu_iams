@@ -367,9 +367,9 @@
 [data-theme="dark"] .skeleton,
 [data-theme="dark"] .skeleton-shimmer {
   background: linear-gradient(90deg,
-    #1A202C 25%,
-    #2D3748 50%,
-    #1A202C 75%);
+    #252525 25%,
+    #303030 50%,
+    #252525 75%);
   background-size: 200% 100%;
 }
 

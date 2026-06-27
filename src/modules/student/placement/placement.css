@@ -1,0 +1,569 @@
+/* =============================================================================
+   IAMS — Placement Registration UI Styles
+   Extracted from Prototype
+   ============================================================================= */
+
+/* Floating interactive background blobs */
+.ambient-glow-1, .ambient-glow-2 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(140px);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.18;
+  mix-blend-mode: screen;
+  transition: all 1s ease;
+}
+.ambient-glow-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--ttu-blue-mid);
+  top: 10%;
+  left: -100px;
+}
+.ambient-glow-2 {
+  width: 500px;
+  height: 500px;
+  background: var(--ttu-gold);
+  bottom: 15%;
+  right: -150px;
+}
+[data-theme="light"] .ambient-glow-1, [data-theme="light"] .ambient-glow-2 {
+  opacity: 0.05;
+}
+
+/* Elastic Shake Animation for Required Validation Feedback */
+@keyframes shakeInp {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.inp-error-shake {
+  animation: shakeInp 0.4s ease-in-out;
+  border-color: var(--border-danger) !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25) !important;
+}
+
+/* -------------------------------------------------------------
+   FULL-WIDTH UTILIZATION SHELL
+   ------------------------------------------------------------- */
+.wizard-shell {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-2xl) var(--space-4xl);
+}
+
+/* Spacious Adaptive Grid */
+.main-workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2xl);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .main-workspace-grid {
+    grid-template-columns: 1.6fr 1fr;
+  }
+}
+
+/* Form panel card styling */
+.wizard-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-raised);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sidebar panel */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  position: sticky;
+  top: 92px;
+}
+
+/* Premium Interactive Ticket Design with holographic scanlines */
+.preview-card {
+  background: linear-gradient(135deg, var(--ttu-blue) 0%, var(--ttu-blue-dark) 100%);
+  color: var(--text-on-brand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-raised);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.preview-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.preview-card .ttu-badge {
+  background: var(--ttu-gold);
+  color: var(--ttu-blue-dark);
+  font-weight: 800;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: var(--space-md);
+  box-shadow: 0 2px 8px rgba(240, 165, 0, 0.3);
+}
+
+/* Live ticket holographic glow effect on data updates */
+.preview-card.data-glow {
+  animation: hologramPulse 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes hologramPulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(240, 165, 0, 0.4), var(--shadow-raised);
+    transform: translateY(-2px);
+  }
+  50% {
+    box-shadow: 0 0 25px 4px rgba(240, 165, 0, 0.35), var(--shadow-raised);
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(240, 165, 0, 0), var(--shadow-raised);
+    transform: translateY(0);
+  }
+}
+
+.guidance-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-raised);
+}
+
+/* -------------------------------------------------------------
+   STAGE TIMELINE & DYNAMIC HOVER EFFECTS
+   ------------------------------------------------------------- */
+.stage-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+}
+.stage-dot-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.stage-dot {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid var(--border-default);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.stage-dot.done {
+  background: var(--ttu-blue);
+  border-color: var(--ttu-blue);
+  color: var(--text-on-brand);
+}
+.stage-dot.active {
+  background: var(--bg-card);
+  border-color: var(--ttu-blue);
+  color: var(--ttu-blue);
+  box-shadow: 0 0 0 4px var(--focus-ring), 0 0 0 8px rgba(240, 165, 0, 0.12);
+}
+
+/* Interactive Timeline Hover UX */
+@keyframes orbRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.stage-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 52px; height: 52px;
+  border: 1.5px dashed var(--ttu-gold);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+.stage-dot:hover {
+  transform: scale(1.15) translateY(-2px);
+  border-color: var(--ttu-gold);
+  color: var(--ttu-gold);
+  box-shadow: 0 8px 24px rgba(240, 165, 0, 0.25);
+  z-index: 10;
+}
+.stage-dot:hover::after {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  animation: orbRotate 6s linear infinite;
+}
+.stage-dot i {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.stage-dot:hover i {
+  transform: scale(1.1) rotate(8deg);
+}
+
+.stage-connector {
+  flex: 1;
+  height: 4px;
+  margin: 0 8px;
+  border-radius: 4px;
+  background: var(--border-default);
+  position: relative;
+  overflow: hidden;
+  transition: height 0.3s ease, box-shadow 0.3s ease;
+}
+.stage-connector::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--ttu-blue), var(--ttu-gold));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stage-connector.done::after {
+  transform: scaleX(1);
+}
+
+.stage-connector:hover {
+  height: 6px;
+  box-shadow: 0 0 12px rgba(240, 165, 0, 0.3);
+}
+
+.stage-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+.stage-label {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+  transition: color 0.3s ease, font-weight 0.3s ease;
+}
+.stage-label:first-child { text-align: left; }
+.stage-label:last-child { text-align: right; }
+.stage-label.active {
+  color: var(--ttu-blue);
+  font-weight: 800;
+}
+
+/* --- Form grid --- */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md) var(--space-lg);
+}
+.form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lbl {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* --- GPS Radar Telemetry Animations --- */
+.gps-stage-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-3xl) var(--space-xl);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at 50% 38%, var(--ttu-blue-surface) 0%, transparent 68%), var(--bg-card);
+  border: 1px solid var(--border-default);
+  overflow: hidden;
+}
+[data-theme="dark"] .gps-stage-box {
+  background: radial-gradient(circle at 50% 38%, rgba(26, 58, 140, 0.12) 0%, transparent 68%), var(--bg-card);
+}
+.gps-stage-box::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(var(--border-default) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-default) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, black 0%, transparent 70%);
+}
+
+.gps-radar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-lg);
+  z-index: 1;
+}
+.gps-radar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--ttu-blue);
+  opacity: 0;
+}
+.gps-radar.locating .gps-radar-ring {
+  animation: radarPulse 2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+}
+.gps-radar.locating .gps-radar-ring:nth-child(2) { animation-delay: 0.6s; }
+.gps-radar.locating .gps-radar-ring:nth-child(3) { animation-delay: 1.2s; }
+@keyframes radarPulse {
+  0%   { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+.gps-icon-ring {
+  position: relative;
+  z-index: 2;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.gps-icon-ring.pending  { background: var(--bg-card); color: var(--ttu-blue); border: 2.5px solid var(--border-default); }
+.gps-icon-ring.locating { background: var(--ttu-blue); color: var(--text-on-brand); box-shadow: 0 4px 20px rgba(26,58,140,0.4); }
+.gps-icon-ring.success  { background: var(--bg-success); color: var(--green); box-shadow: 0 0 0 8px var(--bg-success); }
+.gps-icon-ring.failed   { background: var(--bg-danger); color: var(--ttu-red); }
+.gps-icon-ring.manual   { background: var(--slate-bg); color: var(--slate); }
+.gps-icon-ring svg { width: 32px; height: 32px; }
+
+.gps-coords {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--bg-prefix);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 18px;
+  margin-bottom: var(--space-lg);
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* --- Review Details Rows --- */
+.review-section {
+  margin-bottom: var(--space-xl);
+}
+.review-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 2px solid var(--border-default);
+}
+.review-section-title .title-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.review-section-title .title-text svg {
+  width: 16px; height: 16px;
+  color: var(--ttu-blue);
+}
+.review-edit-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ttu-blue);
+  cursor: pointer;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s;
+}
+.review-edit-link:hover { text-decoration: underline; opacity: 0.8; }
+
+.review-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 14px;
+}
+.review-row:last-child { border-bottom: none; }
+.review-row .k { color: var(--text-secondary); }
+.review-row .v { font-weight: 600; color: var(--text-primary); text-align: right; }
+
+/* --- Guidance Hub Accordeon --- */
+.guidance-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.guidance-item {
+  border-bottom: 1px solid var(--border-default);
+  padding: 14px 0;
+}
+.guidance-item:last-child { border: none; }
+.guidance-q {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: color 0.2s;
+}
+.guidance-q:hover { color: var(--ttu-blue); }
+.guidance-a {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  line-height: 1.6;
+  display: none;
+  animation: slideDown 0.25s ease-out forwards;
+}
+.guidance-item.active .guidance-a {
+  display: block;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Interactive Live Ticket --- */
+.live-ticket {
+  border: 1.5px dashed rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.04);
+  margin-top: var(--space-md);
+  position: relative;
+}
+.live-ticket-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.live-ticket-row:last-child { margin-bottom: 0; }
+.live-ticket-label { opacity: 0.75; }
+.live-ticket-value { font-weight: 600; text-align: right; transition: color 0.3s ease; }
+
+.private-browsing-banner, .resume-banner, .onsite-banner, .edit-deadline-banner, .edit-closed-banner {
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 13px;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  border: 1px solid;
+}
+.onsite-banner { background: var(--bg-prefix); border-color: var(--border-default); color: var(--text-primary); }
+.private-browsing-banner { background: var(--bg-warning); border-color: var(--border-warning); color: var(--amber); }
+.resume-banner { background: var(--bg-gold); border-color: rgba(240,165,0,0.3); color: var(--text-on-gold); }
+.edit-deadline-banner { background: var(--bg-gold); border-color: rgba(240,165,0,0.3); color: var(--text-on-gold); }
+.edit-closed-banner { background: var(--bg-danger); border-color: rgba(239,68,68,0.25); color: var(--ttu-red); }
+
+/* Beautiful Staggered Stage Transitions */
+.placement-stage-view { display: none; opacity: 0; transform: translateY(12px); }
+.placement-stage-view.active {
+  display: block;
+  animation: stageSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes stageSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Confetti Spark System */
+.confetti-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  overflow: hidden;
+}
+.confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--ttu-gold);
+  border-radius: 50%;
+  animation: fall 2.5s ease-out forwards;
+}
+@keyframes fall {
+  0% { transform: translateY(-10px) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(350px) rotate(360deg) scale(0.4); opacity: 0; }
+}
+
+.sync-banner {
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 13px;
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  border: 1px solid;
+}
+.sync-banner.pending { background: var(--bg-warning); border-color: var(--border-warning); color: var(--amber); }
+.sync-banner.error { background: var(--bg-danger); border-color: var(--border-danger); color: var(--ttu-red); }

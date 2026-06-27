@@ -1,444 +1,422 @@
 // =============================================================================
-// IAMS — shared/pdf/generate-letter.js
+// IAMS — src/shared/pdf/generate-letter.js
+// FR2: Attachment Letter Generation
 // =============================================================================
-// Owns the entire PDF assembly pipeline for FR2:
-//   1. Calls letters.generateLetter() to insert the metadata row and receive
-//      a verification_code back from the server.
-//   2. Calls settings.getSettings() to get the three branding asset paths, then
-//      getSignedAssetUrl() for each path individually (per-asset, not all-or-
-//      nothing) so a missing stamp or signature degrades gracefully to a PDF
-//      without that image rather than aborting entirely.
-//   3. Resolves each signed URL to a renderable image source — handling both
-//      real Supabase https:// URLs (fetch → base64) and the mock's
-//      iams-mock-asset:// scheme (resolved via supabase._mock.resolveSignedUrl).
-//   4. Builds the PDF layout with jsPDF (CDN/ESM) and triggers a browser
-//      download.
 //
-// Nothing here talks to the `letters` table or `settings` table directly —
-// that stays inside services/*.js per Section 10. This file only orchestrates
-// the fetch → assemble → download sequence and owns the PDF layout decisions.
+// Generates and downloads the official TTU Industrial Liaison Office
+// attachment-request letter as a jsPDF A4 PDF.
 //
-// NFR3: "PDF generation should complete within 3 seconds under normal network
-// conditions." The main latency source is image fetch for three branding
-// assets. We resolve all three concurrently (Promise.all) so the serial chain
-// is as short as possible:
-//   insert metadata → getSettings → resolve 3 signed URLs + fetch 3 images
-//   (concurrent) → assemble PDF → download.
+// Asset resolution (two-tier, automatic, never throws):
+//   PRIMARY  — Supabase Storage via get-letter-assets Edge Function.
+//              Active once admin uploads assets through the Settings panel.
+//   FALLBACK — Local files bundled in public/assets/letters/.
+//              Used during development and before admin configures storage.
 //
-// Mock compatibility: mock-storage.js issues iams-mock-asset:// URLs that
-// can't be fetched directly. resolveImageSource() detects the scheme and
-// delegates to supabase._mock.resolveSignedUrl() to get the real data URL.
-// Real deployments never reach that branch — the mock escape hatch is
-// explicitly _mock-prefixed and never present on the live client.
+// Caller contract:
+//   generateAndDownloadLetter(formData, studentProfile, season)
+//   Returns: { data: { letterRow: true }, error: null }   — success
+//            { data: { letterRow: true }, error: Error }  — PDF build/save failed
+//   Never throws — all errors are returned, not thrown.
+//
+// The `letters` row is inserted by the CALLER before calling this function.
+// This file does not touch the database.
 // =============================================================================
 
-import { supabase } from '../supabase-client.js';
-import { generateLetter as insertLetterRow } from '../services/letters.js';
-import { getSettings, getSignedAssetUrl } from '../services/settings.js';
-import { formatDate, formatAddress } from '../utils.js';
+// ---------------------------------------------------------------------------
+// jsPDF — lazy-loaded so pages that never generate letters don't pay the cost
+// ---------------------------------------------------------------------------
 
-// jsPDF is loaded via CDN. Since this file is always used as an ES module
-// (Section 9.1 "no build step, ES modules"), we import the ESM build from
-// esm.sh — same pattern as Dexie.js in offline-queue.js. The import is
-// deferred inside getJsPDF() rather than at module load so pages that never
-// trigger letter generation don't pay the CDN round-trip.
 let _jsPDF = null;
+
 async function getJsPDF() {
   if (_jsPDF) return _jsPDF;
   const mod = await import('https://esm.sh/jspdf@2');
-  // jsPDF 2.x ESM build exports { jsPDF } as a named export.
   _jsPDF = mod.jsPDF ?? mod.default?.jsPDF ?? mod.default;
-  if (!_jsPDF) {
-    throw new Error(
-      'generate-letter: failed to load jsPDF from CDN — check your internet connection.'
-    );
-  }
+  if (!_jsPDF) throw new Error('generate-letter: could not load jsPDF from CDN.');
   return _jsPDF;
 }
 
-// -----------------------------------------------------------------------
-// Image resolution
-// -----------------------------------------------------------------------
-// Converts a signed URL (real or mock) into a data URL that jsPDF can pass
-// to addImage(). Always returns { data: string } | { data: null, error }.
-// Never throws — callers check the return shape.
+// ---------------------------------------------------------------------------
+// Date helpers
+// ---------------------------------------------------------------------------
 
-async function resolveImageSource(signedUrl) {
-  if (!signedUrl) {
-    return { data: null, error: { message: 'generate-letter: signedUrl is empty or null' } };
-  }
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
 
-  // Mock path: iams-mock-asset:// URLs are not real HTTP URLs. The mock
-  // client exposes resolveSignedUrl() to turn them into data URLs with
-  // proper expiry enforcement. Only present when USE_MOCK = true.
-  if (signedUrl.startsWith('iams-mock-asset://')) {
-    if (!supabase._mock?.resolveSignedUrl) {
-      return {
-        data: null,
-        error: {
-          message:
-            'generate-letter: supabase._mock.resolveSignedUrl not available — is USE_MOCK = true in supabase-client.js?',
-        },
-      };
-    }
-    const resolved = supabase._mock.resolveSignedUrl(signedUrl);
-    if (resolved.error) return { data: null, error: resolved.error };
-    return { data: resolved.data.url, error: null };
-  }
-
-  // Real path: fetch the image and convert to a base64 data URL so jsPDF
-  // can embed it. Supabase Storage enables CORS for the anon key's origin by
-  // default, so the fetch itself is safe; the blob→dataURL step keeps the
-  // asset embedded in the PDF rather than externally referenced.
-  try {
-    const resp = await fetch(signedUrl);
-    if (!resp.ok) {
-      return {
-        data: null,
-        error: { message: 'generate-letter: image fetch failed (HTTP ' + resp.status + ')' },
-      };
-    }
-    const blob = await resp.blob();
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload  = () => resolve(reader.result);
-      reader.onerror = () =>
-        reject(new Error('generate-letter: FileReader failed converting image to data URL'));
-      reader.readAsDataURL(blob);
-    });
-    return { data: dataUrl, error: null };
-  } catch (err) {
-    return {
-      data: null,
-      error: { message: err.message ?? 'generate-letter: unexpected error fetching image' },
-    };
+function ordinalSuffix(n) {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
   }
 }
 
-// Convenience: getSignedAssetUrl → resolveImageSource in one step.
-// Returns { data: dataUrl | null, error } — soft failure, never throws.
-async function resolveAssetPath(assetPath) {
-  const { data: urlData, error: urlError } = await getSignedAssetUrl(assetPath);
-  if (urlError) return { data: null, error: urlError };
-  return resolveImageSource(urlData.signedUrl);
+/** '2026-08-25' → '25th August, 2026'  (used in body paragraph) */
+function formatAttachmentDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const day = d.getDate();
+  return `${day}${ordinalSuffix(day)} ${MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
 }
 
-// -----------------------------------------------------------------------
-// PDF layout constants — A4 in mm (210 × 297), unit = 'mm'
-// -----------------------------------------------------------------------
+/** '2025-08-12' → '12TH AUGUST, 2025'  (used in top-right date line) */
+function formatLetterDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const day = d.getDate();
+  return `${day}${ordinalSuffix(day).toUpperCase()} ${MONTHS[d.getMonth()].toUpperCase()}, ${d.getFullYear()}`;
+}
 
-const PAGE_W  = 210;
-const PAGE_H  = 297;
-const MARGIN  = 20;
-const BODY_W  = PAGE_W - MARGIN * 2;
+// ---------------------------------------------------------------------------
+// Asset resolution — Supabase Storage first, local files as fallback
+// ---------------------------------------------------------------------------
 
-// Letterhead: full-width band at the top of the page.
-const LETTERHEAD_X = MARGIN;
-const LETTERHEAD_Y = 10;
-const LETTERHEAD_W = BODY_W;
-const LETTERHEAD_H = 35;
-
-// Body text starts below the letterhead.
-const BODY_START_Y = LETTERHEAD_Y + LETTERHEAD_H + 12;
-
-// Stamp + signature: fixed bottom zone so layout doesn't shift with body length.
-const BOTTOM_ZONE_Y = PAGE_H - 60;
-const STAMP_X = MARGIN;
-const STAMP_W = 40;
-const STAMP_H = 40;
-const SIG_W   = 60;
-const SIG_H   = 25;
-const SIG_X   = PAGE_W - MARGIN - SIG_W;
-
-// jsPDF font sizes (pt).
-const FONT_BODY    = 11;
-const FONT_SMALL   = 9;
-const FONT_HEADING = 13;
-
-// -----------------------------------------------------------------------
-// PDF builder (internal)
-// -----------------------------------------------------------------------
+const LOCAL_ASSETS = {
+  letterhead: '/assets/letters/ttu_letterhead.jpeg',
+  stamp:      '/assets/letters/ttu_signature_stamp.jpeg',
+  footer:     '/assets/letters/ttu_footer.png',
+};
 
 /**
- * Assembles the PDF document and returns the jsPDF instance.
- * All image sources (`urls.*`) must already be data URLs or null at this point.
+ * Fetches any URL and returns a raw base64 string, or null on any failure.
+ * Chunked to avoid call-stack overflow on large images.
  */
-async function buildPdf(letterRow, studentName, urls, verifyBaseUrl) {
+async function toBase64(url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const buf   = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    const CHUNK = 8192;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolves all three letter assets.
+ *
+ * Each asset object: { data: string|null, format: 'JPEG'|'PNG' }
+ * `data` is null only if both Supabase and the local file both fail —
+ * buildPdf guards each addImage call so the PDF still renders without it.
+ */
+async function resolveAssets() {
+  // ── Try Supabase Storage (get-letter-assets Edge Function) ──────────────
+  let remote = null;
+  try {
+    const url    = import.meta.env.VITE_SUPABASE_URL;
+    const anon   = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const { data: { session } } = await createClient(url, anon).auth.getSession();
+    const jwt = session?.access_token;
+
+    if (jwt) {
+      const res = await fetch(`${url}/functions/v1/get-letter-assets`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${jwt}`,
+          'apikey':         anon,
+        },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        const p = await res.json();
+        if (p.letterhead_url && p.stamp_url && p.footer_url) {
+          remote = { letterhead: p.letterhead_url, stamp: p.stamp_url, footer: p.footer_url };
+        }
+      }
+    }
+  } catch {
+    // No session, Edge Function not deployed, or network error — use local files.
+  }
+
+  // ── Resolve each asset: remote first, local fallback ────────────────────
+  async function resolve(key, localPath, format) {
+    if (remote?.[key]) {
+      const data = await toBase64(remote[key]);
+      if (data) return { data, format };
+    }
+    const data = await toBase64(localPath);
+    return { data, format };
+  }
+
+  const [letterhead, stamp, footer] = await Promise.all([
+    resolve('letterhead', LOCAL_ASSETS.letterhead, 'JPEG'),
+    resolve('stamp',      LOCAL_ASSETS.stamp,      'JPEG'),
+    resolve('footer',     LOCAL_ASSETS.footer,     'PNG'),
+  ]);
+
+  return { letterhead, stamp, footer };
+}
+
+// ---------------------------------------------------------------------------
+// Mixed-bold inline text helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Draws a justified paragraph where one contiguous run of text is bold.
+ * Structure: [normal] prefix + [bold] boldText + [normal] suffix
+ *
+ * jsPDF can't mix font weights in a single doc.text() call, so we:
+ *   1. Split the full concatenated string into wrapped lines.
+ *   2. Walk each line, identifying which characters fall in the bold region.
+ *   3. Draw each segment separately, tracking the x cursor manually.
+ *
+ * @returns {number} y position after the last line
+ */
+function drawMixedBoldPara(doc, prefix, boldText, suffix, x, y, width, lineHeight, fontSize) {
+  doc.setFontSize(fontSize);
+  doc.setFont('times', 'normal');
+
+  const full      = prefix + boldText + suffix;
+  const boldStart = prefix.length;
+  const boldEnd   = boldStart + boldText.length;
+  const lines     = doc.splitTextToSize(full, width);
+
+  let charPos = 0;
+
+  for (let li = 0; li < lines.length; li++) {
+    const line      = lines[li];
+    const lineStart = charPos;
+    const lineEnd   = charPos + line.length;
+
+    const seg1 = lineStart < Math.min(boldStart, lineEnd)
+      ? full.slice(lineStart, Math.min(boldStart, lineEnd)) : '';
+    const seg2 = Math.max(boldStart, lineStart) < Math.min(boldEnd, lineEnd)
+      ? full.slice(Math.max(boldStart, lineStart), Math.min(boldEnd, lineEnd)) : '';
+    const seg3 = Math.max(boldEnd, lineStart) < lineEnd
+      ? full.slice(Math.max(boldEnd, lineStart), lineEnd) : '';
+
+    let curX = x;
+
+    if (seg1) {
+      doc.setFont('times', 'normal');
+      doc.text(seg1, curX, y);
+      curX += doc.getTextWidth(seg1);
+    }
+    if (seg2) {
+      doc.setFont('times', 'bold');
+      doc.text(seg2, curX, y);
+      curX += doc.getTextWidth(seg2);
+    }
+    if (seg3) {
+      doc.setFont('times', 'normal');
+      doc.text(seg3, curX, y);
+    }
+
+    y += lineHeight;
+    // Advance past this line's characters plus the space splitTextToSize consumed
+    charPos = lineEnd + (li < lines.length - 1 ? 1 : 0);
+  }
+
+  doc.setFont('times', 'normal');
+  return y;
+}
+
+// ---------------------------------------------------------------------------
+// PDF builder
+// ---------------------------------------------------------------------------
+
+async function buildPdf(formData, studentProfile, season, assets) {
   const jsPDF = await getJsPDF();
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-  // ── 1. Letterhead ──────────────────────────────────────────────────────
-  if (urls.letterheadUrl) {
-    try {
-      doc.addImage(
-        urls.letterheadUrl, 'PNG',
-        LETTERHEAD_X, LETTERHEAD_Y, LETTERHEAD_W, LETTERHEAD_H
-      );
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('generate-letter: could not embed letterhead:', e.message);
-    }
+  // Layout constants — A4 is 210 × 297 mm
+  const LEFT   = 20;
+  const RIGHT  = 195;   // 210 − 15 mm right margin
+  const BODY_W = 175;   // RIGHT − LEFT
+  const LH     = 5;     // line height in mm at 11 pt
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+
+  // ── Block 1 — Letterhead (x=15, y=3, 180×38 mm) ─────────────────────
+  if (assets.letterhead.data) {
+    doc.addImage(assets.letterhead.data, 'JPEG', 15, 3, 180, 38);
   }
 
-  // ── 2. Date (top-right) ────────────────────────────────────────────────
-  let y = BODY_START_Y;
-  doc.setFontSize(FONT_SMALL);
-  doc.setTextColor(100);
-  const dateStr = formatDate(letterRow.generated_at ?? new Date().toISOString());
-  doc.text(dateStr, PAGE_W - MARGIN, y, { align: 'right' });
-  y += 6;
+  // ── Block 2 — Reference number  (left, y=45) ───────────────────────────
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text('TTU/ILO/IAP/VOL.2/16', LEFT, 45);
 
-  // ── 3. Recipient block ─────────────────────────────────────────────────
-  doc.setFontSize(FONT_BODY);
-  doc.setTextColor(0);
-  doc.setFont(undefined, 'bold');
-  doc.text('To,', MARGIN, y);
-  y += 5;
+  // ── Block 3 — Date  (right-aligned, same y=45) ─────────────────────────
+  const dateStr = formatLetterDate(
+    formData.generated_at
+      ? formData.generated_at.slice(0, 10)
+      : new Date().toISOString().slice(0, 10)
+  );
+  doc.text(dateStr, RIGHT, 45, { align: 'right' });
 
-  doc.setFont(undefined, 'normal');
-  if (letterRow.contact_person) {
-    doc.text(letterRow.contact_person, MARGIN, y);
-    y += 5;
-  }
-  doc.text(letterRow.company_name, MARGIN, y);
-  y += 5;
+  // ── Block 4 — Addressee block  (y=52, lh=5 mm) ────────────────────────
+  let y = 52;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text('THE MANAGER',                                        LEFT, y); y += LH;
+  doc.text((formData.company_name ?? '').toUpperCase(),          LEFT, y); y += LH;
+  doc.text((formData.city_town    ?? '').toUpperCase(),          LEFT, y); y += LH;
+  doc.text('Dear Sir/Madam,',                                    LEFT, y);
 
-  const fullAddress = formatAddress({
-    street_landmark: letterRow.street_landmark,
-    city_town:       letterRow.city_town,
-    region:          letterRow.region,
-  });
-  const addrLines = doc.splitTextToSize(fullAddress, BODY_W * 0.6);
-  doc.text(addrLines, MARGIN, y);
-  y += addrLines.length * 5 + 3;
+  // ── Block 5 — Subject heading  (centred, bold, underlined) ───────
+  y += 8;
+  const subject = 'PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS';
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.text(subject, 105, y, { align: 'center' });
+  const sw = doc.getTextWidth(subject);
+  const sx = 105 - sw / 2;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(sx, y + 1, sx + sw, y + 1);
 
-  if (letterRow.company_contact_phone) {
-    doc.setFontSize(FONT_SMALL);
-    doc.text('Tel: ' + letterRow.company_contact_phone, MARGIN, y);
-    doc.setFontSize(FONT_BODY);
-    y += 5;
-  }
+  // ── Block 6 — Body paragraph 1  (justified) ──────────────────────
+  y += 8;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  const p1 = `Students of Takoradi Technical University pursuing ${studentProfile.programme} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
+  const p1lines = doc.splitTextToSize(p1, BODY_W);
+  doc.text(p1lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
+  y += p1lines.length * LH;
+
+  // ── Block 7 — Body paragraph 2  (4 mm gap, justified) ──────────────────
   y += 4;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  const p2 =
+    'It is believed that the attachment programme would bring positive industrial exposure to ' +
+    'students. This exercise would enable students to put theory into practice and acquaint ' +
+    'themselves with current technological development in industry and commerce.';
+  const p2lines = doc.splitTextToSize(p2, BODY_W);
+  doc.text(p2lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
+  y += p2lines.length * LH;
 
-  // ── 4. Subject line ────────────────────────────────────────────────────
-  doc.setFont(undefined, 'bold');
-  doc.setFontSize(FONT_HEADING);
-  doc.text('RE: INDUSTRIAL ATTACHMENT REQUEST', MARGIN, y);
-  y += 8;
+  // ── Block 8 — Body paragraph 3  (4 mm gap, bold dates inline) ──────────
+  y += 4;
+  const boldDates = `${formatAttachmentDate(season.start_date)} to ${formatAttachmentDate(season.end_date)}`;
+  const p3prefix  =
+    'The University would, therefore, be grateful if you could consider the under-mentioned ' +
+    'student to undertake his/her industrial attachment programme in your organization from ';
+  y = drawMixedBoldPara(doc, p3prefix, boldDates, '.', LEFT, y, BODY_W, LH, 11);
 
-  // ── 5. Salutation ──────────────────────────────────────────────────────
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(FONT_BODY);
-  doc.text('Dear Sir/Madam,', MARGIN, y);
-  y += 8;
+  // ── Block 9 — Particulars intro  (4 mm gap) ────────────────────────────
+  y += 4;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text("The student's particulars are as follows:", LEFT, y);
 
-  // ── 6. Body paragraphs ─────────────────────────────────────────────────
-  const para1 =
-    'We write to formally introduce ' + studentName + ', a student of Takoradi Technical University ' +
-    '(TTU), who is currently pursuing their academic programme and is required to undergo Industrial ' +
-    'Attachment as part of their course of study.';
-  const p1Lines = doc.splitTextToSize(para1, BODY_W);
-  doc.text(p1Lines, MARGIN, y);
-  y += p1Lines.length * 6 + 4;
-
-  const para2 =
-    'We respectfully request that your esteemed organisation provide an attachment placement for ' +
-    studentName + '. The period of attachment is typically one academic semester. We trust that this ' +
-    'opportunity will be mutually beneficial and help the student gain practical experience in an ' +
-    'industry setting.';
-  const p2Lines = doc.splitTextToSize(para2, BODY_W);
-  doc.text(p2Lines, MARGIN, y);
-  y += p2Lines.length * 6 + 4;
-
-  const para3 =
-    'Should you require any additional information, please do not hesitate to contact the Industrial ' +
-    'Liaison Office. We thank you in advance for your consideration and cooperation.';
-  const p3Lines = doc.splitTextToSize(para3, BODY_W);
-  doc.text(p3Lines, MARGIN, y);
-  y += p3Lines.length * 6 + 8;
-
-  // ── 7. Closing ─────────────────────────────────────────────────────────
-  doc.text('Yours faithfully,', MARGIN, y);
-  doc.text('For: The Industrial Liaison Office', MARGIN, y + 5);
-  doc.text('Takoradi Technical University', MARGIN, y + 10);
-
-  // ── 8. Stamp (bottom-left, fixed zone) ────────────────────────────────
-  if (urls.stampUrl) {
-    try {
-      doc.addImage(urls.stampUrl, 'PNG', STAMP_X, BOTTOM_ZONE_Y, STAMP_W, STAMP_H);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('generate-letter: could not embed stamp:', e.message);
-    }
+  // ── Block 10 — Student particulars  (bold, lh=5.5 mm) ────────────────────
+  y += LH;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  for (const line of [
+    `REGISTRATION NUMBER: ${studentProfile.index_number}`,
+    `NAME: ${(studentProfile.full_name ?? '').toUpperCase()}`,
+    `PROGRAMME: ${(studentProfile.programme ?? '').toUpperCase()}`,
+    `CONTACT NUMBER: ${studentProfile.phone}`,
+  ]) {
+    doc.text(line, LEFT, y);
+    y += LH;
   }
 
-  // ── 9. Signature (bottom-right, fixed zone) ───────────────────────────
-  if (urls.signatureUrl) {
-    try {
-      doc.addImage(urls.signatureUrl, 'PNG', SIG_X, BOTTOM_ZONE_Y, SIG_W, SIG_H);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('generate-letter: could not embed signature:', e.message);
-    }
+  // ── Block 11 — Closing paragraphs  (4 mm gap, justified) ───────────────
+  y += 4;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  for (const para of [
+    'We request that the student should be made to familiarize him/herself with all the related sections available in your organization.',
+    'For your information, all students at the University are covered by Group Personal Accident Insurance policy.',
+    'We count on your usual cooperation.',
+  ]) {
+    const lines = doc.splitTextToSize(para, BODY_W);
+    doc.text(lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
+    y += lines.length * LH + 3;
   }
-  doc.setFontSize(FONT_SMALL);
-  doc.setTextColor(80);
-  doc.text('Authorised Signatory', SIG_X + SIG_W / 2, BOTTOM_ZONE_Y + SIG_H + 4, {
-    align: 'center',
-  });
 
-  // ── 10. Verification code footer ──────────────────────────────────────
-  // FR2: "each letter embeds a short verification code linking to a public
-  // lookup page." No QR code in Phase 1 (spec says "optionally" — the page
-  // script can layer one on via a qrcode library if desired).
-  const FOOTER_Y   = PAGE_H - 8;
-  const verifyPath = verifyBaseUrl
-    ? verifyBaseUrl.replace(/\/$/, '') + '/' + letterRow.verification_code
-    : null;
+  // ── Block 12 — Sign-off ─────────────────────────────────────────────────
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text('Yours faithfully,', LEFT, y);
 
-  doc.setDrawColor(180);
-  doc.setLineWidth(0.2);
-  doc.line(MARGIN, FOOTER_Y - 3, PAGE_W - MARGIN, FOOTER_Y - 3);
+  // ── Block 13 — Signature/stamp image  (3 mm gap, 45×18 mm) ────────────
+  y += 3;
+  if (assets.stamp.data) {
+    doc.addImage(assets.stamp.data, 'JPEG', LEFT, y, 45, 18);
+  }
+  y += 18;
 
-  doc.setFontSize(FONT_SMALL - 1);
-  doc.setTextColor(120);
-  doc.text('Verification code: ' + letterRow.verification_code, MARGIN, FOOTER_Y);
-  if (verifyPath) {
-    doc.text('Verify at: ' + verifyPath, MARGIN, FOOTER_Y + 4);
+  // ── Block 14 — Signatory name and title  (3 mm gap) ────────────────────
+  y += 3;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.text('MARK KOFI O. AREMU (ESQ)', LEFT, y);
+  y += LH;
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text('Head, Industrial Liaison Office', LEFT, y);
+
+  // ── Block 15 — Verification code box  (fixed y=258) ────────────────────
+  doc.setDrawColor(136, 136, 136);
+  doc.setLineWidth(0.3);
+  doc.rect(LEFT, 258, BODY_W, 9);
+  doc.setFont('times', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(68, 68, 68);
+  doc.text(
+    `Verification Code: ${formData.verification_code}  |  Verify at: ttu.edu.gh/verify/${formData.verification_code}`,
+    LEFT + BODY_W / 2,
+    264,
+    { align: 'center' }
+  );
+
+  // ── Block 16 — Footer image  (fixed y=268, x=15, 180×19 mm) ───────────
+  if (assets.footer.data) {
+    doc.addImage(assets.footer.data, 'PNG', 15, 268, 180, 19);
   }
 
   return doc;
 }
 
-// -----------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Public API
-// -----------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 /**
- * The single function page scripts call. Handles the full pipeline:
- *   insert metadata row → fetch settings → resolve + fetch 3 branding images
- *   (concurrent) → build PDF → trigger browser download.
+ * Generates and triggers a browser download of the official TTU ILO
+ * attachment letter PDF.
  *
- * @param {Object} letterInput  Fields from the student's form:
- *   { student_id, season_id, company_name, region, city_town, street_landmark,
- *     contact_person, company_contact_phone }
- *   Passed directly to letters.generateLetter() — see letters.js for validation.
- *
- * @param {string} studentName  The signed-in student's full_name, resolved by
- *   the calling page from modules/auth/auth-guard.js + getStudentById(). Not re-queried
- *   here so this function stays stateless and decoupled from auth state.
- *
- * @param {Object} [options]
- *   options.verifyBaseUrl — base URL for the public /verify/ page (defaults to
- *     window.location.origin + '/verify'). Override in tests or if the verify
- *     page lives at a different path.
- *
- * @returns {{ data: { letterRow, filename } | null, error: { message } | null }}
- *   On success: data.letterRow is the confirmed DB row (includes
- *     verification_code and generated_at) so the page can update its letter
- *     count display without a separate refetch. data.filename is the
- *     downloaded filename string.
- *   On any error after the row is inserted: data.letterRow is still returned
- *     (non-null) with data.filename = null, so the page can at minimum reflect
- *     the count update even if PDF assembly failed.
- *   On row-insert failure: data is null.
+ * @param {Object} formData       - { student_id, season_id, company_name, region,
+ *                                    city_town, street_landmark, contact_person,
+ *                                    company_contact_phone, verification_code, generated_at }
+ * @param {Object} studentProfile - { full_name, index_number, programme, phone }
+ * @param {Object} season         - { start_date, end_date }
+ * @returns {{ data: { letterRow: true }, error: null | Error }}
  */
-export async function generateAndDownloadLetter(letterInput, studentName, options) {
-  const verifyBaseUrl =
-    (options && options.verifyBaseUrl) ||
-    (typeof window !== 'undefined'
-      ? window.location.origin + '/verify'
-      : '/verify');
+export async function generateAndDownloadLetter(formData, studentProfile, season) {
+  const assets = await resolveAssets();
 
-  // ── Step 1: Insert the metadata row ──────────────────────────────────
-  // Must happen before image fetches so the verification_code exists in the
-  // DB before we embed it in the PDF. Stop early on failure — no row means
-  // no code to embed.
-  const { data: letterRow, error: insertError } = await insertLetterRow(letterInput);
-  if (insertError) {
-    return { data: null, error: insertError };
-  }
-
-  // ── Step 2: Fetch settings ────────────────────────────────────────────
-  const { data: settingsRow, error: settingsError } = await getSettings();
-  if (settingsError) {
-    return {
-      data: { letterRow: letterRow, filename: null },
-      error: {
-        message:
-          'Letter recorded but PDF could not be assembled: ' + settingsError.message,
-      },
-    };
-  }
-
-  // ── Step 3: Resolve all three branding assets concurrently ────────────
-  // Per-asset resolution so a missing/unset path degrades softly rather
-  // than aborting the whole pipeline. getSignedAssetUrl() returns an error
-  // for a null/empty path (see settings.js), which resolveAssetPath()
-  // passes through as { data: null, error } — buildPdf() skips addImage()
-  // for any null URL.
-  const [letterheadResult, stampResult, signatureResult] = await Promise.all([
-    resolveAssetPath(settingsRow.letterhead_path),
-    resolveAssetPath(settingsRow.stamp_path),
-    resolveAssetPath(settingsRow.signature_path),
-  ]);
-
-  const resolvedUrls = {
-    letterheadUrl: letterheadResult.data || null,
-    stampUrl:      stampResult.data      || null,
-    signatureUrl:  signatureResult.data  || null,
-  };
-
-  // Log any asset failures for the developer — don't surface to the student.
-  for (const pair of [
-    ['letterheadUrl', letterheadResult],
-    ['stampUrl',      stampResult],
-    ['signatureUrl',  signatureResult],
-  ]) {
-    if (pair[1].error) {
-      // eslint-disable-next-line no-console
-      console.warn('generate-letter: ' + pair[0] + ' could not be resolved:', pair[1].error.message);
-    }
-  }
-
-  // ── Step 4: Build the PDF ─────────────────────────────────────────────
   let doc;
   try {
-    doc = await buildPdf(letterRow, studentName, resolvedUrls, verifyBaseUrl);
-  } catch (buildErr) {
-    return {
-      data: { letterRow: letterRow, filename: null },
-      error: {
-        message:
-          'Letter recorded but PDF assembly failed: ' +
-          (buildErr.message || String(buildErr)),
-      },
-    };
+    doc = await buildPdf(formData, studentProfile, season, assets);
+  } catch (err) {
+    return { data: { letterRow: true }, error: err instanceof Error ? err : new Error(String(err)) };
   }
-
-  // ── Step 5: Trigger browser download ──────────────────────────────────
-  // Filename includes verification code + date so re-generated letters for
-  // the same company are distinguishable in the student's downloads folder.
-  const datePart  = (letterRow.generated_at || new Date().toISOString()).slice(0, 10);
-  const namePart  = studentName
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-  const filename  =
-    'ttu-attachment-letter-' + namePart + '-' + letterRow.verification_code + '-' + datePart + '.pdf';
 
   try {
-    doc.save(filename);
-  } catch (saveErr) {
-    return {
-      data: { letterRow: letterRow, filename: null },
-      error: {
-        message:
-          'Letter recorded and PDF built but download failed: ' +
-          (saveErr.message || String(saveErr)),
-      },
-    };
+    doc.save(`TTU_Attachment_Letter_${formData.verification_code}.pdf`);
+  } catch (err) {
+    return { data: { letterRow: true }, error: err instanceof Error ? err : new Error(String(err)) };
   }
 
-  return { data: { letterRow: letterRow, filename: filename }, error: null };
+  return { data: { letterRow: true }, error: null };
 }

@@ -1,0 +1,211 @@
+/* =============================================================================
+   IAMS — Student Attachment Report (report.css)
+   Design system: Matte Obsidian / TTU brand tokens from shell.css
+   ============================================================================= */
+
+/* ── Gate screen ─────────────────────────────────────────────────────────── */
+.report-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 16px;
+}
+.report-gate-icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: rgba(240, 165, 0, 0.12);
+  border: 1.5px solid rgba(240, 165, 0, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ttu-gold);
+  margin: 0 auto 8px;
+}
+.report-gate-icon svg { width: 32px; height: 32px; }
+.report-gate h2 { font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0; }
+.report-gate p  { font-size: 13.5px; color: var(--text-secondary); max-width: 420px; line-height: 1.6; margin: 0; }
+
+/* ── Path selection ──────────────────────────────────────────────────────── */
+.report-path-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 24px;
+}
+@media (max-width: 680px) { .report-path-grid { grid-template-columns: 1fr; } }
+
+.report-path-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+.report-path-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.report-path-card.path-ai::before {
+  background: linear-gradient(135deg, rgba(240,165,0,0.06) 0%, transparent 60%);
+}
+.report-path-card.path-self::before {
+  background: linear-gradient(135deg, rgba(26,58,140,0.07) 0%, transparent 60%);
+}
+.report-path-card:hover { border-color: var(--ttu-gold); box-shadow: 0 8px 24px rgba(0,0,0,0.10); transform: translateY(-2px); }
+.report-path-card:hover::before { opacity: 1; }
+.report-path-card.path-ai:hover { border-color: var(--ttu-gold); }
+.report-path-card.path-self:hover { border-color: var(--ttu-blue); }
+
+.path-card-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 14px;
+}
+.path-card-badge.ai-badge  { background: rgba(240,165,0,0.15); color: var(--ttu-gold); }
+.path-card-badge.self-badge{ background: rgba(26,58,140,0.12); color: var(--ttu-blue); }
+[data-theme="dark"] .path-card-badge.self-badge { background: rgba(96,165,250,0.15); color: #60A5FA; }
+
+.path-card-title { font-size: 17px; font-weight: 800; color: var(--text-primary); margin: 0 0 8px; }
+.path-card-desc  { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 16px; }
+.path-card-features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+.path-card-features li { font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 7px; }
+.path-card-features li svg { width: 14px; height: 14px; color: var(--ttu-gold); flex-shrink: 0; }
+.path-card-cta {
+  margin-top: 20px; width: 100%;
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer; transition: background 0.15s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.path-cta-ai   { background: var(--ttu-gold); color: #1A1A00; }
+.path-cta-ai:hover   { background: #d9940a; }
+.path-cta-self { background: var(--ttu-blue); color: #fff; }
+.path-cta-self:hover { background: var(--ttu-blue-dark); }
+
+/* ── Payment screen ──────────────────────────────────────────────────────── */
+.payment-screen {
+  max-width: 520px; margin: 0 auto;
+  background: var(--bg-card); border: 1.5px solid var(--border-default);
+  border-radius: 16px; padding: 36px 32px;
+}
+.payment-amount {
+  font-size: 42px; font-weight: 900; color: var(--ttu-gold); text-align: center;
+  margin: 16px 0 4px;
+}
+.payment-per { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 24px; }
+.payment-features {
+  background: var(--bg-hover); border-radius: 10px; padding: 16px;
+  margin-bottom: 24px; list-style: none; display: flex; flex-direction: column; gap: 8px;
+}
+.payment-features li { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.payment-features li svg { width: 15px; height: 15px; color: var(--ttu-gold); flex-shrink: 0; }
+
+/* ── Input form ──────────────────────────────────────────────────────────── */
+.report-input-form { max-width: 760px; }
+.report-field-group { margin-bottom: 22px; }
+.report-field-label {
+  display: block; font-size: 13px; font-weight: 700; color: var(--text-primary);
+  margin-bottom: 7px;
+}
+.report-field-hint { font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px; display: block; }
+.report-textarea {
+  width: 100%; min-height: 100px; padding: 12px 14px;
+  background: var(--bg-card); border: 1.5px solid var(--border-default);
+  border-radius: 10px; font-size: 13.5px; color: var(--text-primary);
+  font-family: inherit; resize: vertical; line-height: 1.6;
+  transition: border-color 0.12s;
+  box-sizing: border-box;
+}
+.report-textarea:focus { outline: none; border-color: var(--ttu-gold); }
+.report-textarea.highlighted { border-color: var(--ttu-gold); }
+
+.upload-drop-zone {
+  border: 2px dashed var(--border-default); border-radius: 12px;
+  padding: 32px; text-align: center; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.upload-drop-zone:hover, .upload-drop-zone.drag-over {
+  border-color: var(--ttu-gold); background: rgba(240,165,0,0.04);
+}
+.upload-drop-zone svg { width: 36px; height: 36px; color: var(--ttu-gold); margin-bottom: 10px; }
+.upload-drop-zone p  { font-size: 13px; color: var(--text-secondary); margin: 4px 0; }
+.upload-drop-zone small { font-size: 11.5px; color: var(--text-muted); }
+
+/* ── AI Generation loading ───────────────────────────────────────────────── */
+.ai-loading {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 380px; gap: 20px; text-align: center;
+}
+.ai-spinner {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 4px solid rgba(240,165,0,0.2);
+  border-top-color: var(--ttu-gold);
+  animation: spin 0.85s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-loading h3 { font-size: 17px; font-weight: 800; color: var(--text-primary); margin: 0; }
+.ai-loading p  { font-size: 13px; color: var(--text-secondary); max-width: 380px; line-height: 1.6; margin: 0; }
+
+/* ── Report review ───────────────────────────────────────────────────────── */
+.report-section-card {
+  background: var(--bg-card); border: 1px solid var(--border-default);
+  border-radius: 12px; margin-bottom: 16px; overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.report-section-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+.report-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; background: var(--bg-hover); gap: 12px;
+}
+.report-section-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.report-section-actions { display: flex; gap: 7px; }
+.report-section-body {
+  padding: 18px; font-size: 13.5px; color: var(--text-secondary);
+  line-height: 1.75; white-space: pre-wrap;
+}
+.report-section-body[contenteditable="true"] {
+  outline: none; border-top: 2px solid var(--ttu-gold);
+  background: rgba(240,165,0,0.03);
+}
+
+/* ── Post-submission state ───────────────────────────────────────────────── */
+.report-submitted-banner {
+  display: flex; align-items: flex-start; gap: 16px;
+  background: linear-gradient(135deg, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0.04) 100%);
+  border: 1.5px solid rgba(34,197,94,0.25); border-radius: 14px; padding: 24px;
+  margin-bottom: 24px;
+}
+.report-submitted-banner svg { width: 28px; height: 28px; color: #22c55e; flex-shrink: 0; margin-top: 2px; }
+
+/* ── Shared step header ──────────────────────────────────────────────────── */
+.report-step-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.report-step-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(240,165,0,0.12); color: var(--ttu-gold);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+}
+.report-step-title { font-size: 20px; font-weight: 900; color: var(--text-primary); margin: 0; }
+.report-step-subtitle { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; }
+
+/* ── Action bar ─────────────────────────────────────────────────────────── */
+.report-action-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+  padding: 18px 0; border-top: 1px solid var(--border-default); margin-top: 24px;
+}
+
+/* ── PDF preview (Path B) ───────────────────────────────────────────────── */
+.pdf-preview-frame {
+  width: 100%; height: 480px; border: 1.5px solid var(--border-default);
+  border-radius: 10px; background: #fff;
+}

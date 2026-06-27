@@ -1,0 +1,421 @@
+/* Workspace shell */
+.logbook-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-2xl) var(--space-4xl);
+}
+
+.main-workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2xl);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .main-workspace-grid {
+    grid-template-columns: 1.7fr 1fr;
+  }
+}
+
+/* Card Elements */
+.panel-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-raised);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: var(--space-xl);
+}
+
+/* Premium Header Status Panel */
+.logbook-header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.status-timeline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--bg-prefix);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+}
+.timeline-step {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  transition: all 0.25s;
+}
+.timeline-step.active {
+  background: var(--ttu-blue);
+  color: var(--text-on-brand);
+}
+.timeline-step.completed {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+/* IndexedDB Live Indicator Pill */
+.db-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.db-indicator.saving {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+/* Custom Tabs navigation */
+.workspace-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: var(--space-lg);
+  padding-bottom: 2px;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: var(--space-sm) var(--space-lg);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+.tab-btn.active {
+  color: var(--ttu-gold);
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--ttu-gold);
+}
+
+/* Work week grid & layout classes */
+.weekly-log-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.daily-grid-card {
+  background: var(--bg-prefix);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+@media(max-width: 640px) {
+  .daily-grid-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+  }
+}
+
+.day-label {
+  font-weight: 800;
+  color: var(--ttu-gold);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: var(--space-xs);
+}
+
+/* Textarea Premium Wrappers & Toolbar Styling */
+.textarea-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.textarea-wrapper:focus-within {
+  border-color: var(--ttu-blue);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.textarea-wrapper .day-textarea {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  resize: vertical;
+  box-shadow: none !important;
+  width: 100%;
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+}
+.textarea-wrapper .day-textarea:disabled {
+  background: var(--bg-prefix) !important;
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.formatting-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-prefix);
+}
+.format-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.format-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.format-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.format-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.day-textarea {
+  width: 100%;
+  min-height: 80px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.day-textarea:focus:not(:disabled) {
+  border-color: var(--ttu-blue);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.day-textarea:disabled {
+  background: var(--bg-prefix);
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+/* Week Info/Meta cards */
+.week-meta-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+@media(max-width: 640px) {
+  .week-meta-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.meta-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.meta-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* Supervisor Certifications Cards */
+.supervisor-cert-card {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-top: var(--space-lg);
+}
+.supervisor-cert-card.certified {
+  border-style: solid;
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+
+/* Right Column Panels styling */
+.profile-sidebar-card {
+  background: linear-gradient(135deg, var(--ttu-blue-dark) 0%, var(--ttu-blue) 100%);
+  color: var(--text-on-brand);
+}
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 12.5px;
+}
+.profile-row:last-child { border: none; }
+.profile-lbl { opacity: 0.75; }
+.profile-val { font-weight: 700; }
+
+/* Read only supervisor summary lists */
+.supervisor-summary-item {
+  border: 1px solid var(--border-default);
+  background: var(--bg-prefix);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-sm);
+}
+.supervisor-summary-item:last-child { margin-bottom: 0; }
+.rating-stars { color: var(--ttu-gold); font-size: 14px; }
+
+
+.physical-submit-banner {
+  background: linear-gradient(135deg, var(--ttu-blue-mid) 0%, var(--ttu-blue-dark) 100%);
+  color: var(--text-on-brand);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom select box styles for monthly summary selectors */
+.select-box {
+  width: 100%;
+  height: 38px;
+  border: 1.5px solid var(--border-default);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-md);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.select-box:focus {
+  border-color: var(--ttu-blue);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ── Spinner animation ─────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* ── Logbook week status badges ────────────────────────────────────────────── */
+.badge-draft {
+  background: var(--bg-prefix);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-submitted {
+  background: var(--amber-bg);
+  color: var(--amber);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-certified {
+  background: var(--green-bg);
+  color: var(--green);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-pending {
+  background: var(--bg-info);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── System banner (incognito warning) ─────────────────────────────────────── */
+.system-banner {
+  background: linear-gradient(90deg, #b91c1c 0%, #7f1d1d 100%);
+  color: #fff;
+  padding: 10px var(--space-xl);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+}
+.system-banner.hidden { display: none; }
+
+/* ── Logbook tab panel toggle ──────────────────────────────────────────────── */
+.logbook-tab-panel { display: none; }
+.logbook-tab-panel.active { display: block; }
+
+/* ── Sidebar responsive ────────────────────────────────────────────────────── */
+.sidebar-panel {
+  min-width: 0;
+}
+
+/* ── dev controls responsive wrapper ──────────────────────────────────────── */
+.dev-controls {
+  margin-top: var(--space-2xl);
+}

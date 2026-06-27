@@ -1,5 +1,5 @@
 // =============================================================================
-// IAMS — profile-section.js  (Phase 2)
+// IAMS — profile.js  (Phase 2)
 // Handles #profile: dynamic initials avatar, inline phone edit, change password.
 // =============================================================================
 import './profile.css';

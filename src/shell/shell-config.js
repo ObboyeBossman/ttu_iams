@@ -64,6 +64,7 @@ export const SHELL_CONFIG = {
       { page: 'register-placement', icon: 'building-2',       label: 'Register Placement', badge: null },
       { page: 'attendance',         icon: 'map-pin',          label: 'Attendance',         badge: null },
       { page: 'logbook',            icon: 'book-open',        label: 'Logbook',            badge: null },
+      { page: 'attachment-report',  icon: 'file-check',       label: 'Attachment Report',  badge: null },
       { page: 'profile',            icon: 'user-circle',      label: 'Profile',            badge: null },
     ],
     footer: [

@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { supabase } from '../supabase-client.js';
-import { generateUuid, isValidVerificationCode, validateAddressFields } from '../utils.js';
+import { generateUuid, generateVerificationCode, isValidVerificationCode, validateAddressFields } from '../utils.js';
 
 /** Returns every letter for the signed-in student, most recent first. Admin sees all (audit — FR7). */
 export async function listLetters() {
@@ -105,6 +105,19 @@ export async function generateLetter(row) {
   const payload = { id: generateUuid(), ...row, verification_code };
   const { data, error } = await supabase.from('letters').insert(payload).select().single();
   return { data, error };
+}
+
+/**
+ * Public alias used by the updated student letters flow:
+ *   1. Generates verification_code client-side.
+ *   2. Inserts into `letters` table.
+ *   3. Returns { data: insertedRow, error }.
+ *
+ * The caller (student/letters.js) passes the returned row's
+ * verification_code and generated_at into generateAndDownloadLetter().
+ */
+export async function createLetter(formData) {
+  return generateLetter(formData);
 }
 
 /**

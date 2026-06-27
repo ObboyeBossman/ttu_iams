@@ -1,8 +1,9 @@
 // =============================================================================
 // IAMS — shared/services/attendance.service.js  (Phase 2)
 // =============================================================================
-// Attendance logs, GPS check-in / check-out, and anomaly flag reads.
-// These tables are created in migration 20260622000003_phase2_schema.sql.
+// Attendance logs, GPS check-in / check-out, absence logging, and flag reads.
+// Tables created in migration 20260622000003_phase2_schema.sql +
+//   20260626000002_attendance_absence_reason.sql
 // All writes are student-only (RLS); admins and supervisors read.
 // =============================================================================
 
@@ -11,15 +12,21 @@ import { supabase } from '../supabase-client.js';
 /**
  * Returns today's attendance log for the signed-in student, or null if none.
  * Used to decide whether to show CHECK IN or CHECK OUT on the attendance page.
+ *
+ * @param {string} studentId
+ * @param {string|null} [seasonId] - Optional: scoped to a season for safety
  */
-export async function getTodayLog(studentId) {
+export async function getTodayLog(studentId, seasonId) {
   const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await supabase
+  let query = supabase
     .from('attendance_logs')
     .select('*')
     .eq('student_id', studentId)
-    .eq('log_date', today)
-    .maybeSingle();
+    .eq('log_date', today);
+
+  if (seasonId) query = query.eq('season_id', seasonId);
+
+  const { data, error } = await query.maybeSingle();
   return { data, error };
 }
 
@@ -27,11 +34,13 @@ export async function getTodayLog(studentId) {
  * Records a check-in for today. Inserts a new attendance_log row.
  * `locationSource` is 'gps' | 'manual'.
  * `distanceM` is Haversine distance from placement coords in metres (or null).
+ *
+ * Check-in distance threshold: > 500m → flagged_location status.
  */
 export async function checkIn({ studentId, placementId, seasonId, lat, lon, locationSource, distanceM }) {
   const now   = new Date().toISOString();
   const today = now.split('T')[0];
-  const status = distanceM !== null && distanceM > 200 ? 'flagged_location' : 'present';
+  const status = distanceM !== null && distanceM > 500 ? 'flagged_location' : 'present';
 
   const { data, error } = await supabase
     .from('attendance_logs')
@@ -72,8 +81,35 @@ export async function checkOut({ logId, lat, lon, locationSource }) {
 }
 
 /**
+ * Logs a voluntary absence for today with a documented reason.
+ * Inserts a row with status = 'absent' and no check-in/check-out timestamps.
+ *
+ * @param {object} opts
+ * @param {string} opts.studentId
+ * @param {string} opts.placementId
+ * @param {string} opts.seasonId
+ * @param {string} opts.reason  - One of the predefined absence reason strings
+ */
+export async function logAbsence({ studentId, placementId, seasonId, reason }) {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('attendance_logs')
+    .insert({
+      student_id:     studentId,
+      placement_id:   placementId,
+      season_id:      seasonId,
+      log_date:       today,
+      status:         'absent',
+      absence_reason: reason,
+    })
+    .select()
+    .single();
+  return { data, error };
+}
+
+/**
  * Returns all attendance logs for a student in a given season,
- * most recent first. Used for the attendance history table.
+ * most recent first. Used for the attendance history calendar + list.
  */
 export async function listAttendanceLogs(studentId, seasonId) {
   const { data, error } = await supabase
@@ -87,7 +123,7 @@ export async function listAttendanceLogs(studentId, seasonId) {
 
 /**
  * Returns unresolved attendance flags for a student in a season.
- * Used on the student dashboard and admin anomaly panel.
+ * Used on the student attendance page and admin anomaly panel.
  */
 export async function listAttendanceFlags(studentId, seasonId) {
   const { data, error } = await supabase

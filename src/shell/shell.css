@@ -19,13 +19,13 @@
 :root,
 [data-theme="light"] {
   /* ── TTU core palette ───────────────────────────────────────────────────── */
-  --ttu-blue: #1A4B8E;
+  --ttu-blue: #1A3A8C;
   /* Primary brand blue                        */
-  --ttu-blue-dark: #13386B;
+  --ttu-blue-dark: #132E75;
   /* Darker blue — hover states, shadows       */
-  --ttu-blue-mid: #1E559E;
+  --ttu-blue-mid: #2A4A9E;
   /* Mid blue — hover overlay on sidebar       */
-  --ttu-blue-surface: #E8F0FA;
+  --ttu-blue-surface: #EEF3FC;
   /* Light blue tint — chips, avatars          */
 
   --ttu-gold: #F0A500;
@@ -37,12 +37,12 @@
   --ttu-gold-border: rgba(240, 165, 0, 0.35);
   /* Gold outline               */
 
-  --ttu-red: #B22222;
+  --ttu-red: #C0392B;
   /* Danger / alert red                        */
   --ttu-white: #FFFFFF;
 
   /* ── Sidebar chrome ─────────────────────────────────────────────────────── */
-  --sidebar-bg: #1A4B8E;
+  --sidebar-bg: #122D70;
   --sidebar-text: #FFFFFF;
   --sidebar-subtext: #93B4DA;
   --sidebar-border: rgba(255, 255, 255, 0.10);
@@ -50,52 +50,55 @@
   --sidebar-active-bg: rgba(240, 165, 0, 0.20);
   --sidebar-item-hover-bg: rgba(255, 255, 255, 0.10);
 
-  /* ── Backgrounds (inlined from theme.css light) ─────────────────────────── */
-  --bg-page: #EEF3FC;
+  /* ── Backgrounds (aligned with refined theme.css light) ─────────────────── */
+  --bg-page: #F3F4F6;
   --bg-card: #FFFFFF;
-  --bg-hover: rgba(26, 58, 140, 0.06);
+  --bg-hover: rgba(26, 58, 140, 0.05);
   --bg-danger: #FADBD8;
   --bg-info: #EEF3FC;
 
-  /* ── Text (inlined from theme.css light) ────────────────────────────────── */
-  --text-primary: #1A202C;
-  --text-secondary: #5D6D8A;
-  --text-muted: #8FABD4;
+  /* ── Text (aligned with refined theme.css light) ────────────────────────── */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
   --text-link: #1A3A8C;
 
-  /* ── Borders (inlined from theme.css light) ─────────────────────────────── */
-  --border-default: #C5D4EF;
+  /* ── Borders (aligned with refined theme.css light) ─────────────────────── */
+  --border-default: #E2E8F0;
 
-  /* ── Focus (inlined from theme.css light) ───────────────────────────────── */
+  /* ── Focus (aligned with refined theme.css light) ───────────────────────── */
   --focus-ring: rgba(26, 58, 140, 0.15);
 }
 
-/* ── Dark mode token overrides ───────────────────────────────────────────────── */
+/* ── Dark mode token overrides — matte OLED charcoal system ─────────────────── */
 [data-theme="dark"] {
   /* ── Backgrounds ────────────────────────────────────────────────────────── */
-  --bg-page: #0A0F1A;
-  --bg-card: #111827;
-  --bg-hover: rgba(58, 92, 176, 0.15);
-  --bg-danger: rgba(192, 57, 43, 0.12);
-  --bg-info: rgba(26, 58, 140, 0.15);
+  --bg-page: #121212;
+  --bg-card: #1E1E1E;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-danger: rgba(192, 57, 43, 0.2);
+  --bg-info: rgba(26, 58, 140, 0.25);
+
+  /* ── Sidebar chrome (dark) ───────────────────────────────────────────────── */
+  --sidebar-bg: #0A1940;
 
   /* ── Text ───────────────────────────────────────────────────────────────── */
-  --text-primary: #EEF3FC;
-  --text-secondary: #8FABD4;
-  --text-muted: #5D6D8A;
-  --text-link: #8FABD4;
+  --text-primary: #F3F4F6;
+  --text-secondary: #D1D5DB;
+  --text-muted: #9CA3AF;
+  --text-link: #60A5FA;
 
   /* ── Borders ────────────────────────────────────────────────────────────── */
-  --border-default: #1A3A8C;
+  --border-default: rgba(255, 255, 255, 0.08);
 
   /* ── Focus ──────────────────────────────────────────────────────────────── */
-  --focus-ring: rgba(143, 171, 212, 0.20);
+  --focus-ring: rgba(240, 165, 0, 0.3);
 }
 
 /* ── Static tokens (theme-invariant, defined once) ───────────────────────────── */
 :root {
   /* Neutral primitive */
-  --n800: #111827;
+  --n800: #0F172A;
 
   /* Spacing */
   --space-xs: 4px;
@@ -104,15 +107,16 @@
   --space-lg: 16px;
   --space-xl: 24px;
 
-  /* Border radius */
+  /* Border radius — updated to refined scale */
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-pill: 9999px;
 
-  /* Elevation */
-  --shadow-overlay: 0 8px 24px rgba(26, 58, 140, 0.14);
+  /* Elevation — refined multi-layer system */
+  --shadow-raised: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  --shadow-overlay: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
 
   /* Typography */
   --text-xs: 0.785rem;
@@ -825,13 +829,17 @@ body {
 
 .topbar {
   height: 76px;
-  background: var(--bg-card);
+  background: var(--bg-nav);
   border-bottom: none;
   display: flex;
   align-items: center;
   gap: var(--space-xl);
   padding: 0 var(--space-xl);
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .topbar {
+  background: var(--bg-page);
 }
 
 /* Left: mobile hamburger + brand title */
@@ -845,7 +853,7 @@ body {
 .topbar-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--ttu-blue);
+  color: #FFFFFF;
   display: flex;
   align-items: center;
 }
@@ -880,7 +888,7 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.80);
   cursor: pointer;
 }
 
@@ -906,20 +914,26 @@ body {
 .topbar-search .inp {
   padding-left: 38px;
   border-radius: var(--radius-pill);
-  background: #F0F4FA;
-  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   height: 38px;
   font-size: 13px;
-  color: var(--text-primary);
+  color: #FFFFFF;
+}
+
+.topbar-search .inp::placeholder {
+  color: rgba(255, 255, 255, 0.50);
 }
 
 [data-theme="dark"] .topbar-search .inp {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
 }
 
 .topbar-search .inp:focus {
-  background: var(--bg-card);
-  border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
   box-shadow: none;
 }
 
@@ -928,7 +942,7 @@ body {
   left: 13px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.55);
   display: flex;
   pointer-events: none;
 }
@@ -962,15 +976,15 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   position: relative;
   transition: background 0.12s, color 0.12s;
 }
 
 .icon-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
 }
 
 .icon-btn svg {
@@ -1008,7 +1022,7 @@ body {
 }
 
 .topbar-avatar-btn:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Name + ID stacked vertically */
@@ -1029,13 +1043,13 @@ body {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #FFFFFF;
 }
 
 .topbar-avatar-sub {
   display: block;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.65);
   white-space: nowrap;
 }
 

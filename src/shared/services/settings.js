@@ -19,7 +19,7 @@ import { supabase } from '../supabase-client.js';
 const BUCKET = 'branding';
 const DEFAULT_EXPIRY_SECONDS = 60;
 
-/** Returns the single settings row (letterhead_path, stamp_path, signature_path, updated_at, updated_by). All authenticated roles may read ("settings: all authenticated users read") — every student's letter generation needs these paths. */
+/** Returns the single settings row (letterhead_path, stamp_path, footer_path, updated_at, updated_by). All authenticated roles may read ("settings: all authenticated users read") — every student's letter generation needs these paths. */
 export async function getSettings() {
   const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
   return { data, error };
@@ -58,19 +58,19 @@ export async function getSignedAssetUrl(path, expiresInSeconds = DEFAULT_EXPIRY_
 
 /**
  * Convenience wrapper: resolves signed URLs for all three branding assets
- * (letterhead, stamp, signature) in one call, given an already-fetched
- * settings row. generate-letter.js calls this once per letter generation
- * rather than three separate getSignedAssetUrl() calls scattered through
- * the PDF assembly code.
+ * (letterhead, stamp, footer) in one call, given an already-fetched
+ * settings row. Note: generate-letter.js now calls the `get-letter-assets`
+ * Edge Function directly — this helper is kept for any other callers that
+ * need signed URLs from settings paths client-side.
  */
 export async function getSignedAssetUrlsForLetter(settingsRow) {
-  const [letterhead, stamp, signature] = await Promise.all([
+  const [letterhead, stamp, footer] = await Promise.all([
     getSignedAssetUrl(settingsRow.letterhead_path),
     getSignedAssetUrl(settingsRow.stamp_path),
-    getSignedAssetUrl(settingsRow.signature_path),
+    getSignedAssetUrl(settingsRow.footer_path),
   ]);
 
-  const errors = [letterhead, stamp, signature].filter((r) => r.error).map((r) => r.error.message);
+  const errors = [letterhead, stamp, footer].filter((r) => r.error).map((r) => r.error.message);
   if (errors.length > 0) {
     return { data: null, error: { message: errors.join(' ') } };
   }
@@ -78,8 +78,8 @@ export async function getSignedAssetUrlsForLetter(settingsRow) {
   return {
     data: {
       letterheadUrl: letterhead.data.signedUrl,
-      stampUrl: stamp.data.signedUrl,
-      signatureUrl: signature.data.signedUrl,
+      stampUrl:      stamp.data.signedUrl,
+      footerUrl:     footer.data.signedUrl,
     },
     error: null,
   };

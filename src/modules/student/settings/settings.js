@@ -1,5 +1,5 @@
 // =============================================================================
-// IAMS — settings-section.js  (Phase 2)
+// IAMS — settings.js  (Phase 2)
 // Handles #settings: appearance toggle, notification prefs, account info.
 // =============================================================================
 import './settings.css';

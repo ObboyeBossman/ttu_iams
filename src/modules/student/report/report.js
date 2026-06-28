@@ -840,25 +840,15 @@ ${payload.visitations}`;
   let chaptersObj = null;
 
   try {
-    const apiKey = 'sk-4c0276e497ad40499c7e486c42a9ced2';
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' }
-      })
+    const { data, error } = await supabase.functions.invoke('generate-ai-report', {
+      body: {
+        systemPrompt,
+        userPrompt,
+        responseFormat: { type: 'json_object' }
+      }
     });
 
-    if (response.ok) {
-      const data = await response.json();
+    if (!error && data) {
       const rawText = data.choices[0]?.message?.content;
       chaptersObj = JSON.parse(rawText);
       if (chaptersObj && chaptersObj.chapters) {
@@ -1057,24 +1047,14 @@ ${currentContent}
 User Instruction:
 ${instruction}`;
 
-  const apiKey = 'sk-4c0276e497ad40499c7e486c42a9ced2';
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ]
-    })
+  const { data, error } = await supabase.functions.invoke('generate-ai-report', {
+    body: {
+      systemPrompt,
+      userPrompt
+    }
   });
 
-  if (response.ok) {
-    const data = await response.json();
+  if (!error && data) {
     return data.choices[0]?.message?.content?.trim();
   }
   throw new Error('API failed');

@@ -23,10 +23,6 @@ export default defineConfig({
         login:               path.resolve(root, 'src/modules/auth/login.html'),
         // Student
         studentDash:         path.resolve(root, 'src/modules/student/dashboard.html'),
-        studentLetters:      path.resolve(root, 'src/modules/student/letters.html'),
-        studentPlacement:    path.resolve(root, 'src/modules/student/placement.html'),
-        studentAttendance:   path.resolve(root, 'src/modules/student/attendance.html'),
-        studentLogbook:      path.resolve(root, 'src/modules/student/logbook.html'),
         // Admin
         adminDash:           path.resolve(root, 'src/modules/admin_portal/dashboard/dashboard.html'),
         adminUsers:          path.resolve(root, 'src/modules/admin_portal/users/users.html'),

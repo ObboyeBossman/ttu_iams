@@ -351,6 +351,7 @@ export function navigateTo(page) {
       'dashboard': '/src/modules/admin_portal/dashboard/dashboard.html',
       'users': '/src/modules/admin_portal/users/users.html',
       'zones': '/src/modules/admin_portal/zones/zones.html',
+      'placement-zones': '/src/modules/admin_portal/placement-zones/placement-zones.html',
       'seasons': '/src/modules/admin_portal/seasons/seasons.html',
       'assign-placements': '/src/modules/admin_portal/placements.html',
       'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',

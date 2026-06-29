@@ -28,6 +28,7 @@ export default defineConfig({
         adminUsers:          path.resolve(root, 'src/modules/admin_portal/users/users.html'),
         adminSeasons:        path.resolve(root, 'src/modules/admin_portal/seasons/seasons.html'),
         adminZones:          path.resolve(root, 'src/modules/admin_portal/zones/zones.html'),
+        adminPlacementZones: path.resolve(root, 'src/modules/admin_portal/placement-zones/placement-zones.html'),
         adminPlacements:     path.resolve(root, 'src/modules/admin_portal/placements.html'),
         adminLettersAudit:   path.resolve(root, 'src/modules/admin_portal/letters/letters-audit.html'),
         adminSettings:       path.resolve(root, 'src/modules/admin_portal/settings/settings.html'),

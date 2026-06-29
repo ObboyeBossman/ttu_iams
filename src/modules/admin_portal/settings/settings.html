@@ -3,44 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#003087">
+  <meta name="theme-color" content="#0a1a48">
   <title>Settings | TTU IAMS Admin</title>
-  <meta name="description" content="System settings and configuration for the TTU IAMS portal.">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/theme.css">
   <link rel="stylesheet" href="/shell/shell.css">
 </head>
 <body>
-<div id="app-shell"></div>
 
-<main id="page-content" class="page-content">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">System Settings</h1>
-      <p class="page-subtitle">Configure system defaults, letter templates, and notifications.</p>
-    </div>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div class="page-container">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+        </div>
+        <div class="card" style="max-width:480px;" id="settings-card">
+          <div class="skeleton skel-text" style="width:50%;margin-bottom:12px;"></div>
+          <div class="skeleton skel-text" style="width:80%;"></div>
+        </div>
+      </div>
+
+    </main>
   </div>
+</div>
 
-  <div class="coming-soon-card coming-soon-card--blue">
-    <div class="coming-soon-illustration">
-      <svg viewBox="0 0 120 120" fill="none">
-        <circle cx="60" cy="60" r="56" fill="#dbeafe" stroke="#93c5fd" stroke-width="2"/>
-        <path d="M60 40 A20 20 0 1 1 59.9 40" stroke="#3b82f6" stroke-width="6" stroke-linecap="round" fill="none" stroke-dasharray="20 15"/>
-        <circle cx="60" cy="60" r="8" fill="#1d4ed8"/>
-      </svg>
-    </div>
-    <div class="coming-soon-content">
-      <div class="coming-soon-badge">Phase 2 Feature</div>
-      <h2 class="coming-soon-title">Settings Panel Coming Soon</h2>
-      <p class="coming-soon-text">
-        Advanced system configuration will be unlocked in Phase 2. Currently, all system defaults are managed via the database schema and environment variables.
-      </p>
-    </div>
-  </div>
-</main>
-
+<div id="shell-overlays"></div>
 <script type="module" src="./settings.js"></script>
 </body>
 </html>

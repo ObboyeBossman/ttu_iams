@@ -313,37 +313,11 @@ document.getElementById('user-search-input').addEventListener('input', (e) => {
 initTabs();
 switchTab('overview');
 
-// Handle external navigation (from sidebar)
-function wireExternalRedirects() {
-  document.querySelectorAll('.sidebar-item[data-page]').forEach(el => {
-    const page = el.getAttribute('data-page');
-    if (page !== 'users') {
-      el.addEventListener('click', () => {
-        window.location.href = '../dashboard.html#' + page;
-      });
-    }
-  });
-
-  // Also handle brand link
-  const brandLink = document.getElementById('shell-brandLink');
-  if (brandLink) {
-    brandLink.addEventListener('click', (e) => {
-      // nav.js handles the collapsed state clicking, but if it's an actual link...
-      window.location.href = '../dashboard.html#dashboard';
-    });
-  }
-}
-
+// Handle hash changes for tabs
 window.addEventListener('hashchange', () => {
   const page = location.hash.replace('#', '');
   if (page === 'users' || TABS.some(t => t.page === page)) {
-    // switch tab if it's a tab
     const tabMatch = TABS.find(t => t.page === page && !t.disabled);
     if (tabMatch) switchTab(tabMatch.page);
-  } else {
-    // redirect to dashboard
-    window.location.href = '../dashboard.html' + location.hash;
   }
 });
-
-wireExternalRedirects();

@@ -345,6 +345,26 @@ function _closeLogoutConfirm() {
  * @param {string} page - Page key, e.g. 'dashboard'
  */
 export function navigateTo(page) {
+  if (_config && _config.portalLabel === 'Admin Portal') {
+    const routes = {
+      'dashboard': '/src/modules/admin_portal/dashboard/dashboard.html',
+      'users': '/src/modules/admin_portal/users/users.html',
+      'zones': '/src/modules/admin_portal/zones/zones.html',
+      'seasons': '/src/modules/admin_portal/seasons/seasons.html',
+      'assign-placements': '/src/modules/admin_portal/placements.html',
+      'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
+      'settings': '/src/modules/admin_portal/settings/settings.html',
+    };
+    if (routes[page]) {
+      const targetPath = routes[page];
+      // Only redirect if we are not already on the target path
+      if (!window.location.pathname.endsWith(targetPath)) {
+        window.location.href = targetPath;
+        return;
+      }
+    }
+  }
+
   const isKnownNavPage = _validPages.length > 0 && _validPages.includes(page);
   const isKnownTabPage = _currentTabs.some(function (t) { return t.page === page; });
   if (_validPages.length > 0 && !isKnownNavPage && !isKnownTabPage) {
@@ -1104,7 +1124,7 @@ export async function renderShell(role, activePage, userInfo) {
 // -----------------------------------------------------------------------------
 // initShell — helper for new modules
 // -----------------------------------------------------------------------------
-export async function initShell(activePage = 'dashboard') {
+export async function initShell(activePage) {
   try {
     const { supabase } = await import('/shared/supabase-client.js');
     const { data: { session } } = await supabase.auth.getSession();
@@ -1123,7 +1143,23 @@ export async function initShell(activePage = 'dashboard') {
     const fullName = profile.full_name ?? 'User';
     const initials = fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     
-    await renderShell(role, activePage, { name: fullName, initials, email: session.user.email });
+    let resolvedPage = activePage;
+    if (!resolvedPage) {
+      if (role === 'admin') {
+        const path = window.location.pathname;
+        if (path.includes('/users/')) resolvedPage = 'users';
+        else if (path.includes('/zones/')) resolvedPage = 'zones';
+        else if (path.includes('/seasons/')) resolvedPage = 'seasons';
+        else if (path.includes('placements.html')) resolvedPage = 'assign-placements';
+        else if (path.includes('/letters/')) resolvedPage = 'letters-audit';
+        else if (path.includes('/settings/')) resolvedPage = 'settings';
+        else resolvedPage = 'dashboard';
+      } else {
+        resolvedPage = (location.hash || '').replace('#', '') || 'dashboard';
+      }
+    }
+    
+    await renderShell(role, resolvedPage, { name: fullName, initials, email: session.user.email });
   } catch (err) {
     console.error('[nav.js] initShell error:', err);
   }

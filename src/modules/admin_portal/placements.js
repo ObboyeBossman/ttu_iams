@@ -34,6 +34,7 @@ const selectAll        = document.getElementById('select-all');
 const tbody            = document.getElementById('placements-tbody');
 
 const COUNT_ELS = {
+  all:       document.getElementById('count-all'),
   submitted: document.getElementById('count-submitted'),
   assigned:  document.getElementById('count-assigned'),
   flagged:   document.getElementById('count-flagged'),
@@ -88,7 +89,7 @@ async function loadPlacements() {
 }
 
 function updateCounts() {
-  const counts = { submitted: 0, assigned: 0, flagged: 0, rejected: 0 };
+  const counts = { all: placements.length, submitted: 0, assigned: 0, flagged: 0, rejected: 0 };
   for (const p of placements) {
     if (counts[p.status] !== undefined) counts[p.status]++;
   }
@@ -102,7 +103,7 @@ function renderTable() {
   selectedIds.clear();
   updateBatchUI();
 
-  const filtered = placements.filter(p => p.status === activeTab);
+  const filtered = activeTab === 'all' ? placements : placements.filter(p => p.status === activeTab);
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:40px">No placements in this status.</td></tr>`;

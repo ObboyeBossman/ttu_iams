@@ -21,19 +21,20 @@ async function loadSettings() {
     return;
   }
 
+  const fields = ['letterhead_path', 'stamp_path', 'signature_path', 'footer_path'];
+  
   card.innerHTML = `
     <div class="form-section-title" style="margin-bottom:12px;font-weight:600;font-size:16px;">Branding Assets</div>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-      These paths point to the branding assets stored in Supabase Storage. Update them
-      when you upload a new letterhead, stamp, or signature.
+      Upload new branding assets below. They will be saved to Supabase Storage and updated in the system automatically.
     </p>
-    ${['letterhead_path','stamp_path','signature_path'].map(field => `
+    ${fields.map(field => `
       <div style="margin-bottom:16px;">
         <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;">
-          ${field.replace('_path','').replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase())} Path
+          ${field.replace('_path','').replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase())}
         </label>
-        <input class="inp" type="text" id="set-${field}" value="${settings?.[field] ?? ''}"
-               placeholder="branding/filename.png">
+        <input class="inp" type="file" id="set-file-${field}" accept="image/*" style="padding:6px;width:100%;">
+        ${settings?.[field] ? `<div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px;">Current: <code>${settings[field]}</code></div>` : ''}
       </div>`).join('')}
     <div class="alert alert-danger hidden" id="set-error" style="margin-bottom:12px;"></div>
     <button class="btn btn-primary" id="set-save">Save Changes</button>`;
@@ -42,26 +43,61 @@ async function loadSettings() {
     const btn = document.getElementById('set-save');
     btn.disabled = true;
     btn.textContent = 'Saving...';
+    document.getElementById('set-error').classList.add('hidden');
     
-    const patch = {
-      letterhead_path: document.getElementById('set-letterhead_path').value.trim(),
-      stamp_path:      document.getElementById('set-stamp_path').value.trim(),
-      signature_path:  document.getElementById('set-signature_path').value.trim(),
-    };
+    const patch = {};
+    let uploadError = null;
+
+    for (const field of fields) {
+      const fileInput = document.getElementById(`set-file-${field}`);
+      if (fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const ext = file.name.split('.').pop();
+        const fileName = `${field.replace('_path', '')}.${ext}`; // e.g. stamp.png
+        
+        const { data, error } = await supabase.storage.from('branding').upload(fileName, file, { upsert: true });
+        
+        if (error) {
+          uploadError = `Failed to upload ${field}: ${error.message}`;
+          break;
+        } else {
+          patch[field] = data.path;
+        }
+      }
+    }
     
-    const { error: updateError } = await supabase.from('settings').update(patch).eq('id', 1);
+    if (uploadError) {
+      document.getElementById('set-error').textContent = uploadError;
+      document.getElementById('set-error').classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Save Changes';
+      return;
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const { error: updateError } = await supabase.from('settings').update(patch).eq('id', 1);
+      
+      if (updateError) {
+        document.getElementById('set-error').textContent = updateError.message;
+        document.getElementById('set-error').classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+        return;
+      }
+    } else {
+       // Nothing was selected
+       btn.disabled = false;
+       btn.textContent = 'Save Changes';
+       showToast('No files were selected to upload.', 'info');
+       return;
+    }
     
     btn.disabled = false;
     btn.textContent = 'Save Changes';
-    
-    if (updateError) {
-      document.getElementById('set-error').textContent = updateError.message;
-      document.getElementById('set-error').classList.remove('hidden');
-      return;
-    }
-    
-    document.getElementById('set-error').classList.add('hidden');
     showToast('Settings saved successfully.', 'success');
+    
+    _settingsLoaded = false;
+    loadSettings();
   });
 }
 

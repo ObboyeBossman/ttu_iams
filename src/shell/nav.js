@@ -1121,6 +1121,14 @@ export async function renderShell(role, activePage, userInfo) {
   const pageContent = document.getElementById('page-content');
   const overlayRoot = document.getElementById('shell-overlays');
 
+  // If the shell is already built (e.g. during a PJAX navigation), just update active state
+  if (document.getElementById('shell-sidebarNav')) {
+    navigateTo(activePage);
+    const loader = document.getElementById('page-loading');
+    if (loader) loader.style.display = 'none';
+    return;
+  }
+
   if (!app || !mainContent || !pageContent) {
     throw new Error('[nav.js] Required DOM elements (#app, #main-content, #page-content) not found.');
   }
@@ -1230,14 +1238,6 @@ export async function initShell(activePage) {
       } else {
         resolvedPage = (location.hash || '').replace('#', '') || 'dashboard';
       }
-    }
-    
-    // If the shell is already built (e.g. during a PJAX navigation), just update active state
-    if (document.getElementById('shell-sidebarNav')) {
-      navigateTo(resolvedPage);
-      const loader = document.getElementById('page-loading');
-      if (loader) loader.style.display = 'none';
-      return;
     }
     
     await renderShell(role, resolvedPage, { name: fullName, initials, email: session.user.email });

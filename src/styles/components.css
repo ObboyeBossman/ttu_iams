@@ -670,10 +670,10 @@
 }
 
 .page-loading-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: var(--bg-page);
-  z-index: 9999;
+  z-index: 99;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -65,6 +65,18 @@
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 .btn-lg { padding: 10px 20px; font-size: 15px; }
 
+/* Sm variants for specific colors */
+.btn-sm--primary { background: var(--ttu-blue); color: var(--ttu-white); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; border: 1px solid transparent; }
+.btn-sm--primary:hover { filter: brightness(1.1); }
+.btn-sm--secondary { background: transparent; border: 1px solid var(--border-default); color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; }
+.btn-sm--secondary:hover { background: var(--bg-hover); }
+.btn-sm--amber { background: transparent; border: 1px solid var(--alert-warning-border); color: var(--amber); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; }
+.btn-sm--amber:hover { background: var(--bg-warning); }
+.btn-sm--neutral { background: transparent; border: 1px solid var(--border-default); color: var(--text-muted); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; }
+.btn-sm--neutral:hover { background: var(--bg-hover); color: var(--text-primary); }
+.btn-sm--danger { background: transparent; border: 1px solid rgba(192,57,43,0.3); color: var(--ttu-red); padding: 4px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; }
+.btn-sm--danger:hover { background: var(--bg-danger); }
+
 .btn:disabled,
 .btn[disabled],
 .btn-dis {
@@ -106,6 +118,9 @@
 .badge-gold  { background: var(--gold-50);   color: var(--ttu-gold-dark); }
 .badge-red   { background: var(--red-50);    color: var(--ttu-red); }
 .badge-gray  { background: var(--n100);      color: var(--n500); }
+.badge-neutral { background: var(--n100); color: var(--n500); }
+.badge-green { background: var(--bg-success); color: var(--green); border: 1px solid rgba(26,122,74,0.2); }
+.badge-amber { background: var(--bg-warning); color: var(--amber); border: 1px solid var(--alert-warning-border); }
 
 /* --- Form inputs --- */
 .inp {
@@ -166,6 +181,40 @@
 }
 .card:hover { border-color: var(--border-strong); }
 .card-featured { border: 1.5px solid var(--ttu-blue); }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+/* --- Data Tables --- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.data-table th, .data-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.data-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-prefix);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.data-table tr:hover td {
+  background: var(--bg-hover);
+}
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
+
 
 /* Metric card (dashboard stats) */
 .metric-card {

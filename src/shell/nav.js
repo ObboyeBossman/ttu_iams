@@ -359,8 +359,21 @@ export function navigateTo(page) {
       const targetPath = routes[page];
       // Only redirect if we are not already on the target path
       if (!window.location.pathname.endsWith(targetPath)) {
-        window.location.href = targetPath;
+        // Implement PJAX-style persistent navigation
+        window.history.pushState({ page }, '', targetPath);
+        _pjaxNavigate(targetPath);
         return;
+      }
+    }
+  }
+
+  // Update URL hash for SPA modules (like student portal)
+  if (!(_config && _config.portalLabel === 'Admin Portal')) {
+    if (window.location.hash !== '#' + page) {
+      try {
+        window.history.pushState(null, '', '#' + page);
+      } catch (e) {
+        window.location.hash = '#' + page;
       }
     }
   }
@@ -396,18 +409,78 @@ export function navigateTo(page) {
   // Topbar title is always the brand name — no per-page title needed.
   // (The responsive CSS shows .topbar-brand-full or .topbar-brand-initials.)
 
-  // URL hash — wrapped in try/catch: sandboxed iframes throw SecurityError
-  if (window.location.hash !== '#' + page) {
-    try {
-      window.history.replaceState(null, '', '#' + page);
-      // Manually dispatch hashchange since replaceState doesn't trigger it
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-    } catch (e) { /* sandboxed */ }
+  // Update URL hash for SPA modules (like student portal)
+  if (!(_config && _config.portalLabel === 'Admin Portal')) {
+    if (window.location.hash !== '#' + page) {
+      try {
+        window.history.pushState(null, '', '#' + page);
+      } catch (e) {
+        window.location.hash = '#' + page;
+      }
+    }
   }
 
   // Close mobile drawer on navigation
   _closeMobileSidebar();
 }
+
+// -----------------------------------------------------------------------------
+// PJAX Fetcher (Persistent Shell)
+// -----------------------------------------------------------------------------
+async function _pjaxNavigate(url) {
+  const pageContent = document.getElementById('page-content');
+  if (!pageContent) return;
+
+  // 1. Show skeleton shimmer while fetching
+  pageContent.innerHTML = `
+    <div class="page-container" style="padding: 24px;">
+      <div class="skeleton-shimmer" style="width:250px;height:36px;border-radius:6px;margin-bottom:8px;"></div>
+      <div class="skeleton-shimmer" style="width:300px;height:16px;border-radius:4px;margin-bottom:32px;"></div>
+      <div class="skeleton-shimmer" style="width:100%;height:400px;border-radius:12px;"></div>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // 2. Extract new content
+    const newContent = doc.getElementById('page-content');
+    if (newContent) {
+      pageContent.innerHTML = newContent.innerHTML;
+      
+      // 3. Re-execute module scripts
+      const scripts = doc.querySelectorAll('script[type="module"]');
+      scripts.forEach(s => {
+        const src = s.getAttribute('src');
+        if (src) {
+          const newScript = document.createElement('script');
+          newScript.type = 'module';
+          // Cache bust to force re-evaluation of the entry module (preserves shared imports)
+          newScript.src = new URL(src, window.location.origin + url).href + '?t=' + Date.now();
+          document.body.appendChild(newScript);
+        }
+      });
+
+      // 4. Update title
+      document.title = doc.title || document.title;
+      
+      if (typeof _renderIconsWithRetry === 'function') _renderIconsWithRetry();
+    }
+  } catch (err) {
+    console.error('[nav.js] PJAX failed:', err);
+    window.location.href = url; // Fallback to hard reload
+  }
+}
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', (e) => {
+  if (_config && _config.portalLabel === 'Admin Portal') {
+    _pjaxNavigate(window.location.pathname);
+  }
+});
 
 // -----------------------------------------------------------------------------
 // setTabs — exported
@@ -1157,6 +1230,14 @@ export async function initShell(activePage) {
       } else {
         resolvedPage = (location.hash || '').replace('#', '') || 'dashboard';
       }
+    }
+    
+    // If the shell is already built (e.g. during a PJAX navigation), just update active state
+    if (document.getElementById('shell-sidebarNav')) {
+      navigateTo(resolvedPage);
+      const loader = document.getElementById('page-loading');
+      if (loader) loader.style.display = 'none';
+      return;
     }
     
     await renderShell(role, resolvedPage, { name: fullName, initials, email: session.user.email });

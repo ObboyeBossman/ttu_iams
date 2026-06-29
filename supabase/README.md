@@ -1,73 +1,75 @@
-# IAMS — Supabase Directory
+# IAMS — Supabase Setup
 
-This directory contains all database and serverless artifacts for the IAMS project.
+## Fresh project setup (do this every time you create a new Supabase project)
 
-## Structure
+### 1. Update your .env
+```
+VITE_SUPABASE_URL=https://your-new-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...your-new-anon-key...
+```
+Both values are in: **Supabase Dashboard → Project Settings → API**
+
+> ⚠️ When you recreate a project, BOTH the URL and the anon key change.
+> Updating only the URL is a common mistake that causes silent auth failures.
+
+### 2. Clear your browser storage
+Before testing, open DevTools → Application → Storage → **Clear site data**.
+Old sessions from the previous project will cause login to silently fail.
+
+### 3. Push the schema
+```bash
+npx supabase link --project-ref your-new-ref
+npx supabase db push
+```
+This runs `migrations/20260629000001_squashed.sql` then `seed.sql` automatically.
+
+### 4. Seed users
+```bash
+export SUPABASE_SERVICE_KEY=eyJ...your-service-role-key...
+node scripts/seed-users.mjs
+```
+The service role key is in: **Supabase Dashboard → Project Settings → API → service_role**
+
+That's it. The app is ready to use.
+
+---
+
+## File structure
 
 ```
 supabase/
-├── README.md
-├── schema.sql                                     ← Phase 1 tables, triggers, indexes, views
-├── rls-policies.sql                               ← Phase 1 Row Level Security policies
-├── seed.sql                                       ← Dev test data (do NOT run in production)
 ├── migrations/
-│   ├── 20260622000001_phase1_schema.sql           ← Supabase CLI — schema
-│   └── 20260622000002_phase1_rls.sql              ← Supabase CLI — RLS
-└── functions/
-    ├── get-letter-assets/index.ts                 ← Signed URLs for private storage assets
-    ├── admin-create-user/index.ts                 ← Admin-only account creation (service role)
-    └── verify-letter/index.ts                     ← Public letter authenticity lookup
+│   └── 20260629000001_squashed.sql   ← single source of truth: schema + RLS
+├── seed.sql                          ← reference data only (seasons + zones)
+├── config.toml                       ← Supabase CLI config
+├── mock_geo.sql                      ← geo test data for local dev
+├── functions/                        ← Edge Functions
+│   ├── admin-create-user/
+│   ├── flag-attendance/
+│   ├── generate-ai-report/
+│   ├── geocode-placement/
+│   ├── get-letter-assets/
+│   ├── verify-letter/
+│   └── verify-paystack/
+└── README.md                         ← this file
 ```
 
-## Two ways to apply
+## Why users are NOT in seed.sql
 
-### Option A — Supabase CLI (recommended)
+Direct `auth.users` SQL inserts break whenever a Supabase project is recreated
+because the internal GoTrue JWT secret changes. Those rows become invalid login
+accounts that look right in the DB but can never authenticate.
 
-```bash
-# Link to your project (first time only)
-supabase link --project-ref <your-project-ref>
+`scripts/seed-users.mjs` uses the Admin API which creates users correctly
+regardless of the project's internal state, and is safe to re-run (idempotent).
 
-# Push all pending migrations
-supabase db push
+## Test credentials
 
-# Optional: load seed data into dev/staging
-supabase db reset   # runs migrations + seed.sql in order
-```
+Password for all accounts: `Password123!`
 
-### Option B — Supabase SQL Editor (manual)
-
-Run the files in this exact order:
-
-1. `schema.sql`
-2. `rls-policies.sql`
-3. `seed.sql` *(optional — dev only)*
-
-> **Note:** `schema.sql` and `rls-policies.sql` are the canonical reference
-> files. The `migrations/` equivalents contain the same SQL split into
-> two versioned files for Supabase CLI tracking.
-
-## Run order
-
-| Step | File | Purpose |
-|------|------|---------|
-| 1 | `schema.sql` / migration 000001 | Creates enums, tables, triggers, indexes, views |
-| 2 | `rls-policies.sql` / migration 000002 | Enables RLS and creates all access policies |
-| 3 | `seed.sql` | Inserts test users, a season, zones, and sample placements |
-
-## Seed data accounts
-
-Create these users in **Supabase Auth** first (Dashboard → Authentication → Users),
-then update the UUID constants in `seed.sql` to match.
-
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@ttu.edu.gh` | `TestPass123!` | admin |
-| `kwame.asante@ttu.edu.gh` | `TestPass123!` | student |
-| `ama.mensah@ttu.edu.gh` | `TestPass123!` | student |
-| `dr.boateng@ttu.edu.gh` | `TestPass123!` | school_supervisor |
-
-## Phase 2 notes
-
-Additional tables (attendance, logbook entries, supervisor visits, anomaly
-flags) will be added as new migrations in this directory when Phase 2 work
-begins. They will reference existing Phase 1 tables via foreign keys.
+| Role               | Email                            |
+|--------------------|----------------------------------|
+| Admin              | admin.kwame@ttu.edu.gh           |
+| School Supervisor  | sup.mensah@ttu.edu.gh            |
+| Company Supervisor | csup.hammond@gmail.com           |
+| Student            | std.abena@student.ttu.edu.gh     |

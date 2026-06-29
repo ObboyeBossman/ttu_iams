@@ -659,6 +659,25 @@
   animation: spin 0.7s linear infinite;
   vertical-align: middle;
 }
+.spinner-lg {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--ttu-blue);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-page);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* --- Missing Modal & Form Aliases (used in admin portal) --- */
 .modal-overlay {

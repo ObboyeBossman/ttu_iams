@@ -372,14 +372,10 @@ export function navigateTo(page) {
     }
   }
 
-  // Update URL hash for SPA modules (like student portal)
+  // Update URL hash for SPA modules (like student portal) to trigger hashchange events
   if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal'))) {
     if (window.location.hash !== '#' + page) {
-      try {
-        window.history.pushState(null, '', '#' + page);
-      } catch (e) {
-        window.location.hash = '#' + page;
-      }
+      window.location.hash = '#' + page;
     }
   }
 
@@ -413,17 +409,6 @@ export function navigateTo(page) {
 
   // Topbar title is always the brand name — no per-page title needed.
   // (The responsive CSS shows .topbar-brand-full or .topbar-brand-initials.)
-
-  // Update URL hash for SPA modules (like student portal)
-  if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal'))) {
-    if (window.location.hash !== '#' + page) {
-      try {
-        window.history.pushState(null, '', '#' + page);
-      } catch (e) {
-        window.location.hash = '#' + page;
-      }
-    }
-  }
 
   // Close mobile drawer on navigation
   _closeMobileSidebar();
@@ -903,14 +888,23 @@ function _wireEvents(config) {
   if (dismissBtn) dismissBtn.addEventListener('click', _closeMobileSidebar);
 
   // ----- Sidebar nav + topbar tabs -----
-  // NOTE: this also covers footer <a data-page> items (e.g. Settings) since
-  // they share the .sidebar-item class — do not add a second listener for
-  // them below, or clicks fire navigateTo() twice.
-  document.querySelectorAll('.sidebar-item[data-page], .tab[data-page]').forEach(function (el) {
-    el.addEventListener('click', function (e) {
+  // Use event delegation on the sidebar so this works regardless of
+  // when items are rendered, and survives PJAX content swaps.
+  if (_sidebar) {
+    _sidebar.addEventListener('click', function (e) {
+      const item = e.target.closest('.sidebar-item[data-page]');
+      if (!item) return;
       e.preventDefault();
-      navigateTo(el.getAttribute('data-page'));
+      navigateTo(item.getAttribute('data-page'));
     });
+  }
+
+  // Topbar tabs — also use delegation on the tabs container
+  document.addEventListener('click', function (e) {
+    const tab = e.target.closest('.tab[data-page]');
+    if (!tab) return;
+    e.preventDefault();
+    navigateTo(tab.getAttribute('data-page'));
   });
 
   // Footer action items

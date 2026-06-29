@@ -15,10 +15,15 @@
 -- ---------------------------------------------------------------------------
 
 create or replace function public.current_role()
-returns user_role language sql stable security definer
+returns user_role language plpgsql stable security definer
 set search_path = public, pg_temp
 as $$
-  select role from public.profiles where id = auth.uid()
+declare
+  _role user_role;
+begin
+  select role into _role from public.profiles where id = auth.uid();
+  return _role;
+end;
 $$;
 comment on function public.current_role is 'Returns the user_role of the currently authenticated user from profiles.';
 

@@ -382,8 +382,11 @@
                   <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <span class="material-symbols-outlined field-icon text-[20px]">lock</span>
                   </div>
-                  <input class="field-input block w-full pl-12 pr-4 py-3.5 border rounded-xl font-body-md transition-all shadow-sm"
+                  <input class="field-input block w-full pl-12 pr-12 py-3.5 border rounded-xl font-body-md transition-all shadow-sm"
                          id="password" placeholder="Enter your password" required type="password"/>
+                  <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-4 flex items-center focus:outline-none cursor-pointer group">
+                    <span class="material-symbols-outlined field-icon text-[20px] transition-colors group-hover:text-opacity-80" id="toggle-icon">visibility_off</span>
+                  </button>
                 </div>
               </div>
 

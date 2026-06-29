@@ -58,6 +58,18 @@ function clearBannerError() {
 
 [idInput, pwInput].forEach(el => el?.addEventListener('input', clearBannerError));
 
+// ── Password Visibility Toggle ───────────────────────────────────────────────
+const togglePasswordBtn = document.getElementById('toggle-password');
+const toggleIcon = document.getElementById('toggle-icon');
+
+if (togglePasswordBtn && toggleIcon && pwInput) {
+  togglePasswordBtn.addEventListener('click', () => {
+    const isPassword = pwInput.type === 'password';
+    pwInput.type = isPassword ? 'text' : 'password';
+    toggleIcon.textContent = isPassword ? 'visibility' : 'visibility_off';
+  });
+}
+
 // ── Form submit ──────────────────────────────────────────────────────────────
 if (form) {
   form.addEventListener('submit', async (e) => {

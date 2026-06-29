@@ -10,7 +10,7 @@ import { showToast } from '/shared/utils.js';
 
 async function init() {
   await requireRole(['school_supervisor']);
-  await initShell();
+  await initShell('dashboard');
 
   const userRes = await getCurrentUser();
   const profileRes = await getUserProfile(userRes.data?.id);

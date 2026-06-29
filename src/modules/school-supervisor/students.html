@@ -24,9 +24,10 @@
   <link rel="stylesheet" href="/shell/shell.css">
 </head>
 <body>
-<div id="app-shell"></div>
-
-<main id="page-content" class="page-content">
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <section id="view-students" class="page-view active">
   <div class="page-header">
     <div>
       <h1 class="page-title">Assigned Students</h1>
@@ -34,14 +35,34 @@
     </div>
   </div>
   
-  <div class="coming-soon-card coming-soon-card--blue">
-    <div class="coming-soon-content">
-      <div class="coming-soon-badge">Phase 2 Feature</div>
-      <h2 class="coming-soon-title">Student Tracking Coming Soon</h2>
-      <p class="coming-soon-text">Detailed student list and logbook review for school supervisors will arrive in Phase 2.</p>
+  <div class="card" style="margin-top:24px">
+    <div class="card-header-row">
+      <h2 class="card-title">Students in My Zones</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Index Number</th>
+            <th>Programme</th>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="students-tbody">
+          <tr><td colspan="6" class="text-center py-4">Loading students...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-</main>
+
+      </section>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
 
 <script type="module" src="./students.js"></script>
 </body>

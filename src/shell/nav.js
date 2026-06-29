@@ -345,8 +345,9 @@ function _closeLogoutConfirm() {
  * @param {string} page - Page key, e.g. 'dashboard'
  */
 export function navigateTo(page) {
-  if (_config && _config.portalLabel === 'Admin Portal') {
-    const routes = {
+  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal')) {
+    const isAdmin = _config.portalLabel === 'Admin Portal';
+    const routes = isAdmin ? {
       'dashboard': '/src/modules/admin_portal/dashboard/dashboard.html',
       'users': '/src/modules/admin_portal/users/users.html',
       'zones': '/src/modules/admin_portal/zones/zones.html',
@@ -354,6 +355,10 @@ export function navigateTo(page) {
       'assign-placements': '/src/modules/admin_portal/placements.html',
       'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
       'settings': '/src/modules/admin_portal/settings/settings.html',
+    } : {
+      'dashboard': '/src/modules/school-supervisor/dashboard.html',
+      'students': '/src/modules/school-supervisor/students.html',
+      'visits': '/src/modules/school-supervisor/visits.html',
     };
     if (routes[page]) {
       const targetPath = routes[page];
@@ -368,7 +373,7 @@ export function navigateTo(page) {
   }
 
   // Update URL hash for SPA modules (like student portal)
-  if (!(_config && _config.portalLabel === 'Admin Portal')) {
+  if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal'))) {
     if (window.location.hash !== '#' + page) {
       try {
         window.history.pushState(null, '', '#' + page);
@@ -410,7 +415,7 @@ export function navigateTo(page) {
   // (The responsive CSS shows .topbar-brand-full or .topbar-brand-initials.)
 
   // Update URL hash for SPA modules (like student portal)
-  if (!(_config && _config.portalLabel === 'Admin Portal')) {
+  if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal'))) {
     if (window.location.hash !== '#' + page) {
       try {
         window.history.pushState(null, '', '#' + page);
@@ -477,7 +482,7 @@ async function _pjaxNavigate(url) {
 
 // Handle browser back/forward buttons
 window.addEventListener('popstate', (e) => {
-  if (_config && _config.portalLabel === 'Admin Portal') {
+  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal')) {
     _pjaxNavigate(window.location.pathname);
   }
 });

@@ -24,9 +24,10 @@
   <link rel="stylesheet" href="/shell/shell.css">
 </head>
 <body>
-<div id="app-shell"></div>
-
-<main id="page-content" class="page-content">
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <section id="view-dashboard" class="page-view active">
   <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
 
   <div class="page-header">
@@ -53,7 +54,11 @@
     </div>
     <div id="zones-list" style="padding:16px">Loading…</div>
   </div>
-</main>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
 
 <script type="module" src="./dashboard.js"></script>
 </body>

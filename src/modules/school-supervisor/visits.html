@@ -24,9 +24,10 @@
   <link rel="stylesheet" href="/shell/shell.css">
 </head>
 <body>
-<div id="app-shell"></div>
-
-<main id="page-content" class="page-content">
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <section id="view-visits" class="page-view active">
   <div class="page-header">
     <div>
       <h1 class="page-title">Site Visits</h1>
@@ -34,14 +35,32 @@
     </div>
   </div>
   
-  <div class="coming-soon-card coming-soon-card--blue">
-    <div class="coming-soon-content">
-      <div class="coming-soon-badge">Phase 2 Feature</div>
-      <h2 class="coming-soon-title">Visit Logging Coming Soon</h2>
-      <p class="coming-soon-text">Recording site visits and scoring student performance will arrive in Phase 2.</p>
+  <div class="card" style="margin-top:24px">
+    <div class="card-header-row">
+      <h2 class="card-title">Log Student Visits</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Last Visit</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="visits-tbody">
+          <tr><td colspan="5" class="text-center py-4">Loading assigned students...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-</main>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
 
 <script type="module" src="./visits.js"></script>
 </body>

@@ -145,9 +145,18 @@ export async function syncPlacement(row) {
   
   if (error && error.code === '23505' && error.message.includes('placements_draft_id_key')) {
     const { data: existing, error: fetchErr } = await supabase.from('placements').select('*').eq('draft_id', row.draft_id).single();
+    if (!fetchErr && existing && existing.latitude && existing.longitude) {
+      // Fire and forget
+      supabase.functions.invoke('geocode-placement', { body: { record: existing } }).catch(console.error);
+    }
     return { data: existing, error: fetchErr };
   }
   
+  if (!error && data && data.latitude && data.longitude) {
+    // Fire and forget geocoding
+    supabase.functions.invoke('geocode-placement', { body: { record: data } }).catch(console.error);
+  }
+
   return { data, error };
 }
 
@@ -197,6 +206,12 @@ export async function updateOwnPlacement(placementId, patch) {
   }
 
   const { data, error } = await supabase.from('placements').update(safePatch).eq('id', placementId).select().single();
+  
+  if (!error && data && ('latitude' in safePatch || 'longitude' in safePatch) && data.latitude && data.longitude) {
+    // Fire and forget geocoding if location was updated
+    supabase.functions.invoke('geocode-placement', { body: { record: data } }).catch(console.error);
+  }
+
   return { data, error };
 }
 

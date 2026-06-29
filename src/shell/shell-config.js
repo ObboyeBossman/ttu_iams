@@ -87,6 +87,7 @@ export const SHELL_CONFIG = {
       { page: 'dashboard',        icon: 'layout-dashboard', label: 'Dashboard',        badge: null },
       { page: 'users',            icon: 'users',            label: 'Users',            badge: null },
       { page: 'zones',            icon: 'map',              label: 'Zones',            badge: null },
+      { page: 'placement-zones',  icon: 'map-pin',          label: 'Placement Zones',  badge: null },
       { page: 'seasons',          icon: 'calendar-range',   label: 'Seasons',          badge: null },
       { page: 'assign-placements',icon: 'link-2',           label: 'Assign Placements',badge: null },
       { page: 'letters-audit',    icon: 'file-search',      label: 'Letters Audit',    badge: null },
@@ -111,7 +112,11 @@ export const SHELL_CONFIG = {
     showPromo:          false,
     promo:              null,
     // Nav items added in Phase 2
-    nav:  [],
+    nav: [
+      { page: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard', badge: null },
+      { page: 'students',  icon: 'users',            label: 'Students',  badge: null },
+      { page: 'visits',    icon: 'map-pin',          label: 'Visits',    badge: null },
+    ],
     footer: [
       { type: 'action', id: 'themeToggle', icon: 'sun',     label: 'Toggle Theme' },
       { type: 'action', id: 'signOut',     icon: 'log-out', label: 'Sign Out'     },

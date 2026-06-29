@@ -18,7 +18,7 @@ import { showToast, formatDate } from '/shared/utils.js';
 let seasons      = [];
 let zones        = [];
 let activeSeason = null;
-let activeTab    = 'submitted';
+let activeTab    = 'all';
 let placements   = [];
 let selectedIds  = new Set();
 
@@ -292,6 +292,7 @@ async function init() {
     await loadPlacements();
   }
   
+  batchActions.style.visibility = activeTab === 'submitted' ? 'visible' : 'hidden';
   pageLoading.style.display = 'none';
 }
 

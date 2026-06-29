@@ -3,26 +3,13 @@
 // =============================================================================
 
 import { requireRole, getCurrentUserId } from '../../auth/auth-guard.js';
-import { renderShell, navigateTo, setTabs, showToast } from '/shell/nav.js';
+import { initShell, navigateTo, setTabs, showToast } from '/shell/nav.js';
 import { supabase } from '/shared/supabase-client.js';
 import { formatDate } from '/shared/utils.js';
 
-// ── 1. Auth Guard ────────────────────────────────────────────────────────────
+// ── 1. Init ────────────────────────────────────────────────────────────
 await requireRole(['admin']);
-const userId = await getCurrentUserId();
-
-// ── 2. Load User Profile ─────────────────────────────────────────────────────
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('full_name')
-  .eq('id', userId)
-  .maybeSingle();
-
-const fullName = profile?.full_name ?? 'Admin';
-const initials = fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-
-// ── 3. Render Shell ──────────────────────────────────────────────────────────
-await renderShell('admin', 'users', { name: fullName, initials, email: '' });
+await initShell('users');
 
 // ── 4. Tab Definitions ───────────────────────────────────────────────────────
 const TABS = [

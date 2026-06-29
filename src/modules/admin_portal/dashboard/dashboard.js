@@ -14,22 +14,13 @@ import { listPlacements, listPlacementsBySeason, batchAssignToZone,
 import { listLetters }                      from '/shared/services/letters.js';
 import { formatDate, formatAddress, statusLabel } from '/shared/utils.js';
 
+import { initShell } from '/shell/nav.js';
+
 // ── 1. Auth guard ────────────────────────────────────────────────────────────
 await requireRole(['admin']);
-const userId = await getCurrentUserId();
-
-// ── 2. Load user profile ─────────────────────────────────────────────────────
-const { data: profile } = await supabase
-  .from('profiles')
-  .select('full_name')
-  .eq('id', userId)
-  .maybeSingle();
-
-const fullName = profile?.full_name ?? 'Admin';
-const initials = fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
 // ── 3. Render shell ──────────────────────────────────────────────────────────
-await renderShell('admin', 'dashboard', { name: fullName, initials, email: '' });
+await initShell('dashboard');
 
 // ── 5. Global data ───────────────────────────────────────────────────────────
 let _season     = null;

@@ -829,17 +829,13 @@ body {
 
 .topbar {
   height: 76px;
-  background: var(--bg-nav);
-  border-bottom: none;
+  background: var(--bg-page);
+  border-bottom: 0.5px solid var(--border-default);
   display: flex;
   align-items: center;
   gap: var(--space-xl);
   padding: 0 var(--space-xl);
   flex-shrink: 0;
-}
-
-[data-theme="dark"] .topbar {
-  background: var(--bg-page);
 }
 
 /* Left: mobile hamburger + brand title */
@@ -853,7 +849,7 @@ body {
 .topbar-title {
   font-size: 22px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
 }
@@ -888,7 +884,7 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.80);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -914,27 +910,21 @@ body {
 .topbar-search .inp {
   padding-left: 38px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
   height: 38px;
   font-size: 13px;
-  color: #FFFFFF;
+  color: var(--text-primary);
 }
 
 .topbar-search .inp::placeholder {
-  color: rgba(255, 255, 255, 0.50);
-}
-
-[data-theme="dark"] .topbar-search .inp {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #FFFFFF;
+  color: var(--text-muted);
 }
 
 .topbar-search .inp:focus {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: none;
+  background: var(--bg-card);
+  border-color: var(--ttu-blue);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .topbar-search-icon {
@@ -942,7 +932,7 @@ body {
   left: 13px;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
   display: flex;
   pointer-events: none;
 }
@@ -976,15 +966,15 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-secondary);
   cursor: pointer;
   position: relative;
   transition: background 0.12s, color 0.12s;
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #FFFFFF;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .icon-btn svg {
@@ -1022,7 +1012,7 @@ body {
 }
 
 .topbar-avatar-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--bg-hover);
 }
 
 /* Name + ID stacked vertically */
@@ -1043,13 +1033,13 @@ body {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #FFFFFF;
+  color: var(--text-primary);
 }
 
 .topbar-avatar-sub {
   display: block;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 

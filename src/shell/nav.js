@@ -725,7 +725,7 @@ function _buildTopbar(config, activePage, userInfo) {
         <span class="badge-dot"></span>
       </button>
       <button class="topbar-avatar-btn" id="shell-profileBtn">
-        <div class="avatar avatar-sm" style="background:rgba(255,255,255,0.20);color:#FFFFFF;border:1px solid rgba(255,255,255,0.35);"
+        <div class="avatar avatar-sm" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);"
           id="shell-topbarAvatar">${_esc(userInfo.initials)}</div>
         <div class="topbar-avatar-info">
           <span class="topbar-avatar-name" id="shell-topbarName">${_esc(userInfo.name)}</span>

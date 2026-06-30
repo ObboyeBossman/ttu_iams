@@ -122,6 +122,66 @@
           color: var(--ttu-blue);
           background: var(--ttu-blue-surface);
         }
+        .account-identity-row {
+          display: flex;
+          align-items: center;
+          gap: var(--space-lg);
+          margin-bottom: var(--space-xl);
+          padding-bottom: var(--space-lg);
+          border-bottom: 1px solid var(--border-default);
+        }
+        .account-avatar-wrap {
+          position: relative;
+          width: 64px;
+          height: 64px;
+          flex-shrink: 0;
+        }
+        .account-avatar-preview {
+          width: 64px;
+          height: 64px;
+          border-radius: var(--radius-pill);
+          background: var(--ttu-blue-surface);
+          color: var(--ttu-blue);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: var(--text-lg);
+          font-weight: 600;
+          overflow: hidden;
+        }
+        .account-avatar-preview img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .account-avatar-edit-btn {
+          position: absolute;
+          bottom: -2px;
+          right: -2px;
+          width: 24px;
+          height: 24px;
+          border-radius: var(--radius-pill);
+          background: var(--ttu-blue);
+          color: var(--text-on-brand);
+          border: 2px solid var(--bg-card);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0;
+        }
+        .account-avatar-edit-btn:hover { filter: brightness(1.12); }
+        .account-identity-text { min-width: 0; }
+        .account-identity-name {
+          font-size: var(--text-md);
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .account-identity-role {
+          font-size: var(--text-xs);
+          color: var(--text-secondary);
+          margin-top: 2px;
+        }
       </style>
 
       <div class="page-container">
@@ -152,6 +212,21 @@
 
           <!-- Account panel -->
           <div class="settings-tab-panel" id="spanel-account">
+
+            <!-- Identity row — sits above the editable form, anchors the panel -->
+            <div class="account-identity-row">
+              <div class="account-avatar-wrap">
+                <div class="account-avatar-preview" id="account-avatar-preview"><!-- img or initials, set by JS --></div>
+                <button class="account-avatar-edit-btn" id="account-avatar-edit-btn" title="Change photo" aria-label="Change profile photo">
+                  <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+                </button>
+                <input type="file" id="account-avatar-input" accept="image/*" class="hidden">
+              </div>
+              <div class="account-identity-text">
+                <div class="account-identity-name" id="account-identity-name">—</div>
+                <div class="account-identity-role" id="account-identity-role">—</div>
+              </div>
+            </div>
 
             <!-- Editable form section — visually primary -->
             <div class="account-form-section">

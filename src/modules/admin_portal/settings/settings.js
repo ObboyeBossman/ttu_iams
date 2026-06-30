@@ -15,9 +15,9 @@
 import { requireRole }                                   from '/modules/auth/auth-guard.js';
 import { initShell }                                     from '/shell/nav.js';
 import { supabase }                                      from '/shared/supabase-client.js';
-import { showToast }                                     from '/shared/utils.js';
+import { showToast, renderAvatarOrInitials }             from '/shared/utils.js';
 import { getSettings, updateSettings }                   from '/shared/services/settings.js';
-import { getOwnProfile, updateOwnProfile, getAuthUser }  from '/shared/services/profile.service.js';
+import { getOwnProfile, updateOwnProfile, getAuthUser, uploadAvatar, getAvatarUrl }  from '/shared/services/profile.service.js';
 
 const BRANDING_FIELDS = [
   { key: 'letterhead_path', label: 'Letterhead' },
@@ -154,6 +154,13 @@ async function loadAccount() {
         year: 'numeric', month: 'long', day: 'numeric',
       })
     : '—';
+
+  // Identity row
+  document.getElementById('account-identity-name').textContent = profile.full_name || '—';
+  document.getElementById('account-identity-role').textContent = profile.role
+    ? profile.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : '—';
+  renderAvatarPreview(profile.full_name, profile.avatar_path);
 }
 
 async function saveAccount() {
@@ -183,6 +190,59 @@ async function saveAccount() {
     btn.textContent = 'Save Account Details';
     _accountSaving = false;
   }
+}
+
+function renderAvatarPreview(fullName, avatarPath) {
+  const preview = document.getElementById('account-avatar-preview');
+  const url = getAvatarUrl(avatarPath);
+  preview.outerHTML = renderAvatarOrInitials({ fullName, avatarUrl: url }, 'account-avatar-preview').replace('class="avatar account-avatar-preview"', 'class="account-avatar-preview" id="account-avatar-preview"');
+}
+
+let _avatarUploading = false;
+
+function initAvatarUpload() {
+  const editBtn = document.getElementById('account-avatar-edit-btn');
+  const fileInput = document.getElementById('account-avatar-input');
+
+  editBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file || !_ownUserId || _avatarUploading) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please choose an image file.', 'warning');
+      fileInput.value = '';
+      return;
+    }
+    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_BYTES) {
+      showToast('Image must be under 5MB.', 'warning');
+      fileInput.value = '';
+      return;
+    }
+
+    _avatarUploading = true;
+    editBtn.disabled = true;
+
+    const { data, error } = await uploadAvatar(_ownUserId, file);
+
+    _avatarUploading = false;
+    editBtn.disabled = false;
+    fileInput.value = '';
+
+    if (error) {
+      showToast(`Could not upload photo: ${error.message}`, 'error');
+      return;
+    }
+
+    renderAvatarPreview(document.getElementById('acct-full-name').value, data.avatar_path);
+    showToast('Profile photo updated.', 'success');
+
+    // Refresh the shell's own avatar render too
+    const { initShell } = await import('/shell/nav.js');
+    await initShell();
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -236,6 +296,7 @@ async function init() {
   initTabs();
   initAppearance();
   initSignOut();
+  initAvatarUpload();
 
   // Bind save handlers once here — not re-bound on every loadBranding() call.
   document.getElementById('branding-save').addEventListener('click', saveBranding);

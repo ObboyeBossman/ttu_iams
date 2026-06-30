@@ -72,6 +72,25 @@ export function timeAgo(isoStr) {
 const PHONE_RE = /^[0-9+()\-\s]{7,20}$/;
 const VERIFICATION_CODE_RE = /^[A-Z0-9]{8}$/;
 
+/** Generates standard 2-letter initials from a full name. */
+export function getInitials(fullName) {
+  return (fullName || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+}
+
+/** 
+ * Returns HTML for an avatar image if avatarUrl is present, 
+ * otherwise returns a colored circle with initials.
+ */
+export function renderAvatarOrInitials({ avatarUrl, fullName }, sizeClass = 'avatar-sm') {
+  if (avatarUrl) {
+    // Escaping is expected to be handled before calling, or we assume avatarUrl is safe (from Supabase).
+    // The name is not strictly needed for the image tag alt but it's safe.
+    return `<div class="avatar ${sizeClass}" style="overflow:hidden;"><img src="${avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;"></div>`;
+  }
+  const initials = getInitials(fullName);
+  return `<div class="avatar ${sizeClass}" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);">${initials}</div>`;
+}
+
 /** True if `value` is present and not just whitespace. */
 export function isRequired(value) {
   return typeof value === 'string' ? value.trim().length > 0 : value !== null && value !== undefined;

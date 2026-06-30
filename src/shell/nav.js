@@ -712,8 +712,8 @@ function _buildTopbar(config, activePage, userInfo) {
         <span class="badge-dot"></span>
       </button>
       <button class="topbar-avatar-btn" id="shell-profileBtn">
-        <div class="avatar avatar-sm" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);"
-          id="shell-topbarAvatar">${_esc(userInfo.initials)}</div>
+        <div class="avatar avatar-sm" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);overflow:hidden;"
+          id="shell-topbarAvatar">${_renderAvatarInner(userInfo)}</div>
         <div class="topbar-avatar-info">
           <span class="topbar-avatar-name" id="shell-topbarName">${_esc(userInfo.name)}</span>
           <span class="topbar-avatar-sub" id="shell-topbarSub">${_esc(userInfo.email)}</span>
@@ -741,8 +741,8 @@ function _buildProfilePopover(config, userInfo) {
 
   pop.innerHTML = `
     <div class="popover-header">
-      <div class="avatar avatar-md" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);">
-        ${_esc(userInfo.initials)}
+      <div class="avatar avatar-md" style="background:var(--ttu-blue-surface);color:var(--ttu-blue);overflow:hidden;">
+        ${_renderAvatarInner(userInfo)}
       </div>
       <div>
         <strong>${_esc(userInfo.name)}</strong>
@@ -841,6 +841,13 @@ function _esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function _renderAvatarInner(userInfo) {
+  if (userInfo.avatarUrl) {
+    return `<img src="${_esc(userInfo.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+  return _esc(userInfo.initials);
 }
 
 // -----------------------------------------------------------------------------
@@ -1215,7 +1222,7 @@ export async function initShell(activePage) {
     const userId = session.user.id;
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, full_name')
+      .select('role, full_name, avatar_path')
       .eq('id', userId)
       .maybeSingle();
       
@@ -1224,6 +1231,9 @@ export async function initShell(activePage) {
     const role = profile.role;
     const fullName = profile.full_name ?? 'User';
     const initials = fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    
+    const { getAvatarUrl } = await import('/shared/services/profile.service.js');
+    const avatarUrl = getAvatarUrl(profile.avatar_path);
     
     let resolvedPage = activePage;
     if (!resolvedPage) {
@@ -1241,7 +1251,7 @@ export async function initShell(activePage) {
       }
     }
     
-    await renderShell(role, resolvedPage, { name: fullName, initials, email: session.user.email });
+    await renderShell(role, resolvedPage, { name: fullName, initials, email: session.user.email, avatarUrl });
   } catch (err) {
     console.error('[nav.js] initShell error:', err);
   }

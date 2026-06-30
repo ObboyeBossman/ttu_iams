@@ -5,7 +5,8 @@
 import { requireRole, getCurrentUserId } from '../../auth/auth-guard.js';
 import { initShell, navigateTo, setTabs, showToast } from '/shell/nav.js';
 import { supabase } from '/shared/supabase-client.js';
-import { formatDate } from '/shared/utils.js';
+import { formatDate, renderAvatarOrInitials } from '/shared/utils.js';
+import { getAvatarUrl } from '/shared/services/profile.service.js';
 
 // ── 1. Init ────────────────────────────────────────────────────────────
 await requireRole(['admin']);
@@ -179,12 +180,18 @@ function renderUserList(users) {
     return;
   }
 
-  listEl.innerHTML = users.map(u => `
-    <div class="user-item" data-id="${u.id}">
-      <div class="user-item-name">${u.full_name}</div>
-      <div class="user-item-sub">${u.email || u.index_number || u.phone}</div>
+  listEl.innerHTML = users.map(u => {
+    const avatarHtml = renderAvatarOrInitials({ fullName: u.full_name, avatarUrl: getAvatarUrl(u.avatar_path) }, 'avatar-sm');
+    return `
+    <div class="user-item" data-id="${u.id}" style="display:flex; align-items:center; gap:10px;">
+      ${avatarHtml}
+      <div style="min-width:0;">
+        <div class="user-item-name">${u.full_name}</div>
+        <div class="user-item-sub">${u.email || u.index_number || u.phone}</div>
+      </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   // Click handlers
   listEl.querySelectorAll('.user-item').forEach(el => {
@@ -210,13 +217,17 @@ function renderDetails(user) {
   }
 
   const isStudent = user.role === 'student';
-  
+  const avatarHtml = renderAvatarOrInitials({ fullName: user.full_name, avatarUrl: getAvatarUrl(user.avatar_path) }, 'avatar-xl');
+
   panel.innerHTML = `
     <div class="details-card card">
       <div class="details-header">
-        <div>
-          <h2 style="margin:0 0 4px 0;">${user.full_name}</h2>
-          <span class="badge ${isStudent ? 'badge-blue' : 'badge-green'}">${user.role.replace('_', ' ')}</span>
+        <div style="display:flex; align-items:center; gap:14px;">
+          ${avatarHtml}
+          <div>
+            <h2 style="margin:0 0 4px 0;">${user.full_name}</h2>
+            <span class="badge ${isStudent ? 'badge-blue' : 'badge-green'}">${user.role.replace('_', ' ')}</span>
+          </div>
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn btn-sm btn-outline" onclick="alert('Placeholder: Edit')">Edit User</button>

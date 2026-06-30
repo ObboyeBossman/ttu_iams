@@ -10,6 +10,8 @@
 
 import { supabase } from '../supabase-client.js';
 
+const AVATAR_BUCKET = 'avatars';
+
 /**
  * Returns the combined profile + student record for a given userId.
  * Uses the student_profiles view (profiles ⋈ students) so callers get
@@ -127,4 +129,52 @@ export async function updateOwnProfile(userId, patch) {
     .select('id, full_name, phone, created_at')
     .single();
   return { data, error };
+}
+
+/**
+ * Uploads a new avatar image for the caller's own account. Path is always
+ * `${userId}/avatar.${ext}` — the user-id-prefixed path is load-bearing,
+ * not cosmetic: the "avatars: user uploads own" storage policy checks
+ * exactly this prefix via storage.foldername(name)[1] = auth.uid(). Using
+ * upsert means re-uploading replaces the same object rather than
+ * accumulating old avatars under different extensions.
+ *
+ * @param {string} userId
+ * @param {File} file
+ * @returns {Promise<{ data: { path: string }|null, error: object|null }>}
+ */
+export async function uploadAvatar(userId, file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${userId}/avatar.${ext}`;
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) return { data: null, error: uploadError };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ avatar_path: uploadData.path })
+    .eq('id', userId)
+    .select('id, avatar_path')
+    .single();
+
+  return { data, error };
+}
+
+/**
+ * Resolves any profile's avatar_path to a public URL. The avatars bucket
+ * is non-public at the bucket level but readable by any authenticated
+ * user via RLS (see migration), so a plain public URL works here — unlike
+ * the branding assets, there's no forgery risk that calls for short-lived
+ * signed URLs.
+ *
+ * @param {string|null} avatarPath
+ * @returns {string|null}
+ */
+export function getAvatarUrl(avatarPath) {
+  if (!avatarPath) return null;
+  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarPath);
+  return data?.publicUrl ?? null;
 }

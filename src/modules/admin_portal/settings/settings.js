@@ -1,111 +1,249 @@
 // =============================================================================
-// IAMS — src/modules/admin_portal/settings.js
+// IAMS — src/modules/admin_portal/settings/settings.js
+// =============================================================================
+// Two tabs: Branding (system-wide letter assets — admin-only RLS) and
+// Account (this admin's own profile + local appearance preference).
+// Routes through shared/services/settings.js and profile.service.js rather
+// than calling supabase.from(...)/supabase.storage directly — matches the
+// codebase's "page scripts call services" convention.
+//
+// Real settings table columns: letterhead_path, stamp_path (combined
+// signature+stamp), footer_path. No signature_path column exists; the
+// previous version of this file listed it and would have errored on save.
 // =============================================================================
 
-import { requireRole } from '/modules/auth/auth-guard.js';
-import { initShell }   from '/shell/nav.js';
-import { supabase }    from '/shared/supabase-client.js';
-import { showToast }   from '/shared/utils.js';
+import { requireRole }                                   from '/modules/auth/auth-guard.js';
+import { initShell }                                     from '/shell/nav.js';
+import { supabase }                                      from '/shared/supabase-client.js';
+import { showToast }                                     from '/shared/utils.js';
+import { getSettings, updateSettings }                   from '/shared/services/settings.js';
+import { getOwnProfile, updateOwnProfile, getAuthUser }  from '/shared/services/profile.service.js';
 
-let _settingsLoaded = false;
+const BRANDING_FIELDS = [
+  { key: 'letterhead_path', label: 'Letterhead' },
+  { key: 'stamp_path',      label: 'Stamp & Signature' },
+  { key: 'footer_path',     label: 'Footer' },
+];
 
-async function loadSettings() {
-  if (_settingsLoaded) return;
-  _settingsLoaded = true;
+const THEME_KEY = 'iams_theme_mode';
 
-  const { data: settings, error } = await supabase.from('settings').select('*').eq('id', 1).single();
-  
-  const card = document.getElementById('settings-card');
+// -----------------------------------------------------------------------------
+// Tabs
+// -----------------------------------------------------------------------------
+
+function initTabs() {
+  document.querySelectorAll('[data-stab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-stab]').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.settings-tab-panel').forEach(p =>
+        p.classList.toggle('active', p.id === `spanel-${btn.dataset.stab}`));
+    });
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Branding tab
+// -----------------------------------------------------------------------------
+
+// Boolean re-entrancy guard — replaces the earlier { once: true } / manual
+// re-bind pattern. try/finally guarantees the flag and button state are always
+// restored regardless of which branch exits.
+let _brandingSaving = false;
+
+async function loadBranding() {
+  const { data: settings, error } = await getSettings();
+  const container = document.getElementById('branding-fields');
+
   if (error) {
-    card.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+    container.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+    document.getElementById('branding-save').disabled = true;
     return;
   }
 
-  const fields = ['letterhead_path', 'stamp_path', 'signature_path', 'footer_path'];
-  
-  card.innerHTML = `
-    <div class="form-section-title" style="margin-bottom:12px;font-weight:600;font-size:16px;">Branding Assets</div>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-      Upload new branding assets below. They will be saved to Supabase Storage and updated in the system automatically.
-    </p>
-    ${fields.map(field => `
-      <div style="margin-bottom:16px;">
-        <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;">
-          ${field.replace('_path','').replace('_',' ').replace(/\b\w/g, c=>c.toUpperCase())}
-        </label>
-        <input class="inp" type="file" id="set-file-${field}" accept="image/*" style="padding:6px;width:100%;">
-        ${settings?.[field] ? `<div style="font-size:11.5px;color:var(--text-secondary);margin-top:4px;">Current: <code>${settings[field]}</code></div>` : ''}
-      </div>`).join('')}
-    <div class="alert alert-danger hidden" id="set-error" style="margin-bottom:12px;"></div>
-    <button class="btn btn-primary" id="set-save">Save Changes</button>`;
+  container.innerHTML = BRANDING_FIELDS.map(({ key, label }) => `
+    <div class="field-group">
+      <label class="field-group-label" for="brand-file-${key}">${label}</label>
+      <input class="inp" type="file" id="brand-file-${key}" accept="image/*" style="padding:6px;width:100%;">
+      ${settings?.[key]
+        ? `<div class="current-asset-path">Current: <code>${settings[key]}</code></div>`
+        : `<div class="current-asset-path" style="color:var(--text-warning);">Not yet uploaded — letter generation will fail until this is set.</div>`}
+    </div>
+  `).join('');
+}
 
-  document.getElementById('set-save').addEventListener('click', async () => {
-    const btn = document.getElementById('set-save');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    document.getElementById('set-error').classList.add('hidden');
-    
+async function saveBranding() {
+  if (_brandingSaving) return;
+  _brandingSaving = true;
+
+  const btn     = document.getElementById('branding-save');
+  const errorEl = document.getElementById('branding-error');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  errorEl.classList.add('hidden');
+
+  try {
     const patch = {};
-    let uploadError = null;
 
-    for (const field of fields) {
-      const fileInput = document.getElementById(`set-file-${field}`);
+    for (const { key, label } of BRANDING_FIELDS) {
+      const fileInput = document.getElementById(`brand-file-${key}`);
       if (fileInput && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const ext = file.name.split('.').pop();
-        const fileName = `${field.replace('_path', '')}.${ext}`; // e.g. stamp.png
-        
+        const file     = fileInput.files[0];
+        const ext      = file.name.split('.').pop();
+        const fileName = `${key.replace('_path', '')}.${ext}`;
+
         const { data, error } = await supabase.storage.from('branding').upload(fileName, file, { upsert: true });
-        
         if (error) {
-          uploadError = `Failed to upload ${field}: ${error.message}`;
-          break;
-        } else {
-          patch[field] = data.path;
+          errorEl.textContent = `Failed to upload ${label}: ${error.message}`;
+          errorEl.classList.remove('hidden');
+          return; // finally restores button state
         }
+        patch[key] = data.path;
       }
     }
-    
-    if (uploadError) {
-      document.getElementById('set-error').textContent = uploadError;
-      document.getElementById('set-error').classList.remove('hidden');
-      btn.disabled = false;
-      btn.textContent = 'Save Changes';
+
+    if (Object.keys(patch).length === 0) {
+      showToast('No files were selected to upload.', 'info');
       return;
     }
 
-    if (Object.keys(patch).length > 0) {
-      const { error: updateError } = await supabase.from('settings').update(patch).eq('id', 1);
-      
-      if (updateError) {
-        document.getElementById('set-error').textContent = updateError.message;
-        document.getElementById('set-error').classList.remove('hidden');
-        btn.disabled = false;
-        btn.textContent = 'Save Changes';
-        return;
-      }
-    } else {
-       // Nothing was selected
-       btn.disabled = false;
-       btn.textContent = 'Save Changes';
-       showToast('No files were selected to upload.', 'info');
-       return;
+    const { error: updateError } = await updateSettings(patch);
+    if (updateError) {
+      errorEl.textContent = updateError.message;
+      errorEl.classList.remove('hidden');
+      return;
     }
-    
+
+    showToast('Branding assets updated.', 'success');
+    await loadBranding(); // refresh "Current: ..." paths
+  } finally {
     btn.disabled = false;
-    btn.textContent = 'Save Changes';
-    showToast('Settings saved successfully.', 'success');
-    
-    _settingsLoaded = false;
-    loadSettings();
+    btn.textContent = 'Save Branding';
+    _brandingSaving = false;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Account tab
+// -----------------------------------------------------------------------------
+
+let _ownUserId    = null;
+let _accountSaving = false;
+
+async function loadAccount() {
+  const { data: authUser } = await getAuthUser();
+  if (!authUser) return;
+  _ownUserId = authUser.id;
+
+  const { data: profile, error } = await getOwnProfile(authUser.id);
+  if (error || !profile) {
+    const el = document.getElementById('account-error');
+    el.textContent = error?.message || 'Could not load account details.';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('acct-full-name').value = profile.full_name || '';
+  document.getElementById('acct-phone').value     = profile.phone     || '';
+
+  document.getElementById('account-email').textContent = authUser.email || '—';
+  document.getElementById('account-role').textContent  = profile.role
+    ? profile.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : '—';
+  document.getElementById('account-created').textContent = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-GH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : '—';
+}
+
+async function saveAccount() {
+  if (_accountSaving || !_ownUserId) return;
+  _accountSaving = true;
+
+  const btn     = document.getElementById('account-save');
+  const errorEl = document.getElementById('account-error');
+  errorEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const full_name = document.getElementById('acct-full-name').value;
+    const phone     = document.getElementById('acct-phone').value;
+
+    const { error } = await updateOwnProfile(_ownUserId, { full_name, phone });
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    showToast('Account details updated.', 'success');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Account Details';
+    _accountSaving = false;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Appearance (theme) — writes the same localStorage key that the inline
+// <head> script on every page reads, so this control is actually effective.
+// -----------------------------------------------------------------------------
+
+function _applyTheme(mode) {
+  if (mode === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', mode);
+  }
+}
+
+function initAppearance() {
+  const saved = localStorage.getItem(THEME_KEY) ?? 'light';
+  document.querySelectorAll('[data-theme-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeMode === saved);
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.themeMode;
+      localStorage.setItem(THEME_KEY, mode);
+      _applyTheme(mode);
+      document.querySelectorAll('[data-theme-mode]').forEach(b =>
+        b.classList.toggle('active', b === btn));
+      showToast(`Theme set to ${mode}.`, 'info');
+    });
   });
 }
+
+// -----------------------------------------------------------------------------
+// Sign out
+// -----------------------------------------------------------------------------
+
+function initSignOut() {
+  document.getElementById('account-signout-btn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/src/modules/auth/login.html';
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Init
+// -----------------------------------------------------------------------------
 
 async function init() {
   await requireRole(['admin']);
   await initShell();
-  
-  await loadSettings();
+
+  initTabs();
+  initAppearance();
+  initSignOut();
+
+  // Bind save handlers once here — not re-bound on every loadBranding() call.
+  document.getElementById('branding-save').addEventListener('click', saveBranding);
+  document.getElementById('account-save').addEventListener('click', saveAccount);
+
+  // Independent reads — no reason to serialize.
+  await Promise.all([loadBranding(), loadAccount()]);
+
   document.getElementById('page-loading').style.display = 'none';
 }
 

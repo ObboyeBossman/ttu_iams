@@ -1,0 +1,637 @@
+The complete issue I for this back end that you've created, and then after that you can move on to the r l r l s edition for the new column.
+
+Got it — let me lay out the complete issue list for what I've built so far, end to end, before touching the RLS addition. I'll go module by module and flag severity honestly rather than smoothing it over.Now let me get the exact body of the three placements policies that matter most — student insert, student update, and admin update — since that's where a column-locking gap would live.Now I have the exact gap confirmed in writing, in code, not from memory. This is the same gap the project spec already documented for `zone_id`/`synced_at` (and the `lock_admin_only_placement_fields()` trigger that closes it) — and the new `geo_*` columns sit in that identical blind spot. The `with check` here only constrains `student_id` and `status`; it says nothing about `geo_region`/`geo_district`/`geo_town`/`geocode_status`/`geocoded_at`. A student calling the REST API directly (not through the HTML form) could currently null out or fabricate their own placement's geo-classification while it's still `submitted`.
+
+Now let me check the `lock_admin_only_placement_fields()` trigger itself, since that's the actual enforcement mechanism this gap needs to extend into, rather than RLS:That confirms exactly where the new columns need to be added — same trigger, same pattern, not a new mechanism. I'll cover that properly in the RLS/trigger addition next. For now, here's the full issue list across everything I've written so far, ranked by severity.
+
+---
+
+## Complete Issue List — Backend (migrations, RPCs, edge function, geo-zoning feature)
+
+### Critical
+
+**1. Student write-path gap on the new columns** — confirmed above. `lock_admin_only_placement_fields()` reverts `zone_id`/`synced_at` but not `geo_region`/`geo_district`/`geo_town`/`geocode_status`/`geocoded_at`. A student can currently overwrite their own placement's geo-classification via a direct API call while `status = 'submitted'`. This needs to be folded into that trigger (covered in the next message, per your sequencing).
+
+**2. The manual-override path writes through the exact same hole.** My `override-save` handler in `placement-zones.js` does a plain `.update({ geo_region, geo_district, geo_town, geocode_status: 'success', geocoded_at: ... })` from the client. It works *today* only because the admin's own `current_role() = 'admin'` update policy is unconditional (`using (public.current_role() = 'admin')`, no `with check` at all) — so this isn't broken, but it's also not actually defended by anything I wrote; it's riding entirely on a pre-existing, very permissive admin policy. Worth being honest that I didn't add any real protection here, I just didn't break anything that was already wide open.
+
+### High
+
+**3. RPC parameter injection surface, low severity but real.** `get_placement_districts(p_region text)` and `get_placement_towns(p_region text, p_district text)` take raw text parameters that flow into a `where geo_region = p_region` clause inside `security definer` functions. Parameterized equality like this isn't SQL-injectable in the traditional sense (Postgres handles it as a bound parameter, not string concatenation), so this isn't actually a vulnerability — but I should have stated that explicitly rather than letting it look unexamined. No fix needed, just flagging that I checked it.
+
+**4. The RPCs degrade silently rather than informatively for non-admins.** `where ... and public.current_role() = 'admin'` makes a non-admin's call return an empty result set instead of an error. I called this a feature in the moment ("friendlier") but I should be more careful: it means a school-supervisor or student account that somehow lands on this page (e.g. if the nav guard has a bug, or someone hits the RPC directly via the Supabase JS client in devtools) gets *zero rows* with no error, which can look indistinguishable from "no geocoded placements exist yet." That's a debuggability cost I introduced without flagging it clearly enough the first time. Given `auth-guard.js` already exists and presumably handles role-gating page access, the RPC-level filter is genuinely redundant defense-in-depth, not the primary boundary — I didn't verify that `auth-guard.js` actually protects this specific page route, only that the nav/route config exists.
+
+**5. `revoke execute ... from public, anon` then `grant ... to authenticated` is slightly redundant** — Supabase's default Postgres role setup typically doesn't grant `anon`/`public` execute on functions created by the migration owner role in the first place, and `security definer` functions already run with the definer's privileges regardless of caller grants for the *logic* inside, only the *call* itself needs the grant. This isn't wrong, just belt-and-suspenders I added without checking whether it matches how the rest of this schema handles function grants. Let me check that now rather than leave it unverified.Confirmed — **no existing function in this codebase uses explicit `grant`/`revoke execute` at all**, including `current_role()` itself, despite that one also being `security definer`. This means my RPCs are the only functions in the entire schema with this pattern, which is an inconsistency I introduced rather than a real protection — every other `security definer` function here just relies on the in-body `current_role()` check, exactly like mine does anyway. The grants are dead weight: redundant with the existing convention and not adding a layer the rest of the schema considers necessary. I should drop them to match house style rather than have one feature quietly diverge.
+
+**6. The migration files are numbered to collide.** I wrote `20260630000001_placement_geo_zones.sql` and `20260630000002_placement_geo_rpcs.sql`. The `supabase/README.md` says the canonical migrations directory holds `20260622000001_phase1_schema.sql` and `20260622000002_phase1_rls.sql` — only two files, both already used. But the `attendance.service.js` I read in the previous conversation referenced `20260622000003_phase2_schema.sql` and `20260626000002_attendance_absence_reason.sql`, **neither of which exists in this repo**, meaning the real migration history (whatever's actually been applied against the live Supabase project) is not fully represented in version control. My two new files might collide with migrations that exist live but were never committed. I have no way to verify this from inside the repo — it needs a `supabase migration list` against the real linked project before applying anything, not just inside this sandbox.
+
+### Medium
+
+**7. The edge function's catch-block self-repair can throw past the outer catch.** Look at this carefully:
+
+```typescript
+} catch (error: any) {
+  console.error('geocode-placement: unhandled error for placement', placementId, error)
+  try {
+    if (placementId) {
+      const supabaseClient = createClient(...)
+      await supabaseClient.from('placements').update({ geocode_status: 'failed' }).eq('id', placementId)
+    }
+  } catch (_) { /* swallow */ }
+
+  return new Response(JSON.stringify({ error: error.message }), { status: 500, ... })
+}
+```
+
+This is fine — the inner `try/catch` does swallow correctly. But I want to flag the actual remaining gap: if `req.json()` itself throws (malformed JSON body), `placementId` is never assigned, so the function correctly skips the repair attempt and just logs/returns 500. That's acceptable. The genuine gap is that **a malformed-JSON failure here never updates any `placements` row to `failed`**, because there's no `record.id` to update — meaning if the *invoking* side (`placements.js`'s fire-and-forget call) somehow sent a malformed body, that placement would sit at `geocode_status = 'pending'` forever with no visible signal except a server log nobody's watching. Given the invoking code I read constructs the body from a real Supabase row (`{ body: { record: data } }`), this is a low-probability path, but "pending forever, invisible" is exactly the failure mode the "Unresolved Locations" banner exists to catch — and my banner only queries `in('geocode_status', ['failed', 'pending'])`, so it *would* actually surface this case correctly via the `pending` branch. So: not a bug, just worth confirming out loud that the recovery path works, rather than assuming it silently.
+
+**8. `idx_placements_geocode_status` is a partial index on a column with a hardcoded default.** `where geocode_status != 'success'` will include every row before geocoding has had a chance to run (default `'pending'`), which for a brand-new placement is correct and intended (it should show as unresolved-pending briefly). But there's no time bound — the spec text said "or `pending` for longer than expected," implying staleness should matter, and I never implemented that distinction. Right now a placement that's been stuck on `pending` for 30 seconds and one stuck for 3 weeks look identical in the unresolved banner. I didn't build any staleness threshold (e.g. `pending` + `created_at < now() - interval '10 minutes'`) even though the original prompt's phrasing implied one. This is a real scope gap, not a bug — I should have called it out as unaddressed rather than letting the "for longer than expected" phrase quietly drop out of my implementation.
+
+**9. I never actually re-ran or re-verified the existing `loadUnresolved()` ordering fix against the live trigger behavior.** I added `.order('created_at', { ascending: false })` to that query, which is a reasonable default, but I asserted this fix without checking whether admins would actually prefer newest-first or oldest-first for a queue they're meant to be working through and clearing (oldest-first is usually correct for a backlog/triage view — newest-first buries old stuck items at the bottom). This is a UX judgment call I made silently rather than flagging as a choice. I'd lean toward switching it to oldest-first (`ascending: true`) for the unresolved banner specifically, since the point of that section is "things needing attention," and old neglected items should surface first, not get buried under new pending rows that will likely resolve themselves within seconds anyway.
+
+### Low / Process
+
+**10. None of this has been applied anywhere.** Every file above is unexecuted text. I have not run these migrations against any database (this sandbox has no live Supabase project linked, and per the network allowlist I confirmed earlier, no egress to Supabase's API or to `maps.googleapis.com` either). The RPCs are unsyntax-checked beyond my own reading — I have not run `supabase db lint`, `psql --dry-run`, or anything equivalent. Treat every SQL snippet above as "should be correct based on the schema I read" rather than "verified to execute."
+
+**11. I never checked whether `students:full_name(...)` embedding in `loadPlacements`/`loadUnresolved` actually respects RLS correctly for the admin caller** — i.e., whether Supabase's PostgREST embedding (`select('*, students:student_id(full_name)')`) silently returns `null` for the joined `profiles` row if some RLS edge case blocks it, rather than erroring. Given `profiles: admin reads all` exists unconditionally, this should work, but "should" is exactly the word I keep needing to replace with "verified" in this project, and I haven't actually traced it end to end.
+
+**12. Inconsistent function-comment claim.** My migration file's `comment on function public.get_placement_regions` says *"Returns empty set for non-admins (defense in depth; the page itself is admin-routed)"* — but I never actually verified the page is admin-routed by checking `auth-guard.js`. I asserted it parenthetically as if confirmed. Let me check that right now rather than let it stand unverified a second time.This confirms a real, separate problem that I had not caught until being asked to compile this list honestly: **`placement-zones.html`/`.js` never calls `requireRole()` at all.** Let me check a sibling admin page to see the actual convention, and confirm this gap is specific to this page rather than a general pattern.That's the **actual** missing piece, and it's more important than half the items I listed above. Every sibling admin page (`zones.js` confirmed; presumably `users.js`, `seasons.js`, the rest of `admin_portal/` too) imports `requireRole` from `/modules/auth/auth-guard.js` and calls `await requireRole(['admin'])` before doing anything else. **`placement-zones.js` never does this.** Right now, the only thing standing between any logged-in user and this page is:
+
+1. Whether the sidebar nav happens to hide the link from non-admins (a UI convenience, not a guard)
+2. Database RLS on `placements`/`zones` (which does correctly restrict *data*, since `placements: admin reads all` requires `current_role() = 'admin'`)
+
+But the *page itself* — the HTML shell, the JS execution, the RPC calls (which, per issue #4, return empty sets rather than erroring for non-admins) — has no client-side gate at all. A school-supervisor or student who directly navigates to `placement-zones.html` would load the full page chrome, see "No geocoded placements yet" or similarly silent empty states (because the RPCs quietly return nothing), and the malformed-permissions state would look identical to "this feature has no data yet" rather than "you're not allowed here." That's a worse failure mode than an explicit redirect or 403, and it's the inverse of how this codebase clearly intends pages to behave.
+
+This is also exactly why issue #4's "friendlier empty result instead of an error" choice was actually the wrong call — it compounds with this gap instead of being independently fine. With `requireRole` properly in place, the RPC-level role filter becomes true defense-in-depth as I originally claimed; without it, it's currently the *only* thing preventing a confusing silent-failure UX, and it was never designed to carry that weight on its own.
+
+**13. Corollary to #12 — I also never confirmed `initShell` is called.** Same pattern in `zones.js`: `initShell` renders the sidebar/topbar shell itself. If `placement-zones.js` also skips this, the page might render without the persistent shell entirely depending on how PJAX navigation is structured. Let me check.Confirmed missing too, with the same pattern: `zones.js`'s real `init()` is `await requireRole(['admin']); await initShell(); /* then page-specific logic */`. The version of `placement-zones.js` I inherited and patched (mine included) calls none of this — it goes straight from `import { supabase } ...` to `fetchZones()`/`loadRegions()`/`loadUnresolved()`. Given that PJAX is how this codebase navigates between pages (confirmed in the earlier exploration — `nav.js` is described as "persistent shell: sidebar, topbar, PJAX navigation"), this likely means either the page silently relies on the shell already being on-screen from whatever page the admin PJAX'd in from (fragile — breaks on a hard refresh/direct URL load), or it genuinely renders without `requireRole` ever running.
+
+This is a real fix I need to make, not just a note — let me add it now since it's a two-line correction that directly addresses the most serious gap on this list:
+
+```javascript
+// src/modules/admin_portal/placement-zones/placement-zones.js
+import { supabase }      from '../../../shared/supabase-client.js';
+import { requireRole }   from '/modules/auth/auth-guard.js';
+import { initShell }     from '/shell/nav.js';
+import { showToast }     from '../../../shared/utils.js';
+
+let zonesMap = [];
+
+async function init() {
+  await requireRole(['admin']);
+  await initShell();
+
+  await fetchZones();
+  await loadRegions();
+  await loadUnresolved();
+}
+
+// ... (rest of the file exactly as written in the previous message, with the
+//      earlier inline `function showToast(...)` stub deleted entirely now
+//      that it's imported above)
+```
+
+That's the one substantive code change buried inside this issue list — everything else above is audit findings, not new code. With that added, `requireRole(['admin'])` becomes the real, primary gate (matching every sibling admin page), the RPC's `current_role() = 'admin'` filter becomes genuine defense-in-depth rather than the sole protection, and the empty-result-instead-of-error behavior from issue #4 stops being a liability.
+
+---
+
+**Summary, by severity:**
+- **Critical (2):** student write-path gap on new geo columns; override path rides on a pre-existing wide-open admin policy with nothing I added defending it
+- **High (4):** RPC param surface (verified fine, just unstated), silent-empty-result UX risk, redundant grants diverging from house style, migration numbering collision risk against an undocumented live schema state
+- **Medium (3):** edge-function malformed-body edge case (verified the recovery path actually works), missing staleness threshold on "pending" that the original spec implied, an unflagged ordering/UX judgment call
+- **Low/Process (4):** nothing executed/applied anywhere; embedded-select RLS interaction unverified; one false "verified" claim in a comment (now corrected); **and the actual most serious finding — `requireRole`/`initShell` were missing entirely, now fixed above**
+
+That last one is the one I'd put at the top if I were re-ranking after writing this out — it's more serious than the column-locking gap, because it's the difference between "a malicious direct API call could change three text fields" and "the page itself has no access control and silently degrades to misleading empty states for anyone who lands on it." I should have caught it while building, not while being asked to audit.
+
+Ready to move to the RLS/trigger addition for the new columns — folding `geo_region`, `geo_district`, `geo_town`, `geocode_status`, and `geocoded_at` into `lock_admin_only_placement_fields()`, the same mechanism that already locks `zone_id`/`synced_at`, when you are.
+I'm redesigning the admin settings settings page... settings feature. Uh-huh. Redesign it. Check the brochures I provided and make sure that you carefully redesign this page. Make it... check check the brochure. We know what to do. And then if there is anything that you can do, you have to improve... you have to have that preference on account listings, account settings for that specific admin. Or that... that's it. That will be apart from the actual... the the general settings, like the the image parts the image parts and other settings. So you can integrate features that you recommend. Uh-huh. You can integrate them, make the system whole.I'm redesigning the admin settings settings page... settings feature. Uh-huh. Redesign it. Check the brochures I provided and make sure that you carefully redesign this page. Make it... check check the brochure. We know what to do. And then if there is anything that you can do, you have to improve... you have to have that preference on account listings, account settings for that specific admin. Or that... that's it. That will be apart from the actual... the the general settings, like the the image parts the image parts and other settings. So you can integrate features that you recommend. Uh-huh. You can integrate them, make the system whole.I'm redesigning the admin settings settings page... settings feature. Uh-huh. Redesign it. Check the brochures I provided and make sure that you carefully redesign this page. Make it... check check the brochure. We know what to do. And then if there is anything that you can do, you have to improve... you have to have that preference on account listings, account settings for that specific admin. Or that... that's it. That will be apart from the actual... the the general settings, like the the image parts the image parts and other settings. So you can integrate features that you recommend. Uh-huh. You can integrate them, make the system whole.I'm redesigning the admin settings settings page... settings feature. Uh-huh. Redesign it. Check the brochures I provided and make sure that you carefully redesign this page. Make it... check check the brochure. We know what to do. And then if there is anything that you can do, you have to improve... you have to have that preference on account listings, account settings for that specific admin. Or that... that's it. That will be apart from the actual... the the general settings, like the the image parts the image parts and other settings. So you can integrate features that you recommend. Uh-huh. You can integrate them, make the system whole.
+
+
+I want to make sure I rebuild this from what's actually there rather than guessing at "the brochures" — I don't see any brochure files in this upload. Let me check the uploads folder directly in case something came through that didn't surface as a document, and pull up the real settings page (HTML, JS, service, schema) before touching anything.Confirmed — only the placement-zones markdown from earlier is there. No brochure was actually attached to this message. Rather than invent what a "TTU brand brochure" might say (colors, logo usage, tone) and redesign against a guess, I'll work from what's verifiably real: the actual `theme.css` tokens, the actual `settings` table/service/page, and the actual patterns the rest of `admin_portal` already uses — the same standard I held the placement-zones work to.
+
+Let me pull up everything settings-related first.That's genuinely thin — just a 480px card with skeleton placeholders, no actual form markup at all. Let me check `settings.js` to see what it's actually rendering at runtime.Already a real, concrete discrepancy with the spec I read earlier: this code references `footer_path` as a fourth field, but the schema doc from Section 9.7 only listed three (`letterhead_path`, `stamp_path`, `signature_path`). Let me check the actual `settings` table definition before assuming either source is right.And there's the resolution: the real table has `letterhead_path`, `stamp_path`, `footer_path` — **no `signature_path` column at all**, and the comment on `stamp_path` says it's now a *combined* signature+stamp image. So the spec doc I read earlier (`docs/IAMS_Project_Scope_and_Specification_Rev8.md`) is stale here too — it documents a three-asset model (letterhead/stamp/signature) that the real schema has since consolidated into letterhead/stamp(combined)/footer. The JS code (`fields = ['letterhead_path', 'stamp_path', 'signature_path', 'footer_path']`) is itself wrong in a different way — it lists four fields including a `signature_path` that doesn't exist in the table at all. If an admin tried to upload a "signature," the `patch` object would include a `signature_path` key that `supabase.from('settings').update(patch)` would send to a column that isn't there — Postgres would reject the whole update with a column-not-found error.
+
+This needs fixing as part of the redesign regardless of styling. Let me check who actually reads these columns downstream (the letter generator) before deciding the right field set, since that's the real source of truth for what's needed.That settles it conclusively, from the actual letter-generation consumer rather than the stale spec doc: **the real, current asset model is three fields — `letterhead_path`, `stamp_path` (combined signature+stamp), `footer_path`** — and `get-letter-assets/index.ts` explicitly requires all three to be non-null before it'll generate a letter. `settings.js` (admin page) is the one file out of sync, still listing a phantom fourth `signature_path` field that doesn't exist on the table and would break the update if ever populated.
+
+Let me also check `services/settings.js` in full, since the redesign needs to call through the service layer (per this codebase's stated architecture rule: "page scripts call services, never Supabase directly") — and the current `admin_portal/settings.js` violates that rule by calling `supabase.from('settings')` and `supabase.storage` directly instead of going through a service. Worth confirming that rule is real and not just aspirational documentation.Confirmed — `getSettings()` and `updateSettings(patch)` already exist, correctly scoped to the real three-field model, and the admin page currently bypasses them entirely by calling `supabase.from('settings')` directly. That's a real architectural violation in the existing code, separate from anything visual, and the redesign should fix it.
+
+Now for the second half of your request — "preference on account listings, account settings for that specific admin... apart from the general settings, like the image parts." I read that as: the redesigned page should have two distinct sections — branding assets (what exists today) plus a new section for the *signed-in admin's own account preferences* (their profile/account, not system-wide settings). Let me check whether anything like that exists anywhere already, since this codebase clearly has conventions I should reuse rather than invent.This is genuinely useful — a real, working precedent: tabbed settings (`data-stab` tab buttons + `.settings-tab-panel` panels), theme toggle persisted to `localStorage` under `iams_theme_mode` (the exact key the inline `<head>` script in every page reads), an "account info" block reading from `profile.service.js`'s `getAuthUser()`, and a sign-out action. Let me check `profile.service.js` to see exactly what's available (full name, phone, etc. — the things an admin would actually want to edit about their own account), and check the matching `settings.html`/`settings.css` for the tab markup pattern.This is the genuinely important finding here, and it changes how I should approach the second half of your request. `getProfile(userId)` is **hardcoded to the `student_profiles` view** — a join of `profiles` + `students`. That view doesn't exist for an admin; there's no `admin_profiles` equivalent, and admins have no row in the `students` table at all (confirmed back in the original repo exploration: "A row exists here only when `profiles.role = 'student'`"). So this service, as written, **cannot be reused for an admin's own account preferences** — calling `getProfile(adminUserId)` would either error against the view or return null, since the admin's `id` only exists in `profiles`, not joined into `student_profiles`.
+
+`updatePhone(userId, phone)` writes straight to `profiles` and isn't role-specific in its query — that one's reusable as-is. Let me confirm the RLS policy backs that for an admin specifically, not just a student, since the doc-comment above only mentions students.Good — confirmed role-agnostic, `using (id = auth.uid())` with no role filter, so this genuinely does cover an admin updating their own `phone`/`full_name`. `updatePhone` is safe to reuse directly. But I need a parallel `getProfile`-equivalent that reads from `profiles` alone (not the student-joined view) for the admin's own basic identity fields. Rather than bend `profile.service.js`'s existing function to do double duty (which would be the kind of silent scope-creep I should avoid), the cleanest fix is a small, explicit addition.
+
+Let me check one more thing before writing anything — the `settings.css`/`settings.html` tab markup pattern on the student side, since that's the actual visual convention I should be matching for tabs, not inventing my own.This is exactly the real, working convention I should match — `.settings-tabs`, `.settings-tab`/`.settings-tab-panel`, `.toggle-switch`/`.toggle-slider`, `.account-info-row` etc. Let me confirm these CSS classes are defined in the shared stylesheet (not scoped only to the student dashboard's own CSS file), since the admin settings page would need to pull from wherever they actually live.That settles the last open question: these classes live only in `student/settings/settings.css`, **scoped to the student SPA**, not in the shared `theme.css`/`components.css` that `admin_portal/settings.html` actually links. So I can match the *visual pattern* (tabs, toggle switches, account-info rows) conceptually, but I cannot literally `<link>` that stylesheet into the admin page without either duplicating it or extracting it into a shared file — and extracting shared CSS out from under the student module is a bigger, riskier change than this redesign calls for. The pragmatic, honest choice is to write the equivalent CSS scoped to the admin settings page itself, using the same shared design tokens (`--ttu-blue`, `--space-md`, etc.) so it looks consistent with the rest of `admin_portal`, without silently coupling two independent modules together.
+
+I now have everything I need, verified rather than assumed:
+
+**Confirmed facts driving this redesign:**
+1. Real asset fields: `letterhead_path`, `stamp_path` (combined sig+stamp), `footer_path` — current admin JS wrongly includes a non-existent `signature_path`
+2. The page bypasses `services/settings.js` entirely and should be calling `getSettings()`/`updateSettings()` instead
+3. No "admin account preferences" exists anywhere yet — `profile.service.js` is hardcoded to the student-joined view and can't serve an admin's own profile as-is; `updatePhone()` is reusable, a basic-profile read is not and needs a small new function
+4. The real UI convention for this exact pattern (tabs, account info, theme toggle) already exists on the student side, but its CSS is module-scoped and not shareable without a larger refactor I shouldn't sneak into this task
+5. Theme persistence already happens globally via `localStorage['iams_theme_mode']`, read by the inline `<head>` script on *every* page including this one — so an admin-side "Appearance" tab isn't cosmetic filler, it's wiring up a control for something the page already silently respects but currently gives the admin no way to change
+
+Here's the plan for the actual redesign, before I write the code, so you can correct course if this isn't what you meant: two tabs — **Branding** (today's image uploads, fixed to the real three-field schema, routed through the existing service) and **Account** (the admin's own name/phone, a theme toggle, and sign-out) — matching the tabbed pattern already proven on the student side, built with real shared tokens, no invented colors or layout.
+
+Before I write the full HTML/JS/CSS, I want to check one thing that directly affects whether "Account" can safely include a phone-number edit for an admin: does `users.js` (admin user management) already let an admin edit *other* admins' phone numbers, which would tell me whether phone is treated as sensitive/admin-only-editable elsewhere, versus self-service?Good — `users.js` only ever displays phone, never edits it, even for other users. So a self-service phone edit in the new Account tab doesn't collide with or duplicate any existing admin capability; it fills a real gap (right now there's no way for an admin to update their own phone number anywhere in the system at all).
+
+I have what I need to build this for real now. Here's the complete redesign.
+
+---
+
+## 1. New service addition — `profile.service.js`
+
+A minimal, explicit addition rather than bending the existing student-scoped function. Reuses `updatePhone` as-is.```javascript
+/**
+ * Returns the bare `profiles` row (id, role, full_name, phone, created_at)
+ * for any authenticated user reading their own row — admin, school_supervisor,
+ * or company_supervisor. Unlike getProfile() above, this does NOT join the
+ * student_profiles view, since that view only exists for the student role
+ * (admins/supervisors have no row in `students` at all). Use this on the
+ * Admin Settings → Account tab and the future supervisor settings pages;
+ * use getProfile() only when academic fields are actually needed.
+ *
+ * @param {string} userId - auth.uid()
+ * @returns {Promise<{ data: object|null, error: object|null }>}
+ */
+export async function getOwnProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, role, full_name, phone, created_at')
+    .eq('id', userId)
+    .maybeSingle();
+  return { data, error };
+}
+```
+
+This goes at the end of the existing `profile.service.js` — I'd also update the file's top-of-file comment from "Profile reads + updates for the student portal Profile page" to "...for the student portal Profile page, plus a role-agnostic own-profile read for other portals' Account settings," since the original comment is about to become inaccurate the moment this function lands.
+
+## 2. Redesigned `settings.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1a48">
+  <title>Settings | TTU IAMS Admin</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <style>
+        /* Scoped to this page — mirrors the tab/toggle pattern already
+           established in the student settings panel, using shared theme
+           tokens rather than the student module's module-scoped CSS. */
+        .settings-tabs {
+          display: flex;
+          gap: var(--space-xs);
+          border-bottom: 1px solid var(--border-default);
+          margin-bottom: var(--space-lg);
+        }
+        .settings-tab {
+          background: none;
+          border: none;
+          padding: var(--space-sm) var(--space-md);
+          font-size: var(--text-sm);
+          font-weight: 600;
+          color: var(--text-secondary);
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+          margin-bottom: -1px;
+          transition: color 0.15s, border-color 0.15s;
+        }
+        .settings-tab:hover { color: var(--text-primary); }
+        .settings-tab.active {
+          color: var(--ttu-blue);
+          border-bottom-color: var(--ttu-blue);
+        }
+        .settings-tab-panel { display: none; }
+        .settings-tab-panel.active { display: block; }
+
+        .field-group { margin-bottom: var(--space-lg); }
+        .field-group-label {
+          font-size: var(--text-xs);
+          font-weight: 600;
+          display: block;
+          margin-bottom: var(--space-sm);
+          color: var(--text-primary);
+        }
+        .field-hint {
+          font-size: var(--text-xs);
+          color: var(--text-secondary);
+          margin-top: var(--space-xs);
+        }
+        .current-asset-path {
+          font-size: var(--text-xs);
+          color: var(--text-secondary);
+          margin-top: var(--space-xs);
+        }
+
+        .account-info-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+          padding: var(--space-md) 0;
+          border-bottom: 1px solid var(--border-default);
+        }
+        .account-info-row:last-of-type { border-bottom: none; }
+        .account-info-label {
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+        }
+        .account-info-value {
+          font-size: var(--text-sm);
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .appearance-toggle-row { display: flex; gap: var(--space-sm); }
+        .appearance-btn {
+          flex: 1;
+          padding: var(--space-sm) var(--space-md);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-sm);
+          background: var(--bg-card);
+          color: var(--text-secondary);
+          font-size: var(--text-sm);
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .appearance-btn:hover { border-color: var(--border-hover); }
+        .appearance-btn.active {
+          border-color: var(--ttu-blue);
+          color: var(--ttu-blue);
+          background: var(--ttu-blue-surface);
+        }
+      </style>
+
+      <div class="page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Settings</h1>
+            <p class="page-subtitle">Manage system branding and your own account preferences.</p>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:560px;" id="settings-card">
+          <!-- Tabs -->
+          <div class="settings-tabs">
+            <button class="settings-tab active" data-stab="branding" id="stab-branding">Branding</button>
+            <button class="settings-tab" data-stab="account" id="stab-account">Account</button>
+          </div>
+
+          <!-- Branding panel -->
+          <div class="settings-tab-panel active" id="spanel-branding">
+            <p style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-lg);">
+              These assets are embedded into every attachment letter generated by students. Uploading a new file replaces the existing one immediately for all future letters.
+            </p>
+
+            <div id="branding-fields"><!-- populated by settings.js --></div>
+
+            <div class="alert alert-danger hidden" id="branding-error" style="margin-bottom:var(--space-md);"></div>
+            <button class="btn btn-primary" id="branding-save">Save Branding</button>
+          </div>
+
+          <!-- Account panel -->
+          <div class="settings-tab-panel" id="spanel-account">
+
+            <div class="field-group">
+              <label class="field-group-label" for="acct-full-name">Full Name</label>
+              <input class="inp" type="text" id="acct-full-name" style="width:100%;">
+            </div>
+
+            <div class="field-group">
+              <label class="field-group-label" for="acct-phone">Phone Number</label>
+              <input class="inp" type="tel" id="acct-phone" style="width:100%;">
+            </div>
+
+            <div class="alert alert-danger hidden" id="account-error" style="margin-bottom:var(--space-md);"></div>
+            <button class="btn btn-primary" id="account-save" style="margin-bottom:var(--space-xl);">Save Account Details</button>
+
+            <div class="account-info-row">
+              <div class="account-info-label">Email</div>
+              <div class="account-info-value" id="account-email">—</div>
+            </div>
+            <div class="account-info-row">
+              <div class="account-info-label">Role</div>
+              <div class="account-info-value" id="account-role">—</div>
+            </div>
+            <div class="account-info-row">
+              <div class="account-info-label">Member since</div>
+              <div class="account-info-value" id="account-created">—</div>
+            </div>
+
+            <div class="field-group" style="margin-top:var(--space-xl);">
+              <label class="field-group-label">Appearance</label>
+              <div class="appearance-toggle-row">
+                <button class="appearance-btn" data-theme-mode="light" id="theme-btn-light">Light</button>
+                <button class="appearance-btn" data-theme-mode="dark" id="theme-btn-dark">Dark</button>
+                <button class="appearance-btn" data-theme-mode="system" id="theme-btn-system">System</button>
+              </div>
+              <p class="field-hint">Your preference is saved on this device only.</p>
+            </div>
+
+            <div style="margin-top:var(--space-xl);">
+              <button class="btn btn-danger" id="account-signout-btn" style="width:100%;">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="shell-overlays"></div>
+<script type="module" src="./settings.js"></script>
+</body>
+</html>
+```
+
+## 3. Redesigned `settings.js`
+
+Fixes the phantom `signature_path` field, routes through `services/settings.js` instead of calling Supabase directly, adds the Account tab logic.
+
+```javascript
+// =============================================================================
+// IAMS — src/modules/admin_portal/settings/settings.js
+// =============================================================================
+// Two tabs: Branding (system-wide letter assets — admin-only RLS) and
+// Account (this admin's own profile + local appearance preference).
+// Branding now goes through shared/services/settings.js rather than
+// calling supabase.from('settings') directly, matching the rest of the
+// codebase's "page scripts call services, never Supabase directly" rule.
+// =============================================================================
+
+import { requireRole }                          from '/modules/auth/auth-guard.js';
+import { initShell }                             from '/shell/nav.js';
+import { supabase }                              from '/shared/supabase-client.js';
+import { showToast }                             from '/shared/utils.js';
+import { getSettings, updateSettings }           from '/shared/services/settings.js';
+import { getOwnProfile, updatePhone, getAuthUser } from '/shared/services/profile.service.js';
+
+// The real settings table has exactly these three asset columns —
+// letterhead_path, stamp_path (combined signature+stamp), footer_path.
+// (The previous version of this file also listed `signature_path`, which
+// does not exist on the table and would have errored if ever populated.)
+const BRANDING_FIELDS = [
+  { key: 'letterhead_path', label: 'Letterhead' },
+  { key: 'stamp_path',      label: 'Stamp & Signature' },
+  { key: 'footer_path',     label: 'Footer' },
+];
+
+const THEME_KEY = 'iams_theme_mode';
+
+// -----------------------------------------------------------------------------
+// Tabs
+// -----------------------------------------------------------------------------
+
+function initTabs() {
+  document.querySelectorAll('[data-stab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-stab]').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.settings-tab-panel').forEach(p =>
+        p.classList.toggle('active', p.id === `spanel-${btn.dataset.stab}`));
+    });
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Branding tab
+// -----------------------------------------------------------------------------
+
+async function loadBranding() {
+  const { data: settings, error } = await getSettings();
+  const container = document.getElementById('branding-fields');
+
+  if (error) {
+    container.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+    document.getElementById('branding-save').disabled = true;
+    return;
+  }
+
+  container.innerHTML = BRANDING_FIELDS.map(({ key, label }) => `
+    <div class="field-group">
+      <label class="field-group-label" for="brand-file-${key}">${label}</label>
+      <input class="inp" type="file" id="brand-file-${key}" accept="image/*" style="padding:6px;width:100%;">
+      ${settings?.[key]
+        ? `<div class="current-asset-path">Current: <code>${settings[key]}</code></div>`
+        : `<div class="current-asset-path" style="color:var(--text-warning);">Not yet uploaded — letter generation will fail until this is set.</div>`}
+    </div>
+  `).join('');
+
+  document.getElementById('branding-save').addEventListener('click', saveBranding, { once: true });
+}
+
+async function saveBranding() {
+  const btn = document.getElementById('branding-save');
+  const errorEl = document.getElementById('branding-error');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  errorEl.classList.add('hidden');
+
+  const patch = {};
+
+  for (const { key } of BRANDING_FIELDS) {
+    const fileInput = document.getElementById(`brand-file-${key}`);
+    if (fileInput && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const ext = file.name.split('.').pop();
+      const fileName = `${key.replace('_path', '')}.${ext}`;
+
+      const { data, error } = await supabase.storage.from('branding').upload(fileName, file, { upsert: true });
+      if (error) {
+        errorEl.textContent = `Failed to upload ${key}: ${error.message}`;
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Save Branding';
+        // Re-bind since { once: true } consumed the previous listener.
+        btn.addEventListener('click', saveBranding, { once: true });
+        return;
+      }
+      patch[key] = data.path;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) {
+    showToast('No files were selected to upload.', 'info');
+    btn.disabled = false;
+    btn.textContent = 'Save Branding';
+    btn.addEventListener('click', saveBranding, { once: true });
+    return;
+  }
+
+  const { error: updateError } = await updateSettings(patch);
+  if (updateError) {
+    errorEl.textContent = updateError.message;
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Save Branding';
+    btn.addEventListener('click', saveBranding, { once: true });
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save Branding';
+  showToast('Branding assets updated.', 'success');
+  await loadBranding(); // refresh "Current: ..." paths
+}
+
+// -----------------------------------------------------------------------------
+// Account tab
+// -----------------------------------------------------------------------------
+
+let _ownUserId = null;
+
+async function loadAccount() {
+  const { data: authUser } = await getAuthUser();
+  if (!authUser) return;
+  _ownUserId = authUser.id;
+
+  const { data: profile, error } = await getOwnProfile(authUser.id);
+  if (error || !profile) {
+    document.getElementById('account-error').textContent = error?.message || 'Could not load account details.';
+    document.getElementById('account-error').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('acct-full-name').value = profile.full_name || '';
+  document.getElementById('acct-phone').value     = profile.phone || '';
+  document.getElementById('account-email').textContent = authUser.email || '—';
+  document.getElementById('account-role').textContent  = profile.role
+    ? profile.role.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
+    : '—';
+  document.getElementById('account-created').textContent = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-GH', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
+
+  document.getElementById('account-save').addEventListener('click', saveAccount);
+}
+
+async function saveAccount() {
+  const btn = document.getElementById('account-save');
+  const errorEl = document.getElementById('account-error');
+  errorEl.classList.add('hidden');
+
+  const phone = document.getElementById('acct-phone').value;
+  // Note: full_name is intentionally read-only display-wise on every other
+  // role in this codebase (students can't change their own full_name either —
+  // only phone, per profiles RLS comment: "phone, full_name" listed together
+  // but updatePhone() is the only mutator that exists anywhere in the repo).
+  // Rather than silently no-op the name field or quietly add a new mutator
+  // with unclear scope, this save only persists phone for now — full_name
+  // editing would need its own reviewed service function first.
+
+  if (!_ownUserId) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  const { error } = await updatePhone(_ownUserId, phone);
+
+  btn.disabled = false;
+  btn.textContent = 'Save Account Details';
+
+  if (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  showToast('Account details updated.', 'success');
+}
+
+// -----------------------------------------------------------------------------
+// Appearance (theme) — same localStorage key the inline <head> script and
+// every other page already read; this just gives the admin a control for it.
+// -----------------------------------------------------------------------------
+
+function _applyTheme(mode) {
+  const html = document.documentElement;
+  if (mode === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    html.setAttribute('data-theme', mode);
+  }
+}
+
+function initAppearance() {
+  const saved = localStorage.getItem(THEME_KEY) ?? 'light';
+  document.querySelectorAll('[data-theme-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.themeMode === saved);
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.themeMode;
+      localStorage.setItem(THEME_KEY, mode);
+      _applyTheme(mode);
+      document.querySelectorAll('[data-theme-mode]').forEach(b => b.classList.toggle('active', b === btn));
+      showToast(`Theme set to ${mode}.`, 'info');
+    });
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Sign out
+// -----------------------------------------------------------------------------
+
+function initSignOut() {
+  document.getElementById('account-signout-btn')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/src/modules/auth/login.html';
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Init
+// -----------------------------------------------------------------------------
+
+async function init() {
+  await requireRole(['admin']);
+  await initShell();
+
+  initTabs();
+  initAppearance();
+  initSignOut();
+
+  await Promise.all([loadBranding(), loadAccount()]);
+
+  document.getElementById('page-loading').style.display = 'none';
+}
+
+init();
+```
+
+---
+
+## Issues I'm flagging on this redesign rather than burying
+
+**1. I deliberately did not add a `full_name` editor.** Your message said "improve... account settings for that specific admin," and a name field is the obvious first thing to add — I drafted the input, then stopped short of wiring it to a save call. Here's why: I traced every existing mutator in this codebase that touches `profiles.full_name` and found exactly zero — `updatePhone()` only ever updates `phone`, RLS's `with check` would technically *allow* a `full_name` change (it only constrains `id` and `role`), but no one has built or reviewed a code path that does this anywhere in the app, including the student side. Silently adding the first-ever `full_name` mutator as a side effect of a settings-page redesign felt like the wrong place to introduce it without you deciding that's wanted — so the input is there for a future `updateOwnProfile(userId, { full_name })` function, but right now it only writes `phone`. Tell me if you want it wired live and I'll add the real service function properly rather than bolt it on inline.
+
+**2. The `{ once: true }` listener pattern in `saveBranding` is a little fragile.** I re-bind it manually in every error-exit path so the button doesn't go dead after a failed save, but this is the kind of thing that's easy to break on a future edit if someone adds a new early-return without remembering to re-bind. A cleaner version would track a single persistent listener and just guard re-entrancy with a `_saving` flag instead. I left it as-is to keep the diff against the original pattern smaller, but flagging it as a design smell I introduced rather than something I'd defend as ideal.
+
+**3. I did not touch RLS at all in this response**, even though `settings: admin updates` already covers the branding writes and `profiles: user updates own row` already covers the account writes — both pre-existing policies, both already correctly scoped, nothing new needed here. I'm calling this out only so it's not ambiguous whether I forgot it versus deliberately found nothing to add.
+
+**4. I did not verify Supabase Storage RLS on the `branding` bucket itself** — only the `settings` *table* policies. The upload call (`supabase.storage.from('branding').upload(...)`) is bucket-level storage RLS, a separate policy surface I haven't read in this conversation at all (it'd live in `supabase/schema.sql` or a separate storage policies block, if it exists in this repo). Given this was already working code I'm refactoring rather than introducing fresh, I'm treating it as out of scope for this redesign — but it's a real gap in my own verification, not a "checked and fine."
+
+Ready for the geo-column RLS/trigger addition whenever you want it — that's still queued from before, separate from this.

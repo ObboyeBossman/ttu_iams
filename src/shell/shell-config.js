@@ -91,6 +91,7 @@ export const SHELL_CONFIG = {
       { page: 'seasons',          icon: 'calendar-range',   label: 'Seasons',          badge: null },
       { page: 'assign-placements',icon: 'link-2',           label: 'Assign Placements',badge: null },
       { page: 'letters-audit',    icon: 'file-search',      label: 'Letters Audit',    badge: null },
+      { page: 'finance',          icon: 'banknote',         label: 'Finance',          badge: null },
       { page: 'settings',         icon: 'settings',         label: 'Settings',         badge: null },
     ],
     footer: [

@@ -717,6 +717,27 @@
           <a href="#register-placement" class="btn btn-primary">Register Placement</a>
         </div>
 
+        <!-- Logbook payment gate -->
+        <div class="hidden" id="lb-payment-gate" style="display:flex; justify-content:center; padding-top:40px;">
+          <div class="payment-screen" style="max-width:480px;">
+            <div style="text-align:center;">
+              <span class="path-card-badge ai-badge" style="margin-bottom:8px;">Logbook Access</span>
+              <h2>Unlock Your Digital Logbook</h2>
+              <div class="payment-amount" id="lbGateAmount">GH¢ 20.00</div>
+              <div class="payment-per">one-time payment per season</div>
+            </div>
+            <ul class="payment-features" style="padding-left:0;">
+              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Unlimited weekly entries for the season</li>
+              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Offline drafts with autosave</li>
+              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Required before attachment report submission</li>
+            </ul>
+            <button type="button" class="btn btn-primary" id="lbPayBtn" style="width:100%; margin-top:20px;">
+              <i data-lucide="credit-card"></i> Pay with Paystack
+            </button>
+            <p style="font-size:12px; color:var(--text-secondary); text-align:center; margin-top:12px;">Secure one-time payment via Paystack. Cards and mobile money supported.</p>
+          </div>
+        </div>
+
         <div class="logbook-shell hidden" id="lb-content">
           <div class="page-header" style="margin-bottom: 24px;">
             <div>
@@ -956,7 +977,7 @@
                     <li><i data-lucide="check"></i> 4 structured academic chapters</li>
                     <li><i data-lucide="check"></i> Grounded in your real logbook data</li>
                     <li><i data-lucide="check"></i> Live section editing & regeneration</li>
-                    <li><i data-lucide="check"></i> GH¢ 50.00 processing fee</li>
+                    <li><i data-lucide="check"></i> <span id="reportFeeFeatureAmount">GH¢ 50.00</span> processing fee</li>
                   </ul>
                   <button class="report-path-cta path-cta-ai" style="margin-top:20px; width:100%; padding:10px 16px; border-radius:8px; font-weight:700; border:none; display:flex; align-items:center; justify-content:center; gap:7px; cursor:pointer;">
                     Select AI Generator <i data-lucide="arrow-right" style="width:16px; height:16px;"></i>
@@ -989,7 +1010,7 @@
                 <div style="text-align: center;">
                   <span class="path-card-badge ai-badge" style="margin-bottom:8px;">AI Path Activation</span>
                   <h2>Attachment Report Generator</h2>
-                  <div class="payment-amount">GH¢ 40.00</div>
+                  <div class="payment-amount" id="reportFeeAmount">GH¢ 50.00</div>
                   <div class="payment-per">one-time payment per season</div>
                 </div>
                 <ul class="payment-features" style="padding-left:0;">

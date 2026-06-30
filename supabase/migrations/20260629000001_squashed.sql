@@ -1,17 +1,16 @@
 -- =============================================================================
--- IAMS — Squashed Migration (Hardened)
+-- IAMS — Industrial Attachment Management System
+-- Phase 1 Schema
 -- Takoradi Technical University
--- Squashes: 20260622000001 → 20260629000002
 -- =============================================================================
--- HARDENING CHANGES vs individual migrations:
---   1. handle_new_user wrapped in EXCEPTION WHEN OTHERS so it can NEVER
---      crash GoTrue — auth always succeeds even if profile insert fails
---   2. All policy DROP/CREATE pairs deduplicated — no more "already exists" errors
---   3. phase2_schema stubs replaced with final RLS policies directly
---   4. logbook_fixes column renames applied inline — no ALTER needed
---   5. attendance_biometrics view rebuild consolidated
---   6. placement_geocoding region column made nullable from the start
---   7. All IF NOT EXISTS / OR REPLACE guards on every object
+-- Run order matters:
+--   1. schema.sql   (this file)
+--   2. rls-policies.sql
+--   3. seed.sql     (optional)
+--
+-- For Supabase CLI users, prefer the versioned migrations in migrations/:
+--   supabase db push
+-- These flat files are kept for reference and manual Supabase SQL Editor runs.
 -- =============================================================================
 
 
@@ -19,852 +18,875 @@
 -- EXTENSIONS
 -- ---------------------------------------------------------------------------
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+create extension if not exists "uuid-ossp";  -- uuid_generate_v4()
+create extension if not exists "pgcrypto";   -- gen_random_uuid() (Supabase default)
 
 
 -- ---------------------------------------------------------------------------
 -- ENUMS
 -- ---------------------------------------------------------------------------
 
-DO $$ BEGIN
-  CREATE TYPE user_role AS ENUM ('student','admin','school_supervisor','company_supervisor');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE season_status AS ENUM ('upcoming','open','closed','archived');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE placement_status AS ENUM ('submitted','flagged','rejected','assigned');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE location_source AS ENUM ('gps','manual');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
--- ---------------------------------------------------------------------------
--- TABLES — Core (Phase 1)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id         uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role       user_role   NOT NULL,
-  full_name  text        NOT NULL,
-  phone      text        NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
+create type user_role as enum (
+  'student',
+  'admin',
+  'school_supervisor',
+  'company_supervisor'
 );
-COMMENT ON TABLE public.profiles IS
+
+create type season_status as enum (
+  'upcoming',
+  'open',
+  'closed',
+  'archived'
+);
+
+-- Valid status transitions (Phase 1):
+--
+--   submitted ──→ assigned   (admin: valid placement, zone + supervisor set)
+--             ──→ flagged    (admin: needs clarification; student contacted externally)
+--             ──→ rejected   (admin: invalid or fraudulent)
+--
+--   flagged   ──→ assigned   (admin: resolved, placement accepted)
+--             ──→ rejected   (admin: resolved, placement invalid)
+--
+-- There is no transition back to 'submitted' in Phase 1.
+-- Flagged/rejected placements are resolved outside the system (phone/email).
+create type placement_status as enum (
+  'submitted',   -- initial state on student registration
+  'flagged',     -- queued for clarification; blocks assignment
+  'rejected',    -- terminal; no in-system resubmission in Phase 1
+  'assigned'     -- terminal for valid placements; zone + supervisor set
+);
+
+create type location_source as enum (
+  'gps',     -- captured from device GPS while physically at the company
+  'manual'   -- GPS unavailable/denied/timed out; placement relies on the structured
+             -- text address alone. Not student-typed coordinates — there is no
+             -- manual coordinate-entry fallback in Phase 1 (see FR3).
+);
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: profiles
+-- One row per auth.users entry, regardless of role.
+-- Contains only identity fields common to every role.
+-- Role-specific fields live in their own tables (e.g. students).
+-- ---------------------------------------------------------------------------
+
+create table public.profiles (
+  id          uuid primary key references auth.users (id) on delete cascade,
+  role        user_role   not null,
+  full_name   text        not null,
+  phone       text        not null,
+  created_at  timestamptz not null default now()
+);
+
+comment on table public.profiles is
   'Common identity record for every user. Role-specific data is in role-specific tables.';
 
-CREATE TABLE IF NOT EXISTS public.students (
-  id                   uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
-  index_number         text NOT NULL UNIQUE,
-  department           text NOT NULL,
-  programme            text NOT NULL,
-  level                text NOT NULL,
-  passport_picture_url text,
-  fingerprint_hash     text
+
+-- Trigger functions: verify that a profile referenced by a foreign key
+-- actually has the expected role. Foreign keys alone can't enforce this
+-- (they don't know about enum values on a different table), so
+-- role-specific child tables and junctions use these to stop, e.g., an
+-- admin's profile ending up in zone_supervisors, or a supervisor's profile
+-- ending up in students.
+--
+-- Written as one small function per relationship rather than a single
+-- generic/parameterized version — easier to read and debug later, and
+-- avoids dynamic SQL for what is otherwise a one-line check.
+
+create or replace function public.enforce_student_role()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if (select role from public.profiles where id = new.id) is distinct from 'student' then
+    raise exception 'students.id (%) must reference a profile with role = student', new.id;
+  end if;
+  return new;
+end;
+$$;
+
+comment on function public.enforce_student_role is
+  'Guards students.id: the referenced profile must have role = student.';
+
+create or replace function public.enforce_school_supervisor_role()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if (select role from public.profiles where id = new.school_supervisor_id) is distinct from 'school_supervisor' then
+    raise exception 'zone_supervisors.school_supervisor_id (%) must reference a profile with role = school_supervisor', new.school_supervisor_id;
+  end if;
+  return new;
+end;
+$$;
+
+comment on function public.enforce_school_supervisor_role is
+  'Guards zone_supervisors.school_supervisor_id: the referenced profile must have role = school_supervisor.';
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: students
+-- One row per student profile only (profiles.role = 'student').
+-- Admin and supervisor profiles have no row here.
+-- ---------------------------------------------------------------------------
+
+create table public.students (
+  id           uuid primary key references public.profiles (id) on delete cascade,
+  index_number text not null unique,  -- e.g. TTU/CSC/23/001
+  department   text not null,
+  programme    text not null,
+  level        text not null          -- e.g. HND 1, HND 2, B-Tech 3
 );
-COMMENT ON TABLE public.students IS
+
+comment on table public.students is
   'Student-specific academic identity. Only exists when profiles.role = ''student''.';
 
-CREATE TABLE IF NOT EXISTS public.seasons (
-  id                     uuid          PRIMARY KEY DEFAULT gen_random_uuid(),
-  name                   text          NOT NULL,
-  start_date             date          NOT NULL,
-  end_date               date          NOT NULL,
-  status                 season_status NOT NULL DEFAULT 'upcoming',
-  placement_window_start date          NOT NULL,
-  placement_window_end   date          NOT NULL,
-  created_at             timestamptz   NOT NULL DEFAULT now(),
-  updated_at             timestamptz,
-  updated_by             uuid          REFERENCES public.profiles(id) ON DELETE SET NULL,
-  CONSTRAINT seasons_window_within_season CHECK (
-    placement_window_start >= start_date AND
-    placement_window_end   <= end_date   AND
-    placement_window_start <= placement_window_end
-  ),
-  CONSTRAINT seasons_dates_ordered CHECK (start_date <= end_date)
+create trigger students_enforce_student_role
+  before insert or update on public.students
+  for each row execute function public.enforce_student_role();
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: seasons
+-- One row per attachment season.
+-- Business rule: at most one season may have status = 'open' at any time.
+-- Enforced by a partial unique index below AND at the application layer.
+-- ---------------------------------------------------------------------------
+
+create table public.seasons (
+  id                      uuid          primary key default gen_random_uuid(),
+  name                    text          not null,           -- e.g. "2024/2025 Semester 1"
+  start_date              date          not null,
+  end_date                date          not null,
+  status                  season_status not null default 'upcoming',
+  placement_window_start  date          not null,
+  placement_window_end    date          not null,
+  created_at              timestamptz   not null default now(),
+  updated_at              timestamptz,
+  updated_by              uuid          references public.profiles (id) on delete set null,
+
+  constraint seasons_window_within_season
+    check (
+      placement_window_start >= start_date and
+      placement_window_end   <= end_date   and
+      placement_window_start <= placement_window_end
+    ),
+
+  constraint seasons_dates_ordered
+    check (start_date <= end_date)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS seasons_one_open ON public.seasons(status) WHERE status = 'open';
+-- Enforces the single-open-season business rule at the database level.
+-- Only one row may exist where status = 'open'.
+create unique index seasons_one_open
+  on public.seasons (status)
+  where status = 'open';
 
-CREATE TABLE IF NOT EXISTS public.zones (
-  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        text        NOT NULL UNIQUE,
+comment on table public.seasons is
+  'Attachment seasons. At most one season may be open at a time (partial unique index).';
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: zones
+-- Geographical zones managed by the admin.
+-- Zones exist independently of any single season.
+-- ---------------------------------------------------------------------------
+
+create table public.zones (
+  id          uuid        primary key default gen_random_uuid(),
+  name        text        not null unique,  -- e.g. "Takoradi Central", "Sekondi"
   description text,
-  created_at  timestamptz NOT NULL DEFAULT now(),
+  created_at  timestamptz not null default now(),
   updated_at  timestamptz,
-  updated_by  uuid        REFERENCES public.profiles(id) ON DELETE SET NULL
+  updated_by  uuid        references public.profiles (id) on delete set null
 );
 
-CREATE TABLE IF NOT EXISTS public.zone_supervisors (
-  zone_id              uuid NOT NULL REFERENCES public.zones(id)    ON DELETE CASCADE,
-  school_supervisor_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  PRIMARY KEY (zone_id, school_supervisor_id)
+comment on table public.zones is
+  'Geographical supervision zones. Independent of seasons.';
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: zone_supervisors
+-- Junction: a school supervisor may be assigned to one or more zones.
+-- ---------------------------------------------------------------------------
+
+create table public.zone_supervisors (
+  zone_id               uuid not null references public.zones    (id) on delete cascade,
+  school_supervisor_id  uuid not null references public.profiles (id) on delete cascade,
+
+  primary key (zone_id, school_supervisor_id)
 );
 
-CREATE TABLE IF NOT EXISTS public.placements (
-  id                    uuid             PRIMARY KEY DEFAULT gen_random_uuid(),
-  draft_id              uuid             NOT NULL UNIQUE,
-  student_id            uuid             NOT NULL REFERENCES public.profiles(id)  ON DELETE RESTRICT,
-  season_id             uuid             NOT NULL REFERENCES public.seasons(id)   ON DELETE RESTRICT,
-  company_name          text             NOT NULL,
-  nature_of_business    text             NOT NULL,
-  -- region is nullable to allow pending geocodes
-  region                text,
-  city_town             text             NOT NULL,
-  street_landmark       text             NOT NULL,
-  contact_person        text             NOT NULL,
-  company_contact_phone text             NOT NULL,
-  district              text,
-  town                  text,
-  geocode_status        text             DEFAULT 'pending',
-  geocoded_at           timestamptz,
-  latitude              numeric(9,6),
-  longitude             numeric(9,6),
-  location_source       location_source  NOT NULL,
-  start_date            date             NOT NULL,
-  end_date              date             NOT NULL,
-  status                placement_status NOT NULL DEFAULT 'submitted',
-  zone_id               uuid             REFERENCES public.zones(id) ON DELETE SET NULL,
+comment on table public.zone_supervisors is
+  'Many-to-many: school supervisors assigned to zones.';
+
+create trigger zone_supervisors_enforce_supervisor_role
+  before insert or update on public.zone_supervisors
+  for each row execute function public.enforce_school_supervisor_role();
+
+
+-- ---------------------------------------------------------------------------
+-- TABLE: placements
+-- One row per student per season.
+-- draft_id is a client-generated UUID (idempotency key):
+--   the client creates it when the form is first opened and includes it
+--   in every sync attempt. The UNIQUE constraint means duplicate inserts
+--   (from retries, duplicate tabs, or Background Sync) are silently rejected.
+-- ---------------------------------------------------------------------------
+
+create table public.placements (
+  id                    uuid             primary key default gen_random_uuid(),
+
+  -- Idempotency key — generated on the client, never changed for this draft.
+  draft_id              uuid             not null unique,
+
+  student_id            uuid             not null references public.profiles (id) on delete restrict,
+  season_id             uuid             not null references public.seasons  (id) on delete restrict,
+
+  -- Company information (denormalised per-placement; no shared companies table).
+  company_name          text             not null,
+  nature_of_business    text             not null,
+  region                text             not null,
+  city_town             text             not null,
+  street_landmark       text             not null,
+  contact_person        text             not null,
+  company_contact_phone text             not null,
+
+  -- GPS capture (non-blocking; latitude/longitude may be null if GPS was unavailable).
+  -- location_source is always set: 'gps' when coordinates were captured,
+  -- 'manual' when GPS failed/was unavailable and the text address alone was used.
+  latitude              numeric(9, 6),
+  longitude             numeric(9, 6),
+  location_source       location_source  not null,
+
+  -- Attachment period at this company.
+  start_date            date             not null,
+  end_date              date             not null,
+
+  -- Status lifecycle: submitted → assigned | flagged | rejected
+  --                   flagged  → assigned | rejected
+  -- No transition back to submitted in Phase 1.
+  status                placement_status not null default 'submitted',
+
+  -- Set by admin during batch review.
+  -- The assigned supervisor is NOT stored here — it is derived via
+  -- zone_id → zone_supervisors → school_supervisor_id. This keeps a single
+  -- source of truth: reassigning a zone's supervisor automatically updates
+  -- every placement in that zone, with no risk of a stale snapshot.
+  zone_id               uuid             references public.zones    (id) on delete set null,
+
+  -- Sync audit: NULL while the record lives only in IndexedDB;
+  -- populated by the server (via trigger below) on confirmed insert.
   synced_at             timestamptz,
-  created_at            timestamptz      NOT NULL DEFAULT now(),
+
+  created_at            timestamptz      not null default now(),
   updated_at            timestamptz,
-  updated_by            uuid             REFERENCES public.profiles(id) ON DELETE SET NULL,
-  CONSTRAINT placements_dates_ordered CHECK (start_date <= end_date),
-  CONSTRAINT placements_one_per_student_per_season UNIQUE (student_id, season_id),
-  CONSTRAINT placements_location_consistency CHECK (
-    (latitude IS NULL AND longitude IS NULL AND location_source = 'manual') OR
-    (latitude IS NOT NULL AND longitude IS NOT NULL AND location_source = 'gps')
-  )
-);
+  updated_by            uuid             references public.profiles (id) on delete set null,
 
-CREATE TABLE IF NOT EXISTS public.letters (
-  id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id            uuid        NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  season_id             uuid        NOT NULL REFERENCES public.seasons(id)  ON DELETE RESTRICT,
-  company_name          text        NOT NULL,
-  region                text        NOT NULL,
-  city_town             text        NOT NULL,
-  street_landmark       text        NOT NULL,
-  contact_person        text        NOT NULL,
-  company_contact_phone text        NOT NULL,
-  verification_code     text        NOT NULL UNIQUE,
-  generated_at          timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT letters_verification_code_format CHECK (verification_code ~ '^[A-Z0-9]{8}$')
-);
+  constraint placements_dates_ordered
+    check (start_date <= end_date),
 
-CREATE TABLE IF NOT EXISTS public.settings (
-  id              int         PRIMARY KEY DEFAULT 1,
-  letterhead_path text,
-  stamp_path      text,
-  signature_path  text,
-  footer_path     text,
-  updated_at      timestamptz,
-  updated_by      uuid        REFERENCES public.profiles(id) ON DELETE SET NULL,
-  CONSTRAINT settings_single_row CHECK (id = 1)
-);
-COMMENT ON COLUMN public.settings.footer_path IS
-  'Storage path for the TTU footer bar image (ttu_footer.png in the letter-assets bucket).';
+  -- A student may only have one placement per season.
+  constraint placements_one_per_student_per_season
+    unique (student_id, season_id),
 
-INSERT INTO public.settings (id) VALUES (1) ON CONFLICT DO NOTHING;
-
-
--- ---------------------------------------------------------------------------
--- TABLES — Phase 2 (Logbook, Attendance, Visits, Reports, Payments)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS public.logbook_weeks (
-  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id           uuid NOT NULL REFERENCES public.profiles(id)    ON DELETE CASCADE,
-  placement_id         uuid NOT NULL REFERENCES public.placements(id)  ON DELETE CASCADE,
-  season_id            uuid NOT NULL REFERENCES public.seasons(id)     ON DELETE CASCADE,
-  week_number          int  NOT NULL CHECK (week_number > 0),
-  week_start           date NOT NULL,
-  week_end             date NOT NULL CHECK (week_end >= week_start),
-  department_section   text,
-  student_remarks      text,
-  status               text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','certified')),
-  company_certified_by text,
-  company_certified_at timestamptz,
-  created_at           timestamptz NOT NULL DEFAULT now(),
-  updated_at           timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, season_id, week_number)
-);
-
-CREATE TABLE IF NOT EXISTS public.logbook_daily_entries (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  week_id    uuid NOT NULL REFERENCES public.logbook_weeks(id) ON DELETE CASCADE,
-  -- student_id denormalised here for simpler RLS (from logbook_fixes migration)
-  student_id uuid NOT NULL REFERENCES public.profiles(id),
-  log_date   date NOT NULL,
-  activities text NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (week_id, log_date)
-);
-
-CREATE TABLE IF NOT EXISTS public.logbook_monthly_summaries (
-  id                             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id                     uuid NOT NULL REFERENCES public.profiles(id)   ON DELETE CASCADE,
-  placement_id                   uuid NOT NULL REFERENCES public.placements(id) ON DELETE CASCADE,
-  season_id                      uuid NOT NULL REFERENCES public.seasons(id)    ON DELETE CASCADE,
-  month_number                   int  NOT NULL CHECK (month_number > 0),
-  student_summary                text,
-  -- renamed from company_supervisor_assessment (logbook_fixes)
-  supervisor_feedback            text,
-  company_supervisor_rating      int  CHECK (company_supervisor_rating BETWEEN 1 AND 5),
-  company_supervisor_name        text,
-  company_supervisor_assessed_at timestamptz,
-  status                         text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','submitted','assessed')),
-  created_at                     timestamptz NOT NULL DEFAULT now(),
-  updated_at                     timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, season_id, month_number)
-);
-
-CREATE TABLE IF NOT EXISTS public.attendance_logs (
-  id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id                uuid NOT NULL REFERENCES public.profiles(id)   ON DELETE CASCADE,
-  placement_id              uuid NOT NULL REFERENCES public.placements(id) ON DELETE CASCADE,
-  season_id                 uuid NOT NULL REFERENCES public.seasons(id)    ON DELETE CASCADE,
-  log_date                  date NOT NULL,
-  check_in_time             timestamptz,
-  check_in_lat              numeric,
-  check_in_lon              numeric,
-  check_in_location_source  text CHECK (check_in_location_source  IN ('gps','manual')),
-  check_out_time            timestamptz,
-  check_out_lat             numeric,
-  check_out_lon             numeric,
-  check_out_location_source text CHECK (check_out_location_source IN ('gps','manual')),
-  distance_from_placement_m numeric,
-  absence_reason            text,
-  biometric_method          text CHECK (biometric_method IN ('face','fingerprint','none')),
-  biometric_verified        boolean DEFAULT false,
-  status                    text NOT NULL DEFAULT 'present'
-    CHECK (status IN ('present','absent','flagged_location')),
-  created_at                timestamptz NOT NULL DEFAULT now(),
-  updated_at                timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, log_date)
-);
-
-CREATE TABLE IF NOT EXISTS public.attendance_flags (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id        uuid NOT NULL REFERENCES public.profiles(id)        ON DELETE CASCADE,
-  season_id         uuid NOT NULL REFERENCES public.seasons(id)         ON DELETE CASCADE,
-  attendance_log_id uuid NOT NULL REFERENCES public.attendance_logs(id) ON DELETE CASCADE,
-  flag_reason       text NOT NULL,
-  triggered_at      timestamptz NOT NULL DEFAULT now(),
-  resolved_at       timestamptz,
-  resolved_by       uuid REFERENCES public.profiles(id)
-);
-
-CREATE TABLE IF NOT EXISTS public.supervisor_visits (
-  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  placement_id         uuid NOT NULL REFERENCES public.placements(id)  ON DELETE CASCADE,
-  school_supervisor_id uuid NOT NULL REFERENCES public.profiles(id)    ON DELETE CASCADE,
-  visit_date           date NOT NULL,
-  observations         text,
-  remarks              text,
-  assessment_score     int  CHECK (assessment_score BETWEEN 0 AND 100),
-  created_at           timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.attachment_payments (
-  student_id        uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  season_id         uuid NOT NULL REFERENCES public.seasons(id)  ON DELETE CASCADE,
-  status            text NOT NULL DEFAULT 'pending',
-  payment_reference text UNIQUE,
-  confirmed_at      timestamptz,
-  created_at        timestamptz DEFAULT now(),
-  PRIMARY KEY (student_id, season_id)
-);
-
-CREATE TABLE IF NOT EXISTS public.attachment_reports (
-  student_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  season_id       uuid NOT NULL REFERENCES public.seasons(id)  ON DELETE CASCADE,
-  path_type       text NOT NULL DEFAULT 'ai',
-  input_form      jsonb NOT NULL DEFAULT '{}'::jsonb,
-  report_sections jsonb NOT NULL DEFAULT '{}'::jsonb,
-  status          text NOT NULL DEFAULT 'draft',
-  pdf_url         text,
-  review_feedback text,
-  submitted_at    timestamptz,
-  created_at      timestamptz DEFAULT now(),
-  updated_at      timestamptz DEFAULT now(),
-  PRIMARY KEY (student_id, season_id)
-);
-
-
--- ---------------------------------------------------------------------------
--- TRIGGER FUNCTIONS
--- ---------------------------------------------------------------------------
-
--- Auto-create profile on new auth user.
--- HARDENED: wrapped in EXCEPTION WHEN OTHERS so this trigger can NEVER
--- crash GoTrue. A profile insert failure will be silently swallowed and
--- auth will proceed normally. The seed inserts profiles separately.
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-BEGIN
-  INSERT INTO public.profiles (id, role, full_name, phone)
-  VALUES (
-    new.id,
-    COALESCE((new.raw_user_meta_data->>'role')::user_role, 'student'),
-    COALESCE(new.raw_user_meta_data->>'full_name', new.email),
-    COALESCE(new.raw_user_meta_data->>'phone', '')
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN new;
-EXCEPTION WHEN OTHERS THEN
-  -- Never block auth due to a profile insert failure
-  RAISE WARNING '[handle_new_user] profile insert failed for %: % %', new.id, SQLSTATE, SQLERRM;
-  RETURN new;
-END;
-$$;
-COMMENT ON FUNCTION public.handle_new_user IS
-  'Auto-creates a public.profiles row on new auth user. Hardened with EXCEPTION
-   handler so it never blocks GoTrue even if the insert fails.';
-
-CREATE OR REPLACE FUNCTION public.enforce_student_role()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-BEGIN
-  IF (SELECT role FROM public.profiles WHERE id = new.id) IS DISTINCT FROM 'student' THEN
-    RAISE EXCEPTION 'students.id (%) must reference a profile with role = student', new.id;
-  END IF;
-  RETURN new;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.enforce_school_supervisor_role()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-BEGIN
-  IF (SELECT role FROM public.profiles WHERE id = new.school_supervisor_id)
-     IS DISTINCT FROM 'school_supervisor' THEN
-    RAISE EXCEPTION 'zone_supervisors.school_supervisor_id (%) must be a school_supervisor',
-      new.school_supervisor_id;
-  END IF;
-  RETURN new;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.stamp_synced_at()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN new.synced_at := now(); RETURN new; END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.touch_updated_at()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN new.updated_at := now(); RETURN new; END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.stamp_updated_by()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-BEGIN new.updated_by := auth.uid(); RETURN new; END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.validate_placement_status_transition()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF new.status = old.status THEN RETURN new; END IF;
-  IF old.status = 'submitted' AND new.status IN ('assigned','flagged','rejected') THEN RETURN new; END IF;
-  IF old.status = 'flagged'   AND new.status IN ('assigned','rejected')           THEN RETURN new; END IF;
-  RAISE EXCEPTION 'invalid placement status transition: % → % (placement %)',
-    old.status, new.status, old.id;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.lock_admin_only_placement_fields()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF public.current_role() = 'student' THEN
-    new.zone_id   := old.zone_id;
-    new.synced_at := old.synced_at;
-  END IF;
-  RETURN new;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.auto_create_attendance_flag()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-BEGIN
-  IF new.status = 'flagged_location' THEN
-    INSERT INTO public.attendance_flags (student_id, season_id, attendance_log_id, flag_reason)
-    VALUES (
-      new.student_id, new.season_id, new.id,
-      'Location mismatch — checked in more than 500m from registered placement address'
+  -- location_source must match coordinate presence exactly:
+  --   no coordinates  → location_source = 'manual'
+  --   coordinates set → location_source = 'gps'
+  -- This removes the previously-allowed third state (null coordinates,
+  -- null source), which Phase 1 never produces and the spec disallows.
+  constraint placements_location_consistency
+    check (
+      (latitude is null and longitude is null and location_source = 'manual') or
+      (latitude is not null and longitude is not null and location_source = 'gps')
     )
-    ON CONFLICT DO NOTHING;
-  END IF;
-  RETURN new;
-END;
+);
+
+comment on table public.placements is
+  'Student placement registrations. draft_id is a client UUID enforcing insert idempotency.';
+
+comment on column public.placements.draft_id is
+  'Client-generated UUID. Stays constant through all edits and retry attempts. UNIQUE constraint makes duplicate inserts safe to ignore.';
+
+comment on column public.placements.synced_at is
+  'NULL while record exists only in IndexedDB. Set to now() on the first confirmed server insert via trigger.';
+
+
+-- Trigger: stamp synced_at on insert (the client sends NULL; the server fills it in).
+create or replace function public.stamp_synced_at()
+returns trigger language plpgsql as $$
+begin
+  new.synced_at := now();
+  return new;
+end;
 $$;
+
+create trigger placements_stamp_synced_at
+  before insert on public.placements
+  for each row execute function public.stamp_synced_at();
+
+
+-- Trigger: keep updated_at current on any table that has it.
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+create trigger seasons_touch_updated_at
+  before update on public.seasons
+  for each row execute function public.touch_updated_at();
+
+create trigger zones_touch_updated_at
+  before update on public.zones
+  for each row execute function public.touch_updated_at();
+
+create trigger placements_touch_updated_at
+  before update on public.placements
+  for each row execute function public.touch_updated_at();
+
+
+-- Trigger: stamp updated_by with the acting user on every update.
+-- Removes the need for every client/service call to remember to set it
+-- explicitly, and prevents a client from claiming false attribution by
+-- passing an arbitrary updated_by value — the server always overwrites it.
+create or replace function public.stamp_updated_by()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+comment on function public.stamp_updated_by is
+  'Overwrites updated_by with auth.uid() on every update, regardless of what the client sent.';
+
+create trigger seasons_stamp_updated_by
+  before update on public.seasons
+  for each row execute function public.stamp_updated_by();
+
+create trigger zones_stamp_updated_by
+  before update on public.zones
+  for each row execute function public.stamp_updated_by();
+
+create trigger placements_stamp_updated_by
+  before update on public.placements
+  for each row execute function public.stamp_updated_by();
+
+
+-- Trigger: enforce the documented placement status lifecycle at the
+-- database level, mirroring how the single-open-season rule is already
+-- enforced here rather than left to client/application discipline.
+--
+-- Valid transitions:
+--   submitted → assigned | flagged | rejected
+--   flagged   → assigned | rejected
+-- No other transition is permitted (including any reversion to
+-- 'submitted', and no transition out of 'rejected' or 'assigned' —
+-- both are terminal in Phase 1). A row may also be updated without
+-- changing status at all (e.g. admin editing zone_id) — that is not a
+-- transition and is always allowed.
+create or replace function public.validate_placement_status_transition()
+returns trigger language plpgsql as $$
+begin
+  if new.status = old.status then
+    return new;
+  end if;
+
+  if old.status = 'submitted' and new.status in ('assigned', 'flagged', 'rejected') then
+    return new;
+  end if;
+
+  if old.status = 'flagged' and new.status in ('assigned', 'rejected') then
+    return new;
+  end if;
+
+  raise exception
+    'invalid placement status transition: % → % (placement %)',
+    old.status, new.status, old.id;
+end;
+$$;
+
+comment on function public.validate_placement_status_transition is
+  'Enforces the Phase 1 placement status lifecycle: submitted → assigned/flagged/rejected; flagged → assigned/rejected. No reversion to submitted; assigned and rejected are terminal.';
+
+create trigger placements_validate_status_transition
+  before update on public.placements
+  for each row execute function public.validate_placement_status_transition();
+
+
+-- Trigger: when a student updates their own placement (RLS already
+-- restricts this to rows where status = 'submitted'), lock the fields
+-- that only the admin's batch-review process should ever set. RLS's
+-- WITH CHECK only constrains student_id and status; a student calling
+-- the REST API directly (not through the HTML form) could otherwise
+-- still smuggle in a change to zone_id, synced_at, or updated_by on an
+-- update that RLS would otherwise allow. This trigger closes that gap
+-- regardless of which role performs the update — for an admin update,
+-- old and new values legitimately differ and nothing is reverted.
+create or replace function public.lock_admin_only_placement_fields()
+returns trigger language plpgsql as $$
+begin
+  if public.current_role() = 'student' then
+    new.zone_id    := old.zone_id;
+    new.synced_at  := old.synced_at;
+  end if;
+
+  return new;
+end;
+$$;
+
+comment on function public.lock_admin_only_placement_fields is
+  'When the acting user is a student, silently reverts zone_id and synced_at to their prior values, regardless of what the client sent. updated_by is already overwritten unconditionally by stamp_updated_by, and status changes are independently constrained by validate_placement_status_transition + RLS.';
+
+create trigger placements_lock_admin_only_fields
+  before update on public.placements
+  for each row execute function public.lock_admin_only_placement_fields();
 
 
 -- ---------------------------------------------------------------------------
--- HELPER FUNCTIONS (RLS)
+-- TABLE: letters
+-- Metadata record for every generated attachment letter.
+-- The PDF itself is never stored — it is generated client-side and
+-- downloaded immediately. This table exists for audit only.
+-- Letter count per student is computed live: COUNT(*) scoped to season.
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION public.current_role()
-RETURNS user_role LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public, pg_temp AS $$
-DECLARE _role user_role;
-BEGIN
-  SELECT role INTO _role FROM public.profiles WHERE id = auth.uid();
-  RETURN _role;
-END;
-$$;
+create table public.letters (
+  id                    uuid        primary key default gen_random_uuid(),
+  student_id            uuid        not null references public.profiles (id) on delete restrict,
+  season_id             uuid        not null references public.seasons  (id) on delete restrict,
 
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = public, pg_temp AS $$
-  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin');
-$$;
+  -- Snapshot of the company details at the time of generation.
+  -- Stored here so the audit record is self-contained even if the
+  -- student later registers a different placement.
+  company_name          text        not null,
+  region                text        not null,
+  city_town             text        not null,
+  street_landmark       text        not null,
+  contact_person        text        not null,
+  company_contact_phone text        not null,
 
-CREATE OR REPLACE FUNCTION public.is_school_supervisor()
-RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = public, pg_temp AS $$
-  SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'school_supervisor');
-$$;
+  -- Short alphanumeric code printed on the letter for verification.
+  -- Format: 8 uppercase alphanumeric characters, e.g. "A3F9B2C1".
+  -- No expiry in Phase 1. Verified via /verify/{code} public page.
+  verification_code     text        not null unique,
 
--- Geocoding helper functions
-CREATE OR REPLACE FUNCTION public.get_placement_regions()
-RETURNS TABLE (region text, total bigint, supervised_count bigint)
-LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT region, COUNT(*) AS total,
-         COUNT(*) FILTER (WHERE zone_id IS NOT NULL) AS supervised_count
-  FROM public.placements WHERE region IS NOT NULL
-  GROUP BY region ORDER BY region;
-$$;
+  generated_at          timestamptz not null default now(),
 
-CREATE OR REPLACE FUNCTION public.get_placement_districts(p_region text)
-RETURNS TABLE (district text, total bigint, supervised_count bigint)
-LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT district, COUNT(*) AS total,
-         COUNT(*) FILTER (WHERE zone_id IS NOT NULL) AS supervised_count
-  FROM public.placements WHERE region = p_region AND district IS NOT NULL
-  GROUP BY district ORDER BY district;
-$$;
+  -- Enforces the documented format: exactly 8 uppercase letters/digits.
+  -- Note: the stored value has no separator; any "TTU-XXXX"-style
+  -- prefix shown on the printed letter is a display-layer concern, not
+  -- part of the stored code. Adjust the pattern here if that changes.
+  constraint letters_verification_code_format
+    check (verification_code ~ '^[A-Z0-9]{8}$')
+);
 
-CREATE OR REPLACE FUNCTION public.get_placement_towns(p_region text, p_district text)
-RETURNS TABLE (town text, total bigint, supervised_count bigint)
-LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT town, COUNT(*) AS total,
-         COUNT(*) FILTER (WHERE zone_id IS NOT NULL) AS supervised_count
-  FROM public.placements WHERE region = p_region AND district = p_district AND town IS NOT NULL
-  GROUP BY town ORDER BY town;
-$$;
+comment on table public.letters is
+  'Audit log of generated letters. PDFs are not stored — generated client-side. Letter count = COUNT(*) per student per season.';
+
+comment on column public.letters.verification_code is
+  '8-char uppercase alphanumeric code printed on each letter. Verified at /verify/{code}. No expiry in Phase 1.';
 
 
 -- ---------------------------------------------------------------------------
--- TRIGGERS
+-- TABLE: settings
+-- Single-row system configuration table.
+-- Stores storage paths for letterhead, stamp, and signature assets.
+-- Short-lived signed URLs are generated from these paths at letter-
+-- generation time — assets are never served from a public bucket.
+-- The CHECK constraint enforces exactly one row (id must always be 1).
 -- ---------------------------------------------------------------------------
 
--- auth.users → auto-create profile
-CREATE OR REPLACE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+create table public.settings (
+  id              int         primary key default 1,
+  letterhead_path text,       -- storage path for TTU letterhead image
+  stamp_path      text,       -- storage path for combined signature+stamp image
+  footer_path     text,       -- storage path for TTU footer bar image
+  updated_at      timestamptz,
+  updated_by      uuid        references public.profiles (id) on delete set null,
 
--- Role enforcement
-CREATE OR REPLACE TRIGGER students_enforce_student_role
-  BEFORE INSERT OR UPDATE ON public.students
-  FOR EACH ROW EXECUTE FUNCTION public.enforce_student_role();
+  constraint settings_single_row check (id = 1)
+);
 
-CREATE OR REPLACE TRIGGER zone_supervisors_enforce_supervisor_role
-  BEFORE INSERT OR UPDATE ON public.zone_supervisors
-  FOR EACH ROW EXECUTE FUNCTION public.enforce_school_supervisor_role();
+-- Seed the one-and-only settings row so the admin page can UPDATE rather than INSERT.
+insert into public.settings (id) values (1);
 
--- Sync timestamps
-CREATE OR REPLACE TRIGGER placements_stamp_synced_at
-  BEFORE INSERT ON public.placements
-  FOR EACH ROW EXECUTE FUNCTION public.stamp_synced_at();
+create trigger settings_touch_updated_at
+  before update on public.settings
+  for each row execute function public.touch_updated_at();
 
-CREATE OR REPLACE TRIGGER seasons_touch_updated_at        BEFORE UPDATE ON public.seasons                  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER zones_touch_updated_at          BEFORE UPDATE ON public.zones                    FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER placements_touch_updated_at     BEFORE UPDATE ON public.placements               FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER settings_touch_updated_at       BEFORE UPDATE ON public.settings                 FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER logbook_weeks_touch_updated_at              BEFORE UPDATE ON public.logbook_weeks              FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER logbook_daily_entries_touch_updated_at      BEFORE UPDATE ON public.logbook_daily_entries      FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER logbook_monthly_summaries_touch_updated_at  BEFORE UPDATE ON public.logbook_monthly_summaries  FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER attendance_logs_touch_updated_at            BEFORE UPDATE ON public.attendance_logs            FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
-CREATE OR REPLACE TRIGGER attachment_reports_touch_updated_at         BEFORE UPDATE ON public.attachment_reports         FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+create trigger settings_stamp_updated_by
+  before update on public.settings
+  for each row execute function public.stamp_updated_by();
 
-CREATE OR REPLACE TRIGGER seasons_stamp_updated_by        BEFORE UPDATE ON public.seasons                  FOR EACH ROW EXECUTE FUNCTION public.stamp_updated_by();
-CREATE OR REPLACE TRIGGER zones_stamp_updated_by          BEFORE UPDATE ON public.zones                    FOR EACH ROW EXECUTE FUNCTION public.stamp_updated_by();
-CREATE OR REPLACE TRIGGER placements_stamp_updated_by     BEFORE UPDATE ON public.placements               FOR EACH ROW EXECUTE FUNCTION public.stamp_updated_by();
-CREATE OR REPLACE TRIGGER settings_stamp_updated_by       BEFORE UPDATE ON public.settings                 FOR EACH ROW EXECUTE FUNCTION public.stamp_updated_by();
-
-CREATE OR REPLACE TRIGGER placements_validate_status_transition
-  BEFORE UPDATE ON public.placements
-  FOR EACH ROW EXECUTE FUNCTION public.validate_placement_status_transition();
-
-CREATE OR REPLACE TRIGGER placements_lock_admin_only_fields
-  BEFORE UPDATE ON public.placements
-  FOR EACH ROW EXECUTE FUNCTION public.lock_admin_only_placement_fields();
-
-CREATE OR REPLACE TRIGGER attendance_logs_auto_flag
-  AFTER INSERT ON public.attendance_logs
-  FOR EACH ROW EXECUTE FUNCTION public.auto_create_attendance_flag();
+comment on table public.settings is
+  'Single-row system config. Admin updates stamp/signature/letterhead paths here.';
 
 
 -- ---------------------------------------------------------------------------
 -- INDEXES
+-- (Primary keys and UNIQUE constraints already create indexes above.)
 -- ---------------------------------------------------------------------------
 
-CREATE INDEX IF NOT EXISTS placements_status_idx          ON public.placements (status);
-CREATE INDEX IF NOT EXISTS placements_zone_idx            ON public.placements (zone_id);
-CREATE INDEX IF NOT EXISTS placements_season_idx          ON public.placements (season_id);
-CREATE INDEX IF NOT EXISTS placements_student_idx         ON public.placements (student_id);
-CREATE INDEX IF NOT EXISTS letters_student_idx            ON public.letters    (student_id);
-CREATE INDEX IF NOT EXISTS letters_season_idx             ON public.letters    (season_id);
-CREATE INDEX IF NOT EXISTS students_index_number_idx      ON public.students   (index_number);
-CREATE INDEX IF NOT EXISTS logbook_weeks_student_idx      ON public.logbook_weeks (student_id);
-CREATE INDEX IF NOT EXISTS logbook_weeks_season_idx       ON public.logbook_weeks (season_id);
-CREATE INDEX IF NOT EXISTS logbook_daily_week_idx         ON public.logbook_daily_entries (week_id);
-CREATE INDEX IF NOT EXISTS logbook_monthly_student_idx    ON public.logbook_monthly_summaries (student_id, season_id);
-CREATE INDEX IF NOT EXISTS attendance_student_idx         ON public.attendance_logs (student_id, season_id);
-CREATE INDEX IF NOT EXISTS attendance_date_idx            ON public.attendance_logs (log_date);
-CREATE INDEX IF NOT EXISTS attendance_absence_reason_idx  ON public.attendance_logs (student_id, season_id) WHERE status = 'absent';
-CREATE INDEX IF NOT EXISTS attachment_payments_student_idx ON public.attachment_payments (student_id);
-CREATE INDEX IF NOT EXISTS attachment_payments_season_idx  ON public.attachment_payments (season_id);
-CREATE INDEX IF NOT EXISTS attachment_reports_student_idx  ON public.attachment_reports  (student_id);
-CREATE INDEX IF NOT EXISTS attachment_reports_season_idx   ON public.attachment_reports  (season_id);
-CREATE INDEX IF NOT EXISTS idx_placements_geo             ON public.placements (region, district, town);
+-- Admin dashboard: filter placements by status and zone.
+create index placements_status_idx  on public.placements (status);
+create index placements_zone_idx    on public.placements (zone_id);
+create index placements_season_idx  on public.placements (season_id);
+create index placements_student_idx on public.placements (student_id);
+
+-- Letter audit: look up by student or season.
+create index letters_student_idx on public.letters (student_id);
+create index letters_season_idx  on public.letters (season_id);
+
+-- Student lookup by index number (admin search).
+create index students_index_number_idx on public.students (index_number);
 
 
 -- ---------------------------------------------------------------------------
 -- VIEWS
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW public.student_profiles AS
-  SELECT p.id, p.full_name, p.phone, p.created_at,
-         s.index_number, s.department, s.programme, s.level,
-         s.passport_picture_url, s.fingerprint_hash
-  FROM public.profiles p
-  JOIN public.students s ON s.id = p.id;
+-- Convenience: join profile + student fields in one row.
+-- Used by admin pages and RLS policies that need both identity and academics.
+create or replace view public.student_profiles as
+  select
+    p.id,
+    p.full_name,
+    p.phone,
+    p.created_at,
+    s.index_number,
+    s.department,
+    s.programme,
+    s.level
+  from public.profiles p
+  join public.students s on s.id = p.id;
 
-CREATE OR REPLACE VIEW public.placement_supervisors AS
-  SELECT pl.id AS placement_id, pl.zone_id, zs.school_supervisor_id
-  FROM public.placements pl
-  JOIN public.zone_supervisors zs ON zs.zone_id = pl.zone_id;
+-- Convenience: derive each placement's current supervisor(s) via zone_id.
+-- Replaces the removed placements.school_supervisor_id column — this view
+-- is always live, so reassigning a zone's supervisor is reflected
+-- immediately for every placement in that zone, with no stale snapshot.
+-- A zone may have more than one supervisor in Phase 1 (zone_supervisors is
+-- many-to-many), so this can return more than one row per placement.
+create or replace view public.placement_supervisors as
+  select
+    pl.id as placement_id,
+    pl.zone_id,
+    zs.school_supervisor_id
+  from public.placements pl
+  join public.zone_supervisors zs on zs.zone_id = pl.zone_id;
+
+comment on view public.placement_supervisors is
+  'Derives the current supervisor(s) for each placement from zone_id + zone_supervisors. Always live — no stale snapshot risk.';
+
+comment on view public.student_profiles is
+  'profiles + students joined. Use for any query that needs both identity and academic fields.';
+
+-- =============================================================================
+-- IAMS — Industrial Attachment Management System
+-- Phase 1 RLS Policies
+-- Takoradi Technical University
+-- =============================================================================
+-- Run AFTER schema.sql.
+-- Every table has RLS enabled. Default = deny. Only explicitly granted
+-- operations are permitted.
+-- =============================================================================
 
 
 -- ---------------------------------------------------------------------------
--- ENABLE RLS
+-- HELPERS
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE public.profiles             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.students             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.seasons              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.zones                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.zone_supervisors     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.placements           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.letters              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.settings             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.logbook_weeks        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.logbook_daily_entries       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.logbook_monthly_summaries   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance_logs      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attendance_flags     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.supervisor_visits    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attachment_payments  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.attachment_reports   ENABLE ROW LEVEL SECURITY;
+-- Returns the role of the currently authenticated user.
+-- Reads from profiles so every policy stays in one place.
+create or replace function public.current_role()
+returns user_role language plpgsql stable security definer
+set search_path = public, pg_temp
+as $$
+declare
+  _role user_role;
+begin
+  select role into _role from public.profiles where id = auth.uid();
+  return _role;
+end;
+$$;
+
+comment on function public.current_role is
+  'Returns the user_role of the currently authenticated user from profiles.';
 
 
 -- ---------------------------------------------------------------------------
--- RLS POLICIES
--- Note: DROP IF EXISTS + CREATE makes this squash safely re-runnable
+-- ENABLE RLS ON ALL TABLES
 -- ---------------------------------------------------------------------------
 
--- ── profiles ──────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "profiles: user reads own row"   ON public.profiles;
-DROP POLICY IF EXISTS "profiles: admin reads all"      ON public.profiles;
-DROP POLICY IF EXISTS "profiles: admin inserts"        ON public.profiles;
-DROP POLICY IF EXISTS "profiles: admin updates"        ON public.profiles;
-DROP POLICY IF EXISTS "profiles: user updates own row" ON public.profiles;
+alter table public.profiles         enable row level security;
+alter table public.students         enable row level security;
+alter table public.seasons          enable row level security;
+alter table public.zones            enable row level security;
+alter table public.zone_supervisors enable row level security;
+alter table public.placements       enable row level security;
+alter table public.letters          enable row level security;
+alter table public.settings         enable row level security;
 
-CREATE POLICY "profiles: user reads own row"   ON public.profiles FOR SELECT USING (id = auth.uid());
-CREATE POLICY "profiles: admin reads all"      ON public.profiles FOR SELECT USING (public.is_admin());
-CREATE POLICY "profiles: admin inserts"        ON public.profiles FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "profiles: admin updates"        ON public.profiles FOR UPDATE USING (public.is_admin());
-CREATE POLICY "profiles: user updates own row" ON public.profiles FOR UPDATE
-  USING  (id = auth.uid())
-  WITH CHECK (id = auth.uid() AND role = (SELECT role FROM public.profiles WHERE id = auth.uid()));
 
--- ── students ──────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "students: student reads own row"     ON public.students;
-DROP POLICY IF EXISTS "students: admin reads all"           ON public.students;
-DROP POLICY IF EXISTS "students: supervisor reads assigned" ON public.students;
-DROP POLICY IF EXISTS "students: admin inserts"             ON public.students;
-DROP POLICY IF EXISTS "students: admin updates"             ON public.students;
+-- =============================================================================
+-- profiles
+-- =============================================================================
 
-CREATE POLICY "students: student reads own row"     ON public.students FOR SELECT USING (id = auth.uid());
-CREATE POLICY "students: admin reads all"           ON public.students FOR SELECT USING (public.is_admin());
-CREATE POLICY "students: supervisor reads assigned" ON public.students FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.placements pl
-      JOIN public.zone_supervisors zs ON zs.zone_id = pl.zone_id
-      WHERE pl.student_id = students.id AND zs.school_supervisor_id = auth.uid()
-    )
-  );
-CREATE POLICY "students: admin inserts" ON public.students FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "students: admin updates" ON public.students FOR UPDATE USING (public.is_admin());
+-- Every authenticated user can read their own profile.
+create policy "profiles: user reads own row"
+  on public.profiles for select
+  using (id = auth.uid());
 
--- ── seasons ───────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "seasons: all authenticated users read" ON public.seasons;
-DROP POLICY IF EXISTS "seasons: admin inserts"               ON public.seasons;
-DROP POLICY IF EXISTS "seasons: admin updates"               ON public.seasons;
+-- Admin can read all profiles (needed for student lists, supervisor assignment).
+create policy "profiles: admin reads all"
+  on public.profiles for select
+  using (public.current_role() = 'admin');
 
-CREATE POLICY "seasons: all authenticated users read" ON public.seasons FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY "seasons: admin inserts"               ON public.seasons FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "seasons: admin updates"               ON public.seasons FOR UPDATE USING (public.is_admin());
+-- Admin can insert profiles (account creation on behalf of students/supervisors).
+create policy "profiles: admin inserts"
+  on public.profiles for insert
+  with check (public.current_role() = 'admin');
 
--- ── zones ─────────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "zones: all authenticated users read" ON public.zones;
-DROP POLICY IF EXISTS "zones: admin inserts"               ON public.zones;
-DROP POLICY IF EXISTS "zones: admin updates"               ON public.zones;
-DROP POLICY IF EXISTS "zones: admin deletes"               ON public.zones;
+-- Admin can update any profile.
+create policy "profiles: admin updates"
+  on public.profiles for update
+  using (public.current_role() = 'admin');
 
-CREATE POLICY "zones: all authenticated users read" ON public.zones FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY "zones: admin inserts"               ON public.zones FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "zones: admin updates"               ON public.zones FOR UPDATE USING (public.is_admin());
-CREATE POLICY "zones: admin deletes"               ON public.zones FOR DELETE USING (public.is_admin());
-
--- ── zone_supervisors ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "zone_supervisors: admin reads all"      ON public.zone_supervisors;
-DROP POLICY IF EXISTS "zone_supervisors: supervisor reads own" ON public.zone_supervisors;
-DROP POLICY IF EXISTS "zone_supervisors: admin inserts"        ON public.zone_supervisors;
-DROP POLICY IF EXISTS "zone_supervisors: admin deletes"        ON public.zone_supervisors;
-
-CREATE POLICY "zone_supervisors: admin reads all"      ON public.zone_supervisors FOR SELECT USING (public.is_admin());
-CREATE POLICY "zone_supervisors: supervisor reads own" ON public.zone_supervisors FOR SELECT USING (school_supervisor_id = auth.uid());
-CREATE POLICY "zone_supervisors: admin inserts"        ON public.zone_supervisors FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "zone_supervisors: admin deletes"        ON public.zone_supervisors FOR DELETE USING (public.is_admin());
-
--- ── placements ────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "placements: student reads own"                  ON public.placements;
-DROP POLICY IF EXISTS "placements: admin reads all"                    ON public.placements;
-DROP POLICY IF EXISTS "placements: supervisor reads assigned zone"     ON public.placements;
-DROP POLICY IF EXISTS "placements: student inserts own"                ON public.placements;
-DROP POLICY IF EXISTS "placements: student updates own while submitted" ON public.placements;
-DROP POLICY IF EXISTS "placements: admin updates all"                  ON public.placements;
-
-CREATE POLICY "placements: student reads own"  ON public.placements FOR SELECT USING (student_id = auth.uid());
-CREATE POLICY "placements: admin reads all"    ON public.placements FOR SELECT USING (public.is_admin());
-CREATE POLICY "placements: supervisor reads assigned zone" ON public.placements FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.zone_supervisors zs
-      WHERE zs.zone_id = placements.zone_id AND zs.school_supervisor_id = auth.uid()
-    )
-  );
-CREATE POLICY "placements: student inserts own" ON public.placements FOR INSERT
-  WITH CHECK (
-    student_id = auth.uid() AND public.current_role() = 'student' AND status = 'submitted' AND
-    EXISTS (
-      SELECT 1 FROM public.seasons s WHERE s.id = season_id AND s.status = 'open'
-        AND current_date BETWEEN s.placement_window_start AND s.placement_window_end
-    )
-  );
-CREATE POLICY "placements: student updates own while submitted" ON public.placements FOR UPDATE
-  USING  (student_id = auth.uid() AND public.current_role() = 'student' AND status = 'submitted')
-  WITH CHECK (student_id = auth.uid() AND status = 'submitted');
-CREATE POLICY "placements: admin updates all" ON public.placements FOR UPDATE USING (public.is_admin());
-
--- ── letters ───────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "letters: student reads own"   ON public.letters;
-DROP POLICY IF EXISTS "letters: admin reads all"     ON public.letters;
-DROP POLICY IF EXISTS "letters: student inserts own" ON public.letters;
-
-CREATE POLICY "letters: student reads own"   ON public.letters FOR SELECT USING (student_id = auth.uid());
-CREATE POLICY "letters: admin reads all"     ON public.letters FOR SELECT USING (public.is_admin());
-CREATE POLICY "letters: student inserts own" ON public.letters FOR INSERT
-  WITH CHECK (
-    student_id = auth.uid() AND public.current_role() = 'student' AND
-    EXISTS (SELECT 1 FROM public.seasons s WHERE s.id = season_id AND s.status = 'open')
+-- A user may update their own profile (phone, full_name).
+-- They cannot change their own role.
+create policy "profiles: user updates own row"
+  on public.profiles for update
+  using (id = auth.uid())
+  with check (
+    id = auth.uid() and
+    role = (select role from public.profiles where id = auth.uid())
   );
 
--- ── settings ──────────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "settings: all authenticated users read" ON public.settings;
-DROP POLICY IF EXISTS "settings: admin updates"               ON public.settings;
 
-CREATE POLICY "settings: all authenticated users read" ON public.settings FOR SELECT USING (auth.uid() IS NOT NULL);
-CREATE POLICY "settings: admin updates"               ON public.settings FOR UPDATE USING (public.is_admin());
+-- =============================================================================
+-- students
+-- =============================================================================
 
--- ── logbook_weeks ─────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "logbook_weeks: student selects own"           ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: student inserts own"           ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: student updates own draft"     ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: admin reads all"               ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: admin updates all"             ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: supervisor reads assigned zone" ON public.logbook_weeks;
-DROP POLICY IF EXISTS "logbook_weeks: supervisor certifies"          ON public.logbook_weeks;
+-- A student can read their own academic record.
+create policy "students: student reads own row"
+  on public.students for select
+  using (id = auth.uid());
 
-CREATE POLICY "logbook_weeks: student selects own"       ON public.logbook_weeks FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "logbook_weeks: student inserts own"       ON public.logbook_weeks FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "logbook_weeks: student updates own draft" ON public.logbook_weeks FOR UPDATE
-  USING (auth.uid() = student_id AND status = 'draft')
-  WITH CHECK (auth.uid() = student_id AND status IN ('draft','submitted'));
-CREATE POLICY "logbook_weeks: admin reads all"           ON public.logbook_weeks FOR SELECT USING (public.is_admin());
-CREATE POLICY "logbook_weeks: admin updates all"         ON public.logbook_weeks FOR UPDATE USING (public.is_admin());
-CREATE POLICY "logbook_weeks: supervisor reads assigned zone" ON public.logbook_weeks FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.placement_supervisors ps
-      WHERE ps.placement_id IN (
-        SELECT id FROM public.placements
-        WHERE student_id = logbook_weeks.student_id AND season_id = logbook_weeks.season_id
-      ) AND ps.school_supervisor_id = auth.uid()
-    )
-  );
-CREATE POLICY "logbook_weeks: supervisor certifies" ON public.logbook_weeks FOR UPDATE
-  USING (
-    public.is_school_supervisor() AND status = 'submitted' AND EXISTS (
-      SELECT 1 FROM public.placement_supervisors ps
-      WHERE ps.placement_id IN (
-        SELECT id FROM public.placements
-        WHERE student_id = logbook_weeks.student_id AND season_id = logbook_weeks.season_id
-      ) AND ps.school_supervisor_id = auth.uid()
+-- Admin can read all student records.
+create policy "students: admin reads all"
+  on public.students for select
+  using (public.current_role() = 'admin');
+
+-- School supervisors can read students in their zones.
+-- (Resolved via placements → zone_supervisors join.)
+create policy "students: supervisor reads assigned"
+  on public.students for select
+  using (
+    public.current_role() = 'school_supervisor' and
+    exists (
+      select 1
+      from public.placements pl
+      join public.zone_supervisors zs on zs.zone_id = pl.zone_id
+      where pl.student_id = students.id
+        and zs.school_supervisor_id = auth.uid()
     )
   );
 
--- ── logbook_daily_entries ─────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "logbook_daily_entries: student selects own"           ON public.logbook_daily_entries;
-DROP POLICY IF EXISTS "logbook_daily_entries: student inserts on draft week" ON public.logbook_daily_entries;
-DROP POLICY IF EXISTS "logbook_daily_entries: student updates on draft week" ON public.logbook_daily_entries;
-DROP POLICY IF EXISTS "logbook_daily_entries: admin reads all"               ON public.logbook_daily_entries;
-DROP POLICY IF EXISTS "logbook_daily_entries: supervisor reads assigned"     ON public.logbook_daily_entries;
+-- Admin inserts student rows (at account creation).
+create policy "students: admin inserts"
+  on public.students for insert
+  with check (public.current_role() = 'admin');
 
-CREATE POLICY "logbook_daily_entries: student selects own" ON public.logbook_daily_entries FOR SELECT USING (student_id = auth.uid());
-CREATE POLICY "logbook_daily_entries: student inserts on draft week" ON public.logbook_daily_entries FOR INSERT
-  WITH CHECK (student_id = auth.uid() AND EXISTS (SELECT 1 FROM public.logbook_weeks WHERE id = week_id AND status = 'draft'));
-CREATE POLICY "logbook_daily_entries: student updates on draft week" ON public.logbook_daily_entries FOR UPDATE
-  USING (student_id = auth.uid() AND EXISTS (SELECT 1 FROM public.logbook_weeks WHERE id = week_id AND status = 'draft'));
-CREATE POLICY "logbook_daily_entries: admin reads all"           ON public.logbook_daily_entries FOR SELECT USING (public.is_admin());
-CREATE POLICY "logbook_daily_entries: supervisor reads assigned" ON public.logbook_daily_entries FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.logbook_weeks lw
-      JOIN public.placement_supervisors ps ON ps.placement_id IN (
-        SELECT id FROM public.placements
-        WHERE student_id = lw.student_id AND season_id = lw.season_id
-      )
-      WHERE lw.id = logbook_daily_entries.week_id AND ps.school_supervisor_id = auth.uid()
+-- Admin can update student academic details.
+create policy "students: admin updates"
+  on public.students for update
+  using (public.current_role() = 'admin');
+
+
+-- =============================================================================
+-- seasons
+-- =============================================================================
+
+-- All authenticated users can read seasons (students need to know if window is open).
+create policy "seasons: all authenticated users read"
+  on public.seasons for select
+  using (auth.uid() is not null);
+
+-- Only admin can create, update, or archive seasons.
+create policy "seasons: admin inserts"
+  on public.seasons for insert
+  with check (public.current_role() = 'admin');
+
+create policy "seasons: admin updates"
+  on public.seasons for update
+  using (public.current_role() = 'admin');
+
+
+-- =============================================================================
+-- zones
+-- =============================================================================
+
+-- All authenticated users can read zones (students see zone name on their placement).
+create policy "zones: all authenticated users read"
+  on public.zones for select
+  using (auth.uid() is not null);
+
+-- Only admin manages zones.
+create policy "zones: admin inserts"
+  on public.zones for insert
+  with check (public.current_role() = 'admin');
+
+create policy "zones: admin updates"
+  on public.zones for update
+  using (public.current_role() = 'admin');
+
+create policy "zones: admin deletes"
+  on public.zones for delete
+  using (public.current_role() = 'admin');
+
+
+-- =============================================================================
+-- zone_supervisors
+-- =============================================================================
+
+-- Admin reads all assignments.
+create policy "zone_supervisors: admin reads all"
+  on public.zone_supervisors for select
+  using (public.current_role() = 'admin');
+
+-- A school supervisor can see which zones they are assigned to.
+create policy "zone_supervisors: supervisor reads own"
+  on public.zone_supervisors for select
+  using (school_supervisor_id = auth.uid());
+
+-- Only admin manages zone-supervisor assignments.
+create policy "zone_supervisors: admin inserts"
+  on public.zone_supervisors for insert
+  with check (public.current_role() = 'admin');
+
+create policy "zone_supervisors: admin deletes"
+  on public.zone_supervisors for delete
+  using (public.current_role() = 'admin');
+
+
+-- =============================================================================
+-- placements
+-- =============================================================================
+
+-- A student can only see their own placements.
+create policy "placements: student reads own"
+  on public.placements for select
+  using (student_id = auth.uid());
+
+-- Admin can read all placements.
+create policy "placements: admin reads all"
+  on public.placements for select
+  using (public.current_role() = 'admin');
+
+-- School supervisor can see placements assigned to their zones.
+create policy "placements: supervisor reads assigned zone"
+  on public.placements for select
+  using (
+    public.current_role() = 'school_supervisor' and
+    exists (
+      select 1
+      from public.zone_supervisors zs
+      where zs.zone_id = placements.zone_id
+        and zs.school_supervisor_id = auth.uid()
     )
   );
 
--- ── logbook_monthly_summaries ─────────────────────────────────────────────────
-DROP POLICY IF EXISTS "logbook_monthly_summaries: student selects own"       ON public.logbook_monthly_summaries;
-DROP POLICY IF EXISTS "logbook_monthly_summaries: student inserts own"       ON public.logbook_monthly_summaries;
-DROP POLICY IF EXISTS "logbook_monthly_summaries: student updates draft"     ON public.logbook_monthly_summaries;
-DROP POLICY IF EXISTS "logbook_monthly_summaries: admin reads all"           ON public.logbook_monthly_summaries;
-DROP POLICY IF EXISTS "logbook_monthly_summaries: supervisor reads assigned" ON public.logbook_monthly_summaries;
-DROP POLICY IF EXISTS "logbook_monthly_summaries: supervisor assesses"       ON public.logbook_monthly_summaries;
-
-CREATE POLICY "logbook_monthly_summaries: student selects own"   ON public.logbook_monthly_summaries FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "logbook_monthly_summaries: student inserts own"   ON public.logbook_monthly_summaries FOR INSERT WITH CHECK (auth.uid() = student_id AND status = 'draft');
-CREATE POLICY "logbook_monthly_summaries: student updates draft" ON public.logbook_monthly_summaries FOR UPDATE
-  USING (auth.uid() = student_id AND status = 'draft') WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "logbook_monthly_summaries: admin reads all"       ON public.logbook_monthly_summaries FOR SELECT USING (public.is_admin());
-CREATE POLICY "logbook_monthly_summaries: supervisor reads assigned" ON public.logbook_monthly_summaries FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.placement_supervisors ps
-      WHERE ps.placement_id IN (
-        SELECT id FROM public.placements
-        WHERE student_id = logbook_monthly_summaries.student_id AND season_id = logbook_monthly_summaries.season_id
-      ) AND ps.school_supervisor_id = auth.uid()
-    )
-  );
-CREATE POLICY "logbook_monthly_summaries: supervisor assesses" ON public.logbook_monthly_summaries FOR UPDATE
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.placement_supervisors ps
-      WHERE ps.placement_id IN (
-        SELECT id FROM public.placements
-        WHERE student_id = logbook_monthly_summaries.student_id AND season_id = logbook_monthly_summaries.season_id
-      ) AND ps.school_supervisor_id = auth.uid()
+-- A student can insert their own placement (sync from IndexedDB).
+-- Enforced conditions:
+--   * student_id must match the authenticated user
+--   * status must be 'submitted' on insert (the only valid initial state)
+--   * The placement window for the chosen season must currently be open
+create policy "placements: student inserts own"
+  on public.placements for insert
+  with check (
+    student_id = auth.uid() and
+    public.current_role() = 'student' and
+    status = 'submitted' and
+    exists (
+      select 1
+      from public.seasons s
+      where s.id = season_id
+        and s.status = 'open'
+        and current_date between s.placement_window_start and s.placement_window_end
     )
   );
 
--- ── attendance_logs ───────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "attendance_logs: student inserts own"       ON public.attendance_logs;
-DROP POLICY IF EXISTS "attendance_logs: student reads own"         ON public.attendance_logs;
-DROP POLICY IF EXISTS "attendance_logs: student updates own today" ON public.attendance_logs;
-DROP POLICY IF EXISTS "attendance_logs: admin reads all"           ON public.attendance_logs;
-DROP POLICY IF EXISTS "attendance_logs: admin updates all"         ON public.attendance_logs;
-DROP POLICY IF EXISTS "attendance_logs: supervisor reads assigned" ON public.attendance_logs;
+-- A student may update their own placement ONLY while it is still 'submitted'.
+-- Once flagged/rejected/assigned, the student cannot change anything.
+-- They may not change student_id, season_id, or status themselves.
+create policy "placements: student updates own while submitted"
+  on public.placements for update
+  using (
+    student_id = auth.uid() and
+    public.current_role() = 'student' and
+    status = 'submitted'
+  )
+  with check (
+    student_id = auth.uid() and
+    status = 'submitted'
+  );
 
-CREATE POLICY "attendance_logs: student inserts own"       ON public.attendance_logs FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "attendance_logs: student reads own"         ON public.attendance_logs FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "attendance_logs: student updates own today" ON public.attendance_logs FOR UPDATE
-  USING (auth.uid() = student_id AND log_date = current_date AND check_out_time IS NULL)
-  WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "attendance_logs: admin reads all"           ON public.attendance_logs FOR SELECT USING (public.is_admin());
-CREATE POLICY "attendance_logs: admin updates all"         ON public.attendance_logs FOR UPDATE USING (public.is_admin());
-CREATE POLICY "attendance_logs: supervisor reads assigned" ON public.attendance_logs FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.placement_supervisors ps
-      WHERE ps.placement_id = attendance_logs.placement_id AND ps.school_supervisor_id = auth.uid()
+-- Admin can update any placement (batch assignment of zone + supervisor,
+-- status transitions to assigned/flagged/rejected).
+create policy "placements: admin updates all"
+  on public.placements for update
+  using (public.current_role() = 'admin');
+
+
+-- =============================================================================
+-- letters
+-- =============================================================================
+
+-- A student can only see their own letter records.
+create policy "letters: student reads own"
+  on public.letters for select
+  using (student_id = auth.uid());
+
+-- Admin can read all letter records (audit).
+create policy "letters: admin reads all"
+  on public.letters for select
+  using (public.current_role() = 'admin');
+
+-- A student may insert their own letter metadata (at generation time).
+-- Conditions:
+--   * student_id must match the authenticated user
+--   * The chosen season must be open
+create policy "letters: student inserts own"
+  on public.letters for insert
+  with check (
+    student_id = auth.uid() and
+    public.current_role() = 'student' and
+    exists (
+      select 1
+      from public.seasons s
+      where s.id = season_id
+        and s.status = 'open'
     )
   );
 
--- ── attendance_flags ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "attendance_flags: admin reads all"           ON public.attendance_flags;
-DROP POLICY IF EXISTS "attendance_flags: admin inserts"             ON public.attendance_flags;
-DROP POLICY IF EXISTS "attendance_flags: admin updates all"         ON public.attendance_flags;
-DROP POLICY IF EXISTS "attendance_flags: student reads own"         ON public.attendance_flags;
-DROP POLICY IF EXISTS "attendance_flags: supervisor reads assigned" ON public.attendance_flags;
+-- Letters are never updated or deleted — the audit log is immutable.
+-- (Regenerating a letter creates a new row with a new verification_code.)
 
-CREATE POLICY "attendance_flags: admin reads all"   ON public.attendance_flags FOR SELECT USING (public.is_admin());
-CREATE POLICY "attendance_flags: admin inserts"     ON public.attendance_flags FOR INSERT WITH CHECK (public.is_admin());
-CREATE POLICY "attendance_flags: admin updates all" ON public.attendance_flags FOR UPDATE USING (public.is_admin());
-CREATE POLICY "attendance_flags: student reads own" ON public.attendance_flags FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "attendance_flags: supervisor reads assigned" ON public.attendance_flags FOR SELECT
-  USING (
-    public.is_school_supervisor() AND EXISTS (
-      SELECT 1 FROM public.attendance_logs al
-      JOIN public.placement_supervisors ps ON ps.placement_id = al.placement_id
-      WHERE al.id = attendance_flags.attendance_log_id AND ps.school_supervisor_id = auth.uid()
-    )
-  );
 
--- ── supervisor_visits ─────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "supervisor_visits: supervisor manages own" ON public.supervisor_visits;
+-- =============================================================================
+-- settings
+-- =============================================================================
 
-CREATE POLICY "supervisor_visits: supervisor manages own" ON public.supervisor_visits FOR ALL USING (auth.uid() = school_supervisor_id);
+-- All authenticated users can read settings (needed to fetch asset paths for letter generation).
+create policy "settings: all authenticated users read"
+  on public.settings for select
+  using (auth.uid() is not null);
 
--- ── attachment_payments ───────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "attachment_payments: student selects own" ON public.attachment_payments;
-DROP POLICY IF EXISTS "attachment_payments: student inserts own" ON public.attachment_payments;
-DROP POLICY IF EXISTS "attachment_payments: student updates own" ON public.attachment_payments;
-DROP POLICY IF EXISTS "attachment_payments: admin reads all"     ON public.attachment_payments;
-DROP POLICY IF EXISTS "attachment_payments: admin updates all"   ON public.attachment_payments;
+-- Only admin can update settings (stamp, signature, letterhead paths).
+create policy "settings: admin updates"
+  on public.settings for update
+  using (public.current_role() = 'admin');
 
-CREATE POLICY "attachment_payments: student selects own" ON public.attachment_payments FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "attachment_payments: student inserts own" ON public.attachment_payments FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "attachment_payments: student updates own" ON public.attachment_payments FOR UPDATE USING (auth.uid() = student_id);
-CREATE POLICY "attachment_payments: admin reads all"     ON public.attachment_payments FOR SELECT USING (public.is_admin());
-CREATE POLICY "attachment_payments: admin updates all"   ON public.attachment_payments FOR UPDATE USING (public.is_admin());
-
--- ── attachment_reports ────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "attachment_reports: student selects own" ON public.attachment_reports;
-DROP POLICY IF EXISTS "attachment_reports: student inserts own" ON public.attachment_reports;
-DROP POLICY IF EXISTS "attachment_reports: student updates own" ON public.attachment_reports;
-DROP POLICY IF EXISTS "attachment_reports: admin reads all"     ON public.attachment_reports;
-DROP POLICY IF EXISTS "attachment_reports: admin updates all"   ON public.attachment_reports;
-
-CREATE POLICY "attachment_reports: student selects own" ON public.attachment_reports FOR SELECT USING (auth.uid() = student_id);
-CREATE POLICY "attachment_reports: student inserts own" ON public.attachment_reports FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "attachment_reports: student updates own" ON public.attachment_reports FOR UPDATE USING (auth.uid() = student_id);
-CREATE POLICY "attachment_reports: admin reads all"     ON public.attachment_reports FOR SELECT USING (public.is_admin());
-CREATE POLICY "attachment_reports: admin updates all"   ON public.attachment_reports FOR UPDATE USING (public.is_admin());
+-- No insert or delete — the single row is seeded in schema.sql.

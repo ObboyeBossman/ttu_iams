@@ -6,9 +6,8 @@
 import { showToast } from '/shell/nav.js';
 import { supabase } from '/shared/supabase-client.js';
 import { listLogbookWeeks, listMonthlySummaries } from '/shared/services/logbook.service.js';
-import { 
-  hasPaidForSeason, markSeasonAsPaid, getAttachmentReport, upsertAttachmentReport 
-} from '/shared/services/attachment-report.service.js';
+import { getAttachmentReport, upsertAttachmentReport } from '/shared/services/attachment-report.service.js';
+import { hasPaid, initiatePayment, formatGHS, PAYMENT_FEES_PESEWAS } from '/shared/services/payments.service.js';
 import Dexie from 'https://esm.sh/dexie@4';
 
 // ── Dexie store for autosaving supplementary inputs and editing drafts ────────
@@ -95,7 +94,14 @@ export async function initReport(studentId, seasonId, placement) {
   document.getElementById('reportWorkspace').classList.remove('hidden');
 
   // 4. Fetch Report Data & Payment Status
-  _ctrl.hasPaid = await hasPaidForSeason(studentId, seasonId);
+  _ctrl.hasPaid = await hasPaid(studentId, seasonId, 'attachment_report');
+
+  const reportFee = formatGHS(PAYMENT_FEES_PESEWAS.attachment_report);
+  const feeAmountEl = document.getElementById('reportFeeAmount');
+  if (feeAmountEl) feeAmountEl.textContent = reportFee;
+  const feeFeatureEl = document.getElementById('reportFeeFeatureAmount');
+  if (feeFeatureEl) feeFeatureEl.textContent = reportFee;
+  
   const { data: report } = await getAttachmentReport(studentId, seasonId);
   _ctrl.reportData = report;
 
@@ -275,40 +281,32 @@ function _wireEvents() {
 
     const submitBtn = document.getElementById('btnPaymentSubmit');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="ai-spinner" style="width:14px; height:14px; border-width:2px; margin:0 6px 0 0; display:inline-block; vertical-align:middle;"></span> Initializing…`;
+    submitBtn.innerHTML = `<span class="ai-spinner" style="width:14px; height:14px; border-width:2px; margin:0 6px 0 0; display:inline-block; vertical-align:middle;"></span> Processing…`;
 
-    try {
-      const email = 'student@ttu.edu.gh'; // Or fetch from profile if available
-      
-      const handler = PaystackPop.setup({
-        key: 'pk_test_0000000000000000000000000000000000000000', // Mock Test Key
-        email: email,
-        amount: 50 * 100, // GH¢ 50.00 in pesewas
-        currency: 'GHS',
-        ref: 'IAMS_' + Math.floor((Math.random() * 1000000000) + 1),
-        callback: async function(response) {
-          await markSeasonAsPaid(_ctrl.studentId, _ctrl.seasonId, response.reference);
-          _ctrl.hasPaid = true;
-          showToast(`Payment Successful! Ref: ${response.reference}`, 'success');
-          
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
-          
-          _setStep(3, 'Supplementary Input Form', 'Provide organization context for report alignment.');
-          _showPanel('stageSupplementaryForm');
-        },
-        onClose: function() {
+    const ok = await initiatePayment({
+      studentId: _ctrl.studentId,
+      seasonId: _ctrl.seasonId,
+      purpose: 'attachment_report',
+      onStatusChange: (status, message) => {
+        if (status === 'verifying') {
+          submitBtn.innerHTML = `<span class="ai-spinner" style="width:14px; height:14px; border-width:2px; margin:0 6px 0 0; display:inline-block; vertical-align:middle;"></span> Verifying…`;
+        } else if (status === 'cancelled') {
           showToast('Payment window closed.', 'warning');
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+        } else if (status === 'error') {
+          showToast(message || 'Payment failed. Please try again.', 'error');
         }
-      });
-      handler.openIframe();
-    } catch (err) {
-      console.error('Paystack initialization failed:', err);
-      showToast('Failed to load payment gateway.', 'error');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+      },
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+    if (window.lucide) window.lucide.createIcons();
+
+    if (ok) {
+      _ctrl.hasPaid = true;
+      showToast('Payment successful! Unlocking the AI Attachment Assistant…', 'success');
+      _setStep(3, 'Supplementary Input Form', 'Provide organization context for report alignment.');
+      _showPanel('stageSupplementaryForm');
     }
   };
 

@@ -10,6 +10,7 @@ import {
   upsertDailyEntry, upsertWeekMeta, submitLogbookWeek,
   listMonthlySummaries, upsertMonthlySummary,
 } from '/shared/services/logbook.service.js';
+import { hasPaid, initiatePayment, formatGHS, PAYMENT_FEES_PESEWAS } from '/shared/services/payments.service.js';
 import Dexie from 'https://esm.sh/dexie@4';
 
 // ── Dexie store for offline daily drafts ─────────────────────────────────────
@@ -1305,6 +1306,37 @@ function exportPdf() {
   }, 1200);
 }
 
+function _wireLogbookPaymentGate() {
+  const amountEl = document.getElementById('lbGateAmount');
+  if (amountEl) amountEl.textContent = formatGHS(PAYMENT_FEES_PESEWAS.logbook_access);
+
+  const btn = document.getElementById('lbPayBtn');
+  if (!btn || btn.dataset.wired) return; // don't double-bind on re-entry
+  btn.dataset.wired = '1';
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="ai-spinner" style="width:14px;height:14px;border-width:2px;margin:0 6px 0 0;display:inline-block;vertical-align:middle;"></span> Processing…`;
+
+    const ok = await initiatePayment({
+      studentId: _lb.studentId,
+      seasonId: _lb.seasonId,
+      purpose: 'logbook_access',
+      onStatusChange: (status, message) => {
+        if (status === 'confirmed') showToast('Payment successful! Unlocking your logbook…', 'success');
+        else if (status === 'cancelled') showToast('Payment window closed.', 'warning');
+        else if (status === 'error') showToast(message || 'Payment failed. Please try again.', 'error');
+      },
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+    if (window.lucide) window.lucide.createIcons();
+
+    if (ok) await initLogbook(_lb.studentId, _lb.seasonId, _lb.placement);
+  };
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initLogbook(studentId, seasonId, placement) {
   _lb.studentId   = studentId;
@@ -1338,6 +1370,17 @@ export async function initLogbook(studentId, seasonId, placement) {
     return;
   }
 
+  const paymentGate = document.getElementById('lb-payment-gate');
+  const paidForLogbook = await hasPaid(studentId, seasonId, 'logbook_access');
+  if (!paidForLogbook) {
+    noPlacement?.classList.add('hidden');
+    content?.classList.add('hidden');
+    paymentGate?.classList.remove('hidden');
+    _wireLogbookPaymentGate();
+    return;
+  }
+  paymentGate?.classList.add('hidden');
+  
   noPlacement?.classList.add('hidden');
   content?.classList.remove('hidden');
   if (seasonLabel) seasonLabel.textContent = placement.company_name ? `At ${placement.company_name}` : 'Loading…';

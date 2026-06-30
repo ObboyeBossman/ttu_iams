@@ -66,19 +66,37 @@ if (togglePasswordBtn && toggleIcon && pwInput) {
   });
 }
 
-// ── Form submit ──────────────────────────────────────────────────────────────
+// ── Index Number → Email conversion ─────────────────────────────────────────
+// Students log in with their index number (e.g. BC/IAS/24/112).
+// The derived email is: strip slashes, lowercase, append @ttu.edu.gh
+// e.g. BC/IAS/24/112 → bcias24112@ttu.edu.gh
+// Non-student users (admin, supervisors) enter their email directly.
+// We detect an index number by the presence of '/' in the input.
+function resolveLoginEmail(input) {
+  if (input.includes('/')) {
+    // Treat as index number → derive email
+    return input.replace(/\//g, '').toLowerCase() + '@ttu.edu.gh';
+  }
+  // Already an email address
+  return input.toLowerCase();
+}
+
+
 if (form) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearBannerError();
 
-    const email = idInput?.value?.trim();
-    const pwd   = pwInput?.value;
+    const rawInput = idInput?.value?.trim();
+    const pwd      = pwInput?.value;
 
-    if (!email || !pwd) {
-      showBannerError('Please enter both email and password.');
+    if (!rawInput || !pwd) {
+      showBannerError('Please enter your index number (or email) and password.');
       return;
     }
+
+    const email = resolveLoginEmail(rawInput);
+    console.log('[login.js] Resolved login email:', email);
 
     setLoading(true);
 

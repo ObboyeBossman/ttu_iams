@@ -2,62 +2,14 @@
 // IAMS — shared/services/attachment-report.service.js
 // Service layer for Student Attachment Report feature.
 // Integrates with Supabase, with automatic local fallback if tables do not exist.
+//
+// Payment status/charging moved to shared/services/payments.service.js
+// (hasPaid / initiatePayment) — see report.js.
 // =============================================================================
 
 import { supabase } from '../supabase-client.js';
 
 const REPORT_KEY_PREFIX = 'iams_report_';
-const PAYMENT_KEY_PREFIX = 'iams_payment_';
-
-/**
- * Checks if the student has paid for the AI report generation in the active season.
- */
-export async function hasPaidForSeason(studentId, seasonId) {
-  try {
-    const { data, error } = await supabase
-      .from('attachment_payments')
-      .select('*')
-      .eq('student_id', studentId)
-      .eq('season_id', seasonId)
-      .maybeSingle();
-
-    if (!error && data) {
-      return data.status === 'confirmed';
-    }
-  } catch (e) {
-    // Ignore and fallback
-  }
-
-  // Fallback to localStorage
-  const localVal = localStorage.getItem(`${PAYMENT_KEY_PREFIX}${studentId}_${seasonId}`);
-  return localVal === 'confirmed';
-}
-
-/**
- * Marks the active season as paid for the student (Simulating webhook confirmation).
- */
-export async function markSeasonAsPaid(studentId, seasonId, paymentRef = '') {
-  try {
-    const { data, error } = await supabase.functions.invoke('verify-paystack', {
-      body: { 
-        reference: paymentRef || `pay_${Math.random().toString(36).substr(2, 9)}`,
-        student_id: studentId, 
-        season_id: seasonId 
-      }
-    });
-
-    if (!error && data?.success) {
-      localStorage.setItem(`${PAYMENT_KEY_PREFIX}${studentId}_${seasonId}`, 'confirmed');
-      return { data: data.data, error: null };
-    }
-  } catch (e) {
-    console.error('Edge function verify-paystack failed:', e);
-  }
-
-  // Fallback to localStorage for local dev without Edge Functions running
-  localStorage.setItem(`${PAYMENT_KEY_PREFIX}${studentId}_${seasonId}`, 'confirmed');
-  return { data: { status: 'confirmed' }, error: null };
-}
 
 /**
  * Gets the student's report record for the active season.

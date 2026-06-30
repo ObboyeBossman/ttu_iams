@@ -30,8 +30,9 @@ export default defineConfig({
         adminZones:          path.resolve(root, 'src/modules/admin_portal/zones/zones.html'),
         adminPlacementZones: path.resolve(root, 'src/modules/admin_portal/placement-zones/placement-zones.html'),
         adminPlacements:     path.resolve(root, 'src/modules/admin_portal/placements.html'),
-        adminLettersAudit:   path.resolve(root, 'src/modules/admin_portal/letters/letters-audit.html'),
-        adminSettings:       path.resolve(root, 'src/modules/admin_portal/settings/settings.html'),
+        adminLettersAudit: path.resolve(root, 'src/modules/admin_portal/letters/letters-audit.html'),
+        adminFinance: path.resolve(root, 'src/modules/admin_portal/finance/finance.html'),
+        adminSettings: path.resolve(root, 'src/modules/admin_portal/settings/settings.html'),
         adminStudents:       path.resolve(root, 'src/modules/admin_portal/students.html'),
         // School Supervisor
         ssDash:              path.resolve(root, 'src/modules/school-supervisor/dashboard.html'),

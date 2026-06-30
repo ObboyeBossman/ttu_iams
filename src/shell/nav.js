@@ -355,6 +355,7 @@ export function navigateTo(page) {
       'seasons': '/src/modules/admin_portal/seasons/seasons.html',
       'assign-placements': '/src/modules/admin_portal/placements.html',
       'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
+      'finance': '/src/modules/admin_portal/finance/finance.html',
       'settings': '/src/modules/admin_portal/settings/settings.html',
     } : {
       'dashboard': '/src/modules/school-supervisor/dashboard.html',

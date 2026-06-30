@@ -1,0 +1,897 @@
+Good — I dug into the actual repo before touching anything, and the existing payment flow has real gaps worth fixing while I'm in here, not just bolting logbook payments on top:
+
+- `attachment-report.service.js`'s `markSeasonAsPaid`/`hasPaidForSeason` **fall back to `localStorage.setItem('confirmed')` on any error** — meaning if the edge function fails for any reason, the browser just grants access anyway. That's a fail-open hole.
+- The report payment screen shows **GH¢40.00**, the feature-list says **GH¢50.00**, and the actual Paystack charge is **GH¢50.00** — three different numbers for one fee.
+- `verify-paystack` writes to an `attachment_payments` table that **doesn't exist anywhere in `schema.sql`** — it's only ever been reachable via the localStorage fallback above.
+- The Paystack public key in `report.js` is a hardcoded fake (`pk_test_000...`).
+
+So instead of patching `attachment_payments`, I'm introducing one real `payments` table (logbook + report share it, distinguished by `purpose`), making the edge function the *only* writer (real server-side Paystack verification, amount/currency checked against a server-side price list — never trusts what the client claims it paid), and removing the fail-open fallback entirely. Logbook access is new at GH¢20.00; report generation stays at GH¢20.00... sorry — stays at **GH¢50.00** (fixing the 40/50 drift to match what's actually charged).
+
+Everything below is grouped by file — nothing has been written to disk, just shown here for you to drop in.
+
+---
+
+**`supabase/schema.sql`** — append at the end (new enums + table):
+
+```sql
+-- ---------------------------------------------------------------------------
+-- TABLE: payments
+-- Student payments collected via Paystack for paid IAMS features.
+-- One row per student, per season, per purpose — a student pays each fee
+-- at most once per season. Written EXCLUSIVELY by the verify-paystack Edge
+-- Function (service role), only after independently re-verifying the
+-- transaction with Paystack's API. No client role may insert/update this
+-- table directly — see rls-policies.sql.
+-- ---------------------------------------------------------------------------
+
+create type payment_purpose as enum (
+  'logbook_access',     -- one-time fee to unlock the digital logbook for a season
+  'attachment_report'   -- one-time fee to unlock the AI Attachment Assistant path
+);
+
+create type payment_status as enum (
+  'confirmed',  -- Paystack verified success AND amount/currency matched expectation
+  'failed'      -- Paystack verification failed, or amount/currency mismatch
+);
+
+create table public.payments (
+  id                 uuid            primary key default gen_random_uuid(),
+  student_id         uuid            not null references public.profiles (id) on delete restrict,
+  season_id          uuid            not null references public.seasons  (id) on delete restrict,
+  purpose            payment_purpose not null,
+  amount_pesewas     integer         not null check (amount_pesewas > 0),
+  currency           text            not null default 'GHS',
+  status             payment_status  not null,
+  paystack_reference text            not null unique,
+  paid_at            timestamptz,
+  created_at         timestamptz     not null default now(),
+
+  -- A student pays each purpose at most once per season. Re-attempts after
+  -- a 'failed' row simply overwrite this same row on next success.
+  constraint payments_one_per_student_per_season_purpose
+    unique (student_id, season_id, purpose)
+);
+
+comment on table public.payments is
+  'Student payments for paid IAMS features (logbook access, AI report generation). Written exclusively by the verify-paystack Edge Function after server-side Paystack verification.';
+
+create index payments_season_idx  on public.payments (season_id);
+create index payments_purpose_idx on public.payments (purpose);
+```
+
+---
+
+**`supabase/rls-policies.sql`** — append at the end:
+
+```sql
+-- =============================================================================
+-- payments
+-- =============================================================================
+
+alter table public.payments enable row level security;
+
+-- A student may read their own payment rows (used by hasPaid() to gate access).
+create policy "payments: student reads own"
+  on public.payments for select
+  using (student_id = auth.uid());
+
+-- Admin reads all payment rows (Finance page).
+create policy "payments: admin reads all"
+  on public.payments for select
+  using (public.current_role() = 'admin');
+
+-- Intentionally no insert/update/delete policy for ANY role, including admin.
+-- Every row is written by the verify-paystack Edge Function via the
+-- service-role key (bypasses RLS) only after it has independently verified
+-- the transaction with Paystack. This removes the "trust the browser"
+-- failure mode that the old localStorage fallback had.
+```
+
+---
+
+**`.env.example`** — add under the existing `PAYSTACK_SECRET_KEY` line:
+
+```bash
+# Client-side (VITE_ prefix) — Paystack PUBLIC key. Safe to expose; it can
+# only initiate a charge, never move money or verify one on its own.
+VITE_PAYSTACK_PUBLIC_KEY=pk_test_your_paystack_public_key
+
+# Edge Functions only — set to "true" to skip real Paystack verification
+# and auto-confirm payments for local dev. Leave unset/false everywhere
+# else. Unlike the old implicit fallback, this requires an explicit opt-in.
+PAYSTACK_MOCK_MODE=false
+```
+
+---
+
+**`supabase/functions/verify-paystack/index.ts`** — full replacement:
+
+```typescript
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Server-side price list. The amount the client *thinks* it's paying never
+// reaches this function — only the Paystack reference does. We look up what
+// that reference *should* be worth, then check Paystack's own record of the
+// transaction against it. Keep in sync with PAYMENT_FEES_PESEWAS in
+// src/shared/services/payments.service.js (that copy only drives the UI).
+const EXPECTED_AMOUNTS_PESEWAS: Record<string, number> = {
+  logbook_access: 2000,      // GH¢ 20.00
+  attachment_report: 5000,   // GH¢ 50.00
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const { reference, student_id, season_id, purpose } = await req.json();
+
+    if (!reference || !student_id || !season_id || !purpose) {
+      return jsonResponse({ error: "Missing required parameters" }, 400);
+    }
+    if (!(purpose in EXPECTED_AMOUNTS_PESEWAS)) {
+      return jsonResponse({ error: `Unknown purpose: ${purpose}` }, 400);
+    }
+
+    const expectedAmount = EXPECTED_AMOUNTS_PESEWAS[purpose];
+    const mockMode = (Deno.env.get("PAYSTACK_MOCK_MODE") ?? "false").toLowerCase() === "true";
+    const paystackSecret = Deno.env.get("PAYSTACK_SECRET_KEY");
+
+    let verifiedStatus: "confirmed" | "failed";
+    let verifiedAmount = expectedAmount;
+    let failureReason = "";
+
+    if (mockMode) {
+      // Explicit opt-in only — never the implicit default. Local dev only.
+      verifiedStatus = "confirmed";
+    } else {
+      if (!paystackSecret) {
+        // Loud failure instead of the old silent "pretend it worked" path.
+        console.error("PAYSTACK_SECRET_KEY is not set and PAYSTACK_MOCK_MODE is not enabled.");
+        return jsonResponse({ error: "Payment verification is not configured on the server." }, 500);
+      }
+
+      const psRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${paystackSecret}` },
+      });
+      const psData = await psRes.json();
+
+      const txSucceeded = psRes.ok && psData?.status === true && psData?.data?.status === "success";
+      const amountMatches = psData?.data?.amount === expectedAmount;
+      const currencyMatches = psData?.data?.currency === "GHS";
+
+      if (txSucceeded && amountMatches && currencyMatches) {
+        verifiedStatus = "confirmed";
+        verifiedAmount = psData.data.amount;
+      } else {
+        verifiedStatus = "failed";
+        failureReason = !txSucceeded
+          ? "Paystack reported the transaction as unsuccessful."
+          : "Amount or currency did not match the expected fee for this purpose.";
+        console.warn(`Payment verification failed for ref ${reference}: ${failureReason}`);
+      }
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from("payments")
+      .upsert({
+        student_id,
+        season_id,
+        purpose,
+        amount_pesewas: verifiedAmount,
+        currency: "GHS",
+        status: verifiedStatus,
+        paystack_reference: reference,
+        paid_at: verifiedStatus === "confirmed" ? new Date().toISOString() : null,
+      }, { onConflict: "student_id,season_id,purpose" })
+      .select()
+      .single();
+
+    if (error) {
+      // unique_violation on paystack_reference = someone tried to replay a
+      // reference already attached to a different student/season/purpose row.
+      if (error.code === "23505" && error.message?.includes("paystack_reference")) {
+        return jsonResponse({ error: "This payment reference has already been used." }, 409);
+      }
+      throw error;
+    }
+
+    if (verifiedStatus === "failed") {
+      return jsonResponse({ success: false, error: failureReason, data }, 400);
+    }
+
+    return jsonResponse({ success: true, data });
+  } catch (err) {
+    console.error("Verification error:", err);
+    return jsonResponse({ error: "Internal Server Error" }, 500);
+  }
+});
+```
+
+---
+
+**`src/shared/services/payments.service.js`** — new file:
+
+```javascript
+// =============================================================================
+// IAMS — shared/services/payments.service.js
+// =============================================================================
+// All payment reads + Paystack charge orchestration for paid features
+// (logbook access, AI report generation). Pages never call supabase or
+// PaystackPop directly for this — they call functions exported here.
+//
+// This file NEVER writes to the payments table. All writes happen inside
+// the verify-paystack Edge Function (service role, bypasses RLS), only
+// after it independently re-verifies the transaction with Paystack. See
+// "payments: ..." policies in rls-policies.sql.
+// =============================================================================
+
+import { supabase } from '../supabase-client.js';
+
+/** UI-side copy of pricing — the server (verify-paystack's
+ *  EXPECTED_AMOUNTS_PESEWAS) is the real source of truth and is checked
+ *  independently of whatever this file tells PaystackPop to charge. */
+export const PAYMENT_FEES_PESEWAS = {
+  logbook_access:    2000,  // GH¢ 20.00
+  attachment_report: 5000,  // GH¢ 50.00
+};
+
+export function formatGHS(pesewas) {
+  return `GH¢ ${(pesewas / 100).toFixed(2)}`;
+}
+
+/** True only if there's a server-confirmed payment for `purpose` in `seasonId`. Fails CLOSED on any read error — never grants access because a query errored. */
+export async function hasPaid(studentId, seasonId, purpose) {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('student_id', studentId)
+    .eq('season_id', seasonId)
+    .eq('purpose', purpose)
+    .eq('status', 'confirmed')
+    .maybeSingle();
+
+  if (error) {
+    console.error(`hasPaid(${purpose}) check failed:`, error);
+    return false;
+  }
+  return !!data;
+}
+
+/**
+ * Opens the Paystack inline popup for `purpose`, then hands the resulting
+ * reference to the verify-paystack Edge Function for independent
+ * confirmation. Resolves true ONLY after the server confirms success —
+ * the popup's own callback is never treated as proof of payment on its own.
+ */
+export async function initiatePayment({ studentId, seasonId, purpose, onStatusChange }) {
+  const amount = PAYMENT_FEES_PESEWAS[purpose];
+  const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
+  if (!publicKey) {
+    onStatusChange?.('error', 'Payments are not configured yet. Contact the Liaison Office.');
+    return false;
+  }
+  if (typeof PaystackPop === 'undefined') {
+    onStatusChange?.('error', 'Payment gateway failed to load. Check your connection and retry.');
+    return false;
+  }
+
+  let email = 'student@ttu.edu.gh';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) email = user.email;
+  } catch { /* keep fallback */ }
+
+  return new Promise((resolve) => {
+    const handler = PaystackPop.setup({
+      key: publicKey,
+      email,
+      amount,
+      currency: 'GHS',
+      ref: `IAMS_${purpose}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`,
+      callback: async (response) => {
+        onStatusChange?.('verifying');
+        const { data, error } = await supabase.functions.invoke('verify-paystack', {
+          body: { reference: response.reference, student_id: studentId, season_id: seasonId, purpose },
+        });
+
+        if (!error && data?.success) {
+          onStatusChange?.('confirmed');
+          resolve(true);
+        } else {
+          const msg = data?.error || error?.message ||
+            `Payment could not be verified. If you were charged, contact the Liaison Office with reference ${response.reference}.`;
+          onStatusChange?.('error', msg);
+          resolve(false);
+        }
+      },
+      onClose: () => {
+        onStatusChange?.('cancelled');
+        resolve(false);
+      },
+    });
+    handler.openIframe();
+  });
+}
+
+// ── Admin: Finance ───────────────────────────────────────────────────────────
+
+/** Every confirmed payment, optionally filtered by season, with the paying student's name + index number joined in. Admin-only (RLS: "payments: admin reads all"). */
+export async function listPaymentsForAdmin(seasonId = null) {
+  let query = supabase
+    .from('payments')
+    .select('*')
+    .eq('status', 'confirmed')
+    .order('paid_at', { ascending: false });
+
+  if (seasonId && seasonId !== 'all') query = query.eq('season_id', seasonId);
+
+  const { data: payments, error } = await query;
+  if (error || !payments) return { data: [], error };
+
+  const studentIds = [...new Set(payments.map(p => p.student_id))];
+  const studentsMap = new Map();
+  if (studentIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('student_profiles')
+      .select('id, full_name, index_number')
+      .in('id', studentIds);
+    (profiles ?? []).forEach(p => studentsMap.set(p.id, p));
+  }
+
+  return { data: payments.map(p => ({ ...p, student: studentsMap.get(p.student_id) ?? null })), error: null };
+}
+
+/** Aggregates an already-fetched payments array by purpose, for the Finance summary cards. Plain client-side reduce — consistent with how other admin pages here total rows they've already fetched, rather than a separate RPC. */
+export function summarizePayments(payments) {
+  const summary = { total: 0, count: payments.length, byPurpose: {} };
+  for (const p of payments) {
+    summary.total += p.amount_pesewas;
+    if (!summary.byPurpose[p.purpose]) summary.byPurpose[p.purpose] = { total: 0, count: 0 };
+    summary.byPurpose[p.purpose].total += p.amount_pesewas;
+    summary.byPurpose[p.purpose].count += 1;
+  }
+  return summary;
+}
+```
+
+---
+
+**`src/shared/services/attachment-report.service.js`** — `hasPaidForSeason`/`markSeasonAsPaid` removed (superseded by `payments.service.js`); the report-content functions are untouched. Full updated file:
+
+```javascript
+// =============================================================================
+// IAMS — shared/services/attachment-report.service.js
+// Service layer for Student Attachment Report feature.
+// Integrates with Supabase, with automatic local fallback if tables do not exist.
+//
+// Payment status/charging moved to shared/services/payments.service.js
+// (hasPaid / initiatePayment) — see report.js.
+// =============================================================================
+
+import { supabase } from '../supabase-client.js';
+
+const REPORT_KEY_PREFIX = 'iams_report_';
+
+/**
+ * Gets the student's report record for the active season.
+ */
+export async function getAttachmentReport(studentId, seasonId) {
+  try {
+    const { data, error } = await supabase
+      .from('attachment_reports')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('season_id', seasonId)
+      .maybeSingle();
+
+    if (!error && data) {
+      return { data, error: null };
+    }
+  } catch (e) {
+    // Ignore and fallback
+  }
+
+  // Fallback to localStorage
+  const localStr = localStorage.getItem(`${REPORT_KEY_PREFIX}${studentId}_${seasonId}`);
+  if (localStr) {
+    try {
+      return { data: JSON.parse(localStr), error: null };
+    } catch (e) {
+      return { data: null, error: e };
+    }
+  }
+  return { data: null, error: null };
+}
+
+/**
+ * Upserts the report data (draft/sections/inputs).
+ */
+export async function upsertAttachmentReport(studentId, seasonId, reportData) {
+  const payload = {
+    student_id: studentId,
+    season_id: seasonId,
+    path_type: reportData.path_type || 'ai',
+    input_form: reportData.input_form || {},
+    report_sections: reportData.report_sections || {},
+    status: reportData.status || 'draft',
+    pdf_url: reportData.pdf_url || null,
+    submitted_at: reportData.submitted_at || null,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('attachment_reports')
+      .upsert(payload, { onConflict: 'student_id,season_id' })
+      .select()
+      .single();
+
+    if (!error) return { data, error: null };
+  } catch (e) {
+    // Ignore and fallback
+  }
+
+  // Fallback to localStorage
+  localStorage.setItem(`${REPORT_KEY_PREFIX}${studentId}_${seasonId}`, JSON.stringify(payload));
+  return { data: payload, error: null };
+}
+```
+
+---
+
+**`src/modules/student/report/report.js`** — three targeted edits.
+
+Replace the import block:
+```javascript
+// OLD
+import { 
+  hasPaidForSeason, markSeasonAsPaid, getAttachmentReport, upsertAttachmentReport 
+} from '/shared/services/attachment-report.service.js';
+
+// NEW
+import { getAttachmentReport, upsertAttachmentReport } from '/shared/services/attachment-report.service.js';
+import { hasPaid, initiatePayment, formatGHS, PAYMENT_FEES_PESEWAS } from '/shared/services/payments.service.js';
+```
+
+In `initReport`, replace the payment-status line and add the fee-display sync right after it:
+```javascript
+// OLD
+_ctrl.hasPaid = await hasPaidForSeason(studentId, seasonId);
+
+// NEW
+_ctrl.hasPaid = await hasPaid(studentId, seasonId, 'attachment_report');
+
+const reportFee = formatGHS(PAYMENT_FEES_PESEWAS.attachment_report);
+const feeAmountEl = document.getElementById('reportFeeAmount');
+if (feeAmountEl) feeAmountEl.textContent = reportFee;
+const feeFeatureEl = document.getElementById('reportFeeFeatureAmount');
+if (feeFeatureEl) feeFeatureEl.textContent = reportFee;
+```
+
+Replace the whole `paymentForm.onsubmit` handler:
+```javascript
+// OLD — replace this entire block (the try/catch with PaystackPop.setup(...))
+document.getElementById('paymentForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById('btnPaymentSubmit');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `<span class="ai-spinner" ...></span> Initializing…`;
+  try {
+    const email = 'student@ttu.edu.gh';
+    const handler = PaystackPop.setup({
+      key: 'pk_test_0000000000000000000000000000000000000000',
+      // ...
+    });
+    handler.openIframe();
+  } catch (err) { /* ... */ }
+};
+
+// NEW
+document.getElementById('paymentForm').onsubmit = async (e) => {
+  e.preventDefault();
+
+  const submitBtn = document.getElementById('btnPaymentSubmit');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `<span class="ai-spinner" style="width:14px; height:14px; border-width:2px; margin:0 6px 0 0; display:inline-block; vertical-align:middle;"></span> Processing…`;
+
+  const ok = await initiatePayment({
+    studentId: _ctrl.studentId,
+    seasonId: _ctrl.seasonId,
+    purpose: 'attachment_report',
+    onStatusChange: (status, message) => {
+      if (status === 'verifying') {
+        submitBtn.innerHTML = `<span class="ai-spinner" style="width:14px; height:14px; border-width:2px; margin:0 6px 0 0; display:inline-block; vertical-align:middle;"></span> Verifying…`;
+      } else if (status === 'cancelled') {
+        showToast('Payment window closed.', 'warning');
+      } else if (status === 'error') {
+        showToast(message || 'Payment failed. Please try again.', 'error');
+      }
+    },
+  });
+
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+  if (window.lucide) window.lucide.createIcons();
+
+  if (ok) {
+    _ctrl.hasPaid = true;
+    showToast('Payment successful! Unlocking the AI Attachment Assistant…', 'success');
+    _setStep(3, 'Supplementary Input Form', 'Provide organization context for report alignment.');
+    _showPanel('stageSupplementaryForm');
+  }
+};
+```
+
+---
+
+**`src/modules/student/dashboard.html`** — two small fixes + one new block.
+
+Fix the drifted fee text (line ~959):
+```html
+<li><i data-lucide="check"></i> <span id="reportFeeFeatureAmount">GH¢ 50.00</span> processing fee</li>
+```
+
+Fix the GH¢40→50 bug and add the id (line ~992):
+```html
+<div class="payment-amount" id="reportFeeAmount">GH¢ 50.00</div>
+```
+
+Insert this new block right after the `lb-no-placement` div closes and before `lb-content` opens (reuses the `.payment-screen` classes already defined in `report.css`, which is loaded globally on this page since `dashboard.js` imports it statically — no new CSS needed):
+
+```html
+<!-- Logbook payment gate -->
+<div class="hidden" id="lb-payment-gate" style="display:flex; justify-content:center; padding-top:40px;">
+  <div class="payment-screen" style="max-width:480px;">
+    <div style="text-align:center;">
+      <span class="path-card-badge ai-badge" style="margin-bottom:8px;">Logbook Access</span>
+      <h2>Unlock Your Digital Logbook</h2>
+      <div class="payment-amount" id="lbGateAmount">GH¢ 20.00</div>
+      <div class="payment-per">one-time payment per season</div>
+    </div>
+    <ul class="payment-features" style="padding-left:0;">
+      <li style="margin-bottom:8px;"><i data-lucide="check"></i> Unlimited weekly entries for the season</li>
+      <li style="margin-bottom:8px;"><i data-lucide="check"></i> Offline drafts with autosave</li>
+      <li style="margin-bottom:8px;"><i data-lucide="check"></i> Required before attachment report submission</li>
+    </ul>
+    <button type="button" class="btn btn-primary" id="lbPayBtn" style="width:100%; margin-top:20px;">
+      <i data-lucide="credit-card"></i> Pay with Paystack
+    </button>
+    <p style="font-size:12px; color:var(--text-secondary); text-align:center; margin-top:12px;">Secure one-time payment via Paystack. Cards and mobile money supported.</p>
+  </div>
+</div>
+```
+
+---
+
+**`src/modules/student/logbook/logbook.js`** — one import + the gate check inside `initLogbook` + a new wiring function.
+
+```javascript
+// Add to the imports at the top:
+import { hasPaid, initiatePayment, formatGHS, PAYMENT_FEES_PESEWAS } from '/shared/services/payments.service.js';
+```
+
+```javascript
+// Inside initLogbook, right after the "not placed/assigned" early-return block
+// (after the `if (!placement || placement.status !== 'assigned') { ... return; }`)
+// and BEFORE the existing `noPlacement?.classList.add('hidden'); content?.classList.remove('hidden');` lines:
+
+  const paymentGate = document.getElementById('lb-payment-gate');
+  const paidForLogbook = await hasPaid(studentId, seasonId, 'logbook_access');
+  if (!paidForLogbook) {
+    noPlacement?.classList.add('hidden');
+    content?.classList.add('hidden');
+    paymentGate?.classList.remove('hidden');
+    _wireLogbookPaymentGate();
+    return;
+  }
+  paymentGate?.classList.add('hidden');
+```
+
+```javascript
+// New function, placed anywhere before initLogbook's export:
+
+function _wireLogbookPaymentGate() {
+  const amountEl = document.getElementById('lbGateAmount');
+  if (amountEl) amountEl.textContent = formatGHS(PAYMENT_FEES_PESEWAS.logbook_access);
+
+  const btn = document.getElementById('lbPayBtn');
+  if (!btn || btn.dataset.wired) return; // don't double-bind on re-entry
+  btn.dataset.wired = '1';
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="ai-spinner" style="width:14px;height:14px;border-width:2px;margin:0 6px 0 0;display:inline-block;vertical-align:middle;"></span> Processing…`;
+
+    const ok = await initiatePayment({
+      studentId: _lb.studentId,
+      seasonId: _lb.seasonId,
+      purpose: 'logbook_access',
+      onStatusChange: (status, message) => {
+        if (status === 'confirmed') showToast('Payment successful! Unlocking your logbook…', 'success');
+        else if (status === 'cancelled') showToast('Payment window closed.', 'warning');
+        else if (status === 'error') showToast(message || 'Payment failed. Please try again.', 'error');
+      },
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="credit-card"></i> Pay with Paystack`;
+    if (window.lucide) window.lucide.createIcons();
+
+    if (ok) await initLogbook(_lb.studentId, _lb.seasonId, _lb.placement);
+  };
+}
+```
+
+---
+
+**`src/modules/admin_portal/finance/finance.html`** — new file (mirrors `letters-audit.html`'s exact boilerplate):
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#003087">
+  <title>Finance | TTU IAMS Admin</title>
+  <meta name="description" content="Payments collected from students for logbook access and AI report generation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div class="page-container">
+  <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Finance</h1>
+      <p class="page-subtitle">Payments collected from students across seasons.</p>
+    </div>
+    <div>
+      <select id="season-filter" class="field-input" style="min-width:200px" disabled>
+        <option value="">Loading seasons…</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--space-lg); margin-bottom:var(--space-lg);">
+    <div class="card">
+      <div style="font-size:13px; color:var(--text-muted);">Total Collected</div>
+      <div style="font-size:28px; font-weight:700; color:var(--text-primary); margin-top:4px;" id="fin-total">GH¢ 0.00</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;"><span id="fin-count">0</span> payment(s)</div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px; color:var(--text-muted);">Logbook Access</div>
+      <div style="font-size:28px; font-weight:700; color:var(--text-primary); margin-top:4px;" id="fin-logbook-total">GH¢ 0.00</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;"><span id="fin-logbook-count">0</span> student(s) paid</div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px; color:var(--text-muted);">Report Generation</div>
+      <div style="font-size:28px; font-weight:700; color:var(--text-primary); margin-top:4px;" id="fin-report-total">GH¢ 0.00</div>
+      <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;"><span id="fin-report-count">0</span> student(s) paid</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header-row">
+      <h2 class="card-title">Payment Records</h2>
+      <div style="font-size:13px;color:var(--text-muted)">Total: <strong id="fin-table-count">0</strong></div>
+    </div>
+
+    <div id="payments-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Index Number</th>
+            <th>For</th>
+            <th>Amount</th>
+            <th>Reference</th>
+            <th class="text-right">Paid</th>
+          </tr>
+        </thead>
+        <tbody id="payments-tbody">
+          <tr><td colspan="6" class="text-center text-muted" style="padding:40px">Loading payments…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+
+<script type="module" src="./finance.js"></script>
+</body>
+</html>
+```
+
+---
+
+**`src/modules/admin_portal/finance/finance.js`** — new file (mirrors `letters-audit.js`'s init pattern):
+
+```javascript
+// =============================================================================
+// IAMS — src/modules/admin_portal/finance/finance.js
+// Read-only ledger of confirmed student payments (logbook access, report
+// generation fees). All writes happen server-side in verify-paystack —
+// this page only reads via payments.service.js.
+// =============================================================================
+
+import { requireRole } from '/modules/auth/auth-guard.js';
+import { initShell }   from '/shell/nav.js';
+import { listSeasons } from '/shared/services/seasons.js';
+import { listPaymentsForAdmin, summarizePayments, formatGHS } from '/shared/services/payments.service.js';
+import { showToast, formatDateTime } from '/shared/utils.js';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let activeSeason = 'all';
+let payments = [];
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const pageLoading  = document.getElementById('page-loading');
+const seasonFilter = document.getElementById('season-filter');
+const tbody        = document.getElementById('payments-tbody');
+const tableCount   = document.getElementById('fin-table-count');
+
+const PURPOSE_LABELS = {
+  logbook_access: 'Logbook Access',
+  attachment_report: 'Report Generation',
+};
+
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Loaders ───────────────────────────────────────────────────────────────────
+async function loadFilters() {
+  const { data } = await listSeasons();
+  const seasons = data ?? [];
+
+  if (seasons.length > 0) {
+    seasonFilter.innerHTML = '<option value="all">All Seasons</option>' +
+      seasons.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    seasonFilter.disabled = false;
+    seasonFilter.value = 'all';
+  } else {
+    seasonFilter.innerHTML = '<option value="">No seasons found</option>';
+  }
+}
+
+async function loadPayments() {
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:40px">Loading…</td></tr>';
+
+  const { data, error } = await listPaymentsForAdmin(activeSeason);
+  if (error) {
+    showToast('Failed to load payments: ' + error.message, 'error');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger" style="padding:40px">Error loading data</td></tr>';
+    return;
+  }
+
+  payments = data ?? [];
+  renderSummary();
+  renderTable();
+}
+
+function renderSummary() {
+  const summary = summarizePayments(payments);
+  document.getElementById('fin-total').textContent = formatGHS(summary.total);
+  document.getElementById('fin-count').textContent = summary.count;
+
+  const lb = summary.byPurpose.logbook_access ?? { total: 0, count: 0 };
+  document.getElementById('fin-logbook-total').textContent = formatGHS(lb.total);
+  document.getElementById('fin-logbook-count').textContent = lb.count;
+
+  const rep = summary.byPurpose.attachment_report ?? { total: 0, count: 0 };
+  document.getElementById('fin-report-total').textContent = formatGHS(rep.total);
+  document.getElementById('fin-report-count').textContent = rep.count;
+}
+
+function renderTable() {
+  tableCount.textContent = payments.length;
+
+  if (payments.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:40px">No confirmed payments yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = payments.map(p => {
+    const name = p.student?.full_name ?? 'Unknown Student';
+    const indexNo = p.student?.index_number ?? p.student_id.substring(0, 8) + '...';
+    return `
+      <tr>
+        <td style="font-weight:500;color:var(--text-primary)">${esc(name)}</td>
+        <td><span style="font-family:monospace;color:var(--text-secondary)">${esc(indexNo)}</span></td>
+        <td><span class="badge badge-gray">${esc(PURPOSE_LABELS[p.purpose] ?? p.purpose)}</span></td>
+        <td style="font-weight:600;color:var(--text-primary)">${formatGHS(p.amount_pesewas)}</td>
+        <td><code class="code-pill">${esc(p.paystack_reference)}</code></td>
+        <td class="text-right" style="white-space:nowrap">${formatDateTime(p.paid_at)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Event Handlers ────────────────────────────────────────────────────────────
+seasonFilter.addEventListener('change', async (e) => {
+  activeSeason = e.target.value;
+  await loadPayments();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await requireRole(['admin']);
+  await initShell();
+
+  await loadFilters();
+  await loadPayments();
+
+  pageLoading.style.display = 'none';
+}
+
+init();
+```
+
+---
+
+**`src/shell/shell-config.js`** — one line in the admin `nav` array:
+```javascript
+{ page: 'letters-audit',    icon: 'file-search',      label: 'Letters Audit',    badge: null },
+{ page: 'finance',          icon: 'banknote',         label: 'Finance',          badge: null },
+{ page: 'settings',         icon: 'settings',         label: 'Settings',         badge: null },
+```
+
+**`src/shell/nav.js`** — one line in the admin routing map inside `navigateTo()`:
+```javascript
+'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
+'finance':       '/src/modules/admin_portal/finance/finance.html',
+```
+
+**`vite.config.js`** — one line in `rollupOptions.input`:
+```javascript
+adminLettersAudit: path.resolve(root, 'src/modules/admin_portal/letters/letters-audit.html'),
+adminFinance:      path.resolve(root, 'src/modules/admin_portal/finance/finance.html'),
+```
+
+---
+
+Three things to actually do before this works, and one heads-up:
+
+The SQL has to be run manually against your Supabase project — there's no `migrations/` folder yet, just the flat `schema.sql`/`rls-policies.sql` files, so paste the two new blocks into the SQL Editor in that order. Set both `VITE_PAYSTACK_PUBLIC_KEY` and `PAYSTACK_SECRET_KEY` to a real Paystack **test-mode** key pair first and run a payment end-to-end before anything live touches it — your real public/secret keys go in whichever `.env` actually gets deployed, same as your existing dev/prod split. And redeploy `verify-paystack` after the rewrite.
+
+The heads-up: while in there I confirmed `attachment_reports` also doesn't exist in `schema.sql` — so report *content* (not the payment, the actual generated chapters/submission) has been running on localStorage-only this whole time too, meaning a liaison officer reviewing flagged reports currently can't see them from their own session. That's outside what you asked for today, but it's the natural next thing once finance is live.

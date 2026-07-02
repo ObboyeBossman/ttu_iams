@@ -833,17 +833,20 @@ body {
   border-bottom: 0.5px solid var(--border-default);
   display: flex;
   align-items: center;
-  gap: var(--space-xl);
+  gap: var(--space-md);
   padding: 0 var(--space-xl);
   flex-shrink: 0;
 }
 
-/* Left: mobile hamburger + brand title */
+/* Left: mobile hamburger + brand title.
+   flex-shrink:1 + min-width:0 lets this section yield space to the search
+   bar and actions instead of crushing them off-screen. */
 .topbar-left {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;            /* required for text-overflow to work on children */
 }
 
 .topbar-title {
@@ -852,6 +855,10 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* Full brand name — visible on wider screens */
@@ -864,13 +871,25 @@ body {
   display: none;
 }
 
-@media (max-width: 520px) {
+/* Switch to initials on tablet (sidebar is a drawer, space is tight) */
+@media (max-width: 900px) {
   .topbar-brand-full {
     display: none;
   }
 
   .topbar-brand-initials {
     display: inline;
+  }
+}
+
+/* Restore full name only on true desktop (sidebar is always visible) */
+@media (min-width: 901px) {
+  .topbar-brand-full {
+    display: inline;
+  }
+
+  .topbar-brand-initials {
+    display: none;
   }
 }
 
@@ -899,11 +918,11 @@ body {
   height: 20px;
 }
 
-/* Search bar — pill shape, grey fill, pushes right */
+/* Search bar — pill shape, grey fill, fills middle space on desktop/tablet */
 .topbar-search {
   flex: 1;
   max-width: 380px;
-  margin-left: auto;
+  min-width: 0;          /* allow shrinking on narrow tablet */
   position: relative;
 }
 
@@ -945,6 +964,12 @@ body {
 @media (max-width: 640px) {
   .topbar-search {
     display: none;
+  }
+
+  /* When search is gone, make topbar-left grow so it
+     acts as the flexible spacer, pushing actions to the right */
+  .topbar-left {
+    flex: 1;
   }
 }
 
@@ -1041,6 +1066,9 @@ body {
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
+  max-width: 160px;        /* clamp email on tablet so it doesn't burst layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Hide old chevron */
@@ -1052,6 +1080,22 @@ body {
 @media (max-width: 640px) {
   .topbar {
     padding: 0 var(--space-md);
+    gap: var(--space-sm);
+  }
+}
+
+/* Tablet: tighten the avatar info so long emails don't squeeze the search */
+@media (max-width: 900px) and (min-width: 641px) {
+  .topbar {
+    gap: var(--space-sm);
+  }
+
+  .topbar-avatar-sub {
+    max-width: 120px;
+  }
+
+  .topbar-search {
+    max-width: 260px;
   }
 }
 

@@ -460,7 +460,17 @@ async function _pjaxNavigate(url) {
     if (newContent) {
       pageContent.innerHTML = newContent.innerHTML;
       
-      // 3. Re-execute module scripts
+      // 3. Update styles
+      const existingStyles = document.head.querySelectorAll('style');
+      existingStyles.forEach(s => s.remove());
+      const newStyles = doc.head.querySelectorAll('style');
+      newStyles.forEach(s => {
+        const styleNode = document.createElement('style');
+        styleNode.textContent = s.textContent;
+        document.head.appendChild(styleNode);
+      });
+
+      // 4. Re-execute module scripts
       const scripts = doc.querySelectorAll('script[type="module"]');
       scripts.forEach(s => {
         const src = s.getAttribute('src');

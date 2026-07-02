@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1a48">
+  <title>System Health | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .health-section { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); margin-bottom: var(--space-xl); overflow: hidden; }
+    .health-section-header { padding: var(--space-lg) var(--space-xl); border-bottom: 1px solid var(--border-default); background: var(--bg-page); }
+    .health-section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">System Health</h1>
+            <p class="page-subtitle">Cross-season analytics and platform-wide statistics</p>
+          </div>
+        </div>
+
+        <!-- Users by Role -->
+        <div class="health-section">
+          <div class="health-section-header"><h2 class="health-section-title">Users by Role</h2></div>
+          <div style="overflow-x:auto;">
+            <table class="data-table"><thead><tr><th>Role</th><th>Count</th><th>Active</th><th>Inactive</th></tr></thead>
+            <tbody id="roles-tbody"><tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <!-- Placements by Season -->
+        <div class="health-section">
+          <div class="health-section-header"><h2 class="health-section-title">Placements by Season</h2></div>
+          <div style="overflow-x:auto;">
+            <table class="data-table"><thead><tr><th>Season</th><th>Status</th><th>Total</th><th>Submitted</th><th>Assigned</th><th>Flagged</th><th>Rejected</th></tr></thead>
+            <tbody id="placements-tbody"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <!-- Payments by Season -->
+        <div class="health-section">
+          <div class="health-section-header"><h2 class="health-section-title">Payments by Season</h2></div>
+          <div style="overflow-x:auto;">
+            <table class="data-table"><thead><tr><th>Season</th><th>Total GH¢</th><th>Logbook Fees</th><th>Report Fees</th><th>Transactions</th></tr></thead>
+            <tbody id="payments-tbody"><tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <!-- Institutional summary -->
+        <div class="health-section">
+          <div class="health-section-header"><h2 class="health-section-title">Institutional Summary</h2></div>
+          <div style="overflow-x:auto;">
+            <table class="data-table"><thead><tr><th>Faculty</th><th>Departments</th><th>Programmes</th><th>Students</th></tr></thead>
+            <tbody id="institution-tbody"><tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">Loading…</td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./system-health.js"></script>
+</body>
+</html>

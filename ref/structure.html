@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Institution | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .tree-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    .tree-col {
+      background: var(--bg-card);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .tree-col-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border-default);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-page);
+    }
+    .tree-col-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin: 0; }
+    .tree-item {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border-default);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.1s;
+    }
+    .tree-item:last-child { border-bottom: none; }
+    .tree-item:hover { background: var(--bg-hover); }
+    .tree-item.selected { background: var(--bg-info); border-left: 3px solid var(--ttu-blue); }
+    [data-theme="dark"] .tree-item.selected { border-left-color: var(--text-link); background: rgba(26,58,140,0.2); }
+    .tree-item-name   { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .tree-item-meta   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .tree-item-actions { display: flex; gap: var(--space-xs); opacity: 0; transition: opacity 0.1s; }
+    .tree-item:hover .tree-item-actions { opacity: 1; }
+    .tree-empty { padding: var(--space-2xl) var(--space-lg); text-align: center; color: var(--text-muted); font-size: 13px; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(10,15,26,0.55); z-index: 1000; display: none; align-items: center; justify-content: center; padding: var(--space-lg); }
+    .modal-overlay.open { display: flex; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Institutional Structure</h1>
+            <p class="page-subtitle">Manage faculties, departments, and programmes</p>
+          </div>
+        </div>
+
+        <div class="tree-layout">
+          <!-- Faculties -->
+          <div class="tree-col">
+            <div class="tree-col-header">
+              <h2 class="tree-col-title">Faculties</h2>
+              <button class="btn btn-sm btn-primary" id="add-faculty-btn">+ Add</button>
+            </div>
+            <div id="faculties-list"><div class="tree-empty">Loading…</div></div>
+          </div>
+
+          <!-- Departments -->
+          <div class="tree-col">
+            <div class="tree-col-header">
+              <h2 class="tree-col-title">Departments</h2>
+              <button class="btn btn-sm btn-primary" id="add-dept-btn" disabled>+ Add</button>
+            </div>
+            <div id="departments-list"><div class="tree-empty">Select a faculty</div></div>
+          </div>
+
+          <!-- Programmes -->
+          <div class="tree-col">
+            <div class="tree-col-header">
+              <h2 class="tree-col-title">Programmes</h2>
+              <button class="btn btn-sm btn-primary" id="add-prog-btn" disabled>+ Add</button>
+            </div>
+            <div id="programmes-list"><div class="tree-empty">Select a department</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Faculty Modal -->
+      <div class="modal-overlay" id="faculty-modal">
+        <div class="modal-panel" style="max-width:420px;">
+          <div class="modal-header">
+            <h3 class="modal-title" id="faculty-modal-title">Add Faculty</h3>
+            <button class="modal-close-btn" data-close="faculty-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="field"><label class="field-label">Faculty Name <span class="required">*</span></label><input class="field-input" id="f-name" placeholder="e.g. Faculty of Applied Sciences"></div>
+            <div class="field"><label class="field-label">Code <span class="required">*</span></label><input class="field-input" id="f-code" placeholder="e.g. FAS" style="text-transform:uppercase;"></div>
+            <div class="form-error-banner hidden" id="faculty-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="faculty-err-msg"></span></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-close="faculty-modal">Cancel</button>
+            <button class="btn btn-primary" id="faculty-save-btn">Save Faculty</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Modal -->
+      <div class="modal-overlay" id="dept-modal">
+        <div class="modal-panel" style="max-width:420px;">
+          <div class="modal-header">
+            <h3 class="modal-title" id="dept-modal-title">Add Department</h3>
+            <button class="modal-close-btn" data-close="dept-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info" id="dept-context" style="margin-bottom:16px;font-size:13px;"></div>
+            <div class="field"><label class="field-label">Department Name <span class="required">*</span></label><input class="field-input" id="d-name" placeholder="e.g. Computer Science"></div>
+            <div class="field"><label class="field-label">Code <span class="required">*</span></label><input class="field-input" id="d-code" placeholder="e.g. CSC" style="text-transform:uppercase;"></div>
+            <div class="form-error-banner hidden" id="dept-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="dept-err-msg"></span></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-close="dept-modal">Cancel</button>
+            <button class="btn btn-primary" id="dept-save-btn">Save Department</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Programme Modal -->
+      <div class="modal-overlay" id="prog-modal">
+        <div class="modal-panel" style="max-width:440px;">
+          <div class="modal-header">
+            <h3 class="modal-title" id="prog-modal-title">Add Programme</h3>
+            <button class="modal-close-btn" data-close="prog-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info" id="prog-context" style="margin-bottom:16px;font-size:13px;"></div>
+            <div class="field"><label class="field-label">Programme Name <span class="required">*</span></label><input class="field-input" id="p-name" placeholder="e.g. Computer Science"></div>
+            <div class="field-row-2col">
+              <div class="field">
+                <label class="field-label">Type <span class="required">*</span></label>
+                <select class="field-input" id="p-type">
+                  <option value="">Select type…</option>
+                  <option>BSc</option><option>HND</option><option>Diploma</option>
+                  <option>B-Tech</option><option>MSc</option><option>PhD</option>
+                </select>
+              </div>
+              <div class="field"><label class="field-label">Duration (years) <span class="required">*</span></label><input class="field-input" id="p-duration" type="number" min="1" max="10" placeholder="4"></div>
+            </div>
+            <div class="form-error-banner hidden" id="prog-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="prog-err-msg"></span></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-close="prog-modal">Cancel</button>
+            <button class="btn btn-primary" id="prog-save-btn">Save Programme</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./structure.js"></script>
+</body>
+</html>

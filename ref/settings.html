@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1a48">
+  <title>System Config | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .settings-section { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); margin-bottom: var(--space-xl); overflow: hidden; }
+    .settings-section-header { padding: var(--space-lg) var(--space-xl); border-bottom: 1px solid var(--border-default); background: var(--bg-page); }
+    .settings-section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .settings-section-body { padding: var(--space-xl); }
+    .asset-row { display: flex; align-items: center; gap: var(--space-lg); margin-bottom: var(--space-lg); flex-wrap: wrap; }
+    .asset-preview { width: 120px; height: 60px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); object-fit: contain; background: var(--bg-page); flex-shrink: 0; }
+    .asset-info { flex: 1; min-width: 200px; }
+    .asset-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .asset-path { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
+    .season-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-md) 0; border-bottom: 1px solid var(--border-default); }
+    .season-row:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">System Config</h1>
+            <p class="page-subtitle">Platform-wide settings, letter assets, and season controls</p>
+          </div>
+        </div>
+
+        <!-- Letter Assets -->
+        <div class="settings-section">
+          <div class="settings-section-header"><h2 class="settings-section-title">Letter Assets</h2></div>
+          <div class="settings-section-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-xl);">
+              These assets are used when generating official attachment letters. Paths point to files in Supabase Storage. Update paths then save — new letters will use the updated assets immediately.
+            </p>
+            <div id="assets-form">
+              <div class="field"><label class="field-label">Letterhead Path (Storage key)</label><input class="field-input" id="asset-letterhead" placeholder="letters/ttu_letterhead.jpeg"></div>
+              <div class="field"><label class="field-label">Stamp Path (Storage key)</label><input class="field-input" id="asset-stamp" placeholder="letters/ttu_signature_stamp.jpeg"></div>
+              <div class="field"><label class="field-label">Footer Path (Storage key)</label><input class="field-input" id="asset-footer" placeholder="letters/ttu_footer.png"></div>
+              <button class="btn btn-primary" id="save-assets-btn">Save Asset Paths</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Season Emergency Controls -->
+        <div class="settings-section">
+          <div class="settings-section-header"><h2 class="settings-section-title">Season Emergency Controls</h2></div>
+          <div class="settings-section-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-xl);">
+              Force-close an open season before its end date. This will prevent students from submitting new placements. This action is irreversible.
+            </p>
+            <div id="seasons-emergency-list"><p style="color:var(--text-muted);font-size:13px;">Loading…</p></div>
+          </div>
+        </div>
+
+        <!-- My Profile -->
+        <div class="settings-section">
+          <div class="settings-section-header"><h2 class="settings-section-title">My Profile</h2></div>
+          <div class="settings-section-body" style="max-width:400px;">
+            <div class="field"><label class="field-label">Full Name</label><input class="field-input" id="p-name"></div>
+            <div class="field"><label class="field-label">Phone</label><input class="field-input" id="p-phone" type="tel"></div>
+            <button class="btn btn-primary" id="save-profile-btn">Save Profile</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./settings.js"></script>
+</body>
+</html>

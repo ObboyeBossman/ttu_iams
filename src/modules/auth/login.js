@@ -147,6 +147,7 @@ if (form) {
 
       // ── Redirect to the appropriate dashboard ─────────────────────────────
       const dashboardPaths = {
+        super_admin:        '/src/modules/super_admin/dashboard/dashboard.html',
         admin:              '/src/modules/admin_portal/dashboard/dashboard.html',
         student:            '/src/modules/student/dashboard.html',
         school_supervisor:  '/src/modules/school-supervisor/dashboard.html',

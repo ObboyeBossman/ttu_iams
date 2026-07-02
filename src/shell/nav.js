@@ -345,23 +345,40 @@ function _closeLogoutConfirm() {
  * @param {string} page - Page key, e.g. 'dashboard'
  */
 export function navigateTo(page) {
-  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal')) {
+  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal' || _config.portalLabel === 'Super Admin')) {
+    const isSuperAdmin = _config.portalLabel === 'Super Admin';
     const isAdmin = _config.portalLabel === 'Admin Portal';
-    const routes = isAdmin ? {
-      'dashboard': '/src/modules/admin_portal/dashboard/dashboard.html',
-      'users': '/src/modules/admin_portal/users/users.html',
-      'zones': '/src/modules/admin_portal/zones/zones.html',
-      'placement-zones': '/src/modules/admin_portal/placement-zones/placement-zones.html',
-      'seasons': '/src/modules/admin_portal/seasons/seasons.html',
-      'assign-placements': '/src/modules/admin_portal/placements.html',
-      'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
-      'finance': '/src/modules/admin_portal/finance/finance.html',
-      'settings': '/src/modules/admin_portal/settings/settings.html',
-    } : {
-      'dashboard': '/src/modules/school-supervisor/dashboard.html',
-      'students': '/src/modules/school-supervisor/students.html',
-      'visits': '/src/modules/school-supervisor/visits.html',
-    };
+    let routes = {};
+    if (isSuperAdmin) {
+      routes = {
+        'dashboard': '/src/modules/super_admin/dashboard/dashboard.html',
+        'structure': '/src/modules/super_admin/structure/structure.html',
+        'students': '/src/modules/super_admin/students/students.html',
+        'supervisors': '/src/modules/super_admin/supervisors/supervisors.html',
+        'admins': '/src/modules/super_admin/admins/admins.html',
+        'system-audit': '/src/modules/super_admin/system-audit/system-audit.html',
+        'system-health': '/src/modules/super_admin/system-health/system-health.html',
+        'settings': '/src/modules/super_admin/settings/settings.html',
+      };
+    } else if (isAdmin) {
+      routes = {
+        'dashboard': '/src/modules/admin_portal/dashboard/dashboard.html',
+        'users': '/src/modules/admin_portal/users/users.html',
+        'zones': '/src/modules/admin_portal/zones/zones.html',
+        'placement-zones': '/src/modules/admin_portal/placement-zones/placement-zones.html',
+        'seasons': '/src/modules/admin_portal/seasons/seasons.html',
+        'assign-placements': '/src/modules/admin_portal/placements.html',
+        'letters-audit': '/src/modules/admin_portal/letters/letters-audit.html',
+        'finance': '/src/modules/admin_portal/finance/finance.html',
+        'settings': '/src/modules/admin_portal/settings/settings.html',
+      };
+    } else {
+      routes = {
+        'dashboard': '/src/modules/school-supervisor/dashboard.html',
+        'students': '/src/modules/school-supervisor/students.html',
+        'visits': '/src/modules/school-supervisor/visits.html',
+      };
+    }
     if (routes[page]) {
       const targetPath = routes[page];
       // Only redirect if we are not already on the target path
@@ -375,7 +392,7 @@ export function navigateTo(page) {
   }
 
   // Update URL hash for SPA modules (like student portal) to trigger hashchange events
-  if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal'))) {
+  if (!(_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal' || _config.portalLabel === 'Super Admin'))) {
     if (window.location.hash !== '#' + page) {
       window.location.hash = '#' + page;
     }
@@ -469,7 +486,7 @@ async function _pjaxNavigate(url) {
 
 // Handle browser back/forward buttons
 window.addEventListener('popstate', (e) => {
-  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal')) {
+  if (_config && (_config.portalLabel === 'Admin Portal' || _config.portalLabel === 'Supervisor Portal' || _config.portalLabel === 'Super Admin')) {
     _pjaxNavigate(window.location.pathname);
   }
 });
@@ -1237,15 +1254,26 @@ export async function initShell(activePage) {
     
     let resolvedPage = activePage;
     if (!resolvedPage) {
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'super_admin') {
         const path = window.location.pathname;
-        if (path.includes('/users/')) resolvedPage = 'users';
-        else if (path.includes('/zones/')) resolvedPage = 'zones';
-        else if (path.includes('/seasons/')) resolvedPage = 'seasons';
-        else if (path.includes('placements.html')) resolvedPage = 'assign-placements';
-        else if (path.includes('/letters/')) resolvedPage = 'letters-audit';
-        else if (path.includes('/settings/')) resolvedPage = 'settings';
-        else resolvedPage = 'dashboard';
+        if (role === 'super_admin') {
+          if (path.includes('/structure/')) resolvedPage = 'structure';
+          else if (path.includes('/students/')) resolvedPage = 'students';
+          else if (path.includes('/supervisors/')) resolvedPage = 'supervisors';
+          else if (path.includes('/admins/')) resolvedPage = 'admins';
+          else if (path.includes('/system-audit/')) resolvedPage = 'system-audit';
+          else if (path.includes('/system-health/')) resolvedPage = 'system-health';
+          else if (path.includes('/settings/')) resolvedPage = 'settings';
+          else resolvedPage = 'dashboard';
+        } else {
+          if (path.includes('/users/')) resolvedPage = 'users';
+          else if (path.includes('/zones/')) resolvedPage = 'zones';
+          else if (path.includes('/seasons/')) resolvedPage = 'seasons';
+          else if (path.includes('placements.html')) resolvedPage = 'assign-placements';
+          else if (path.includes('/letters/')) resolvedPage = 'letters-audit';
+          else if (path.includes('/settings/')) resolvedPage = 'settings';
+          else resolvedPage = 'dashboard';
+        }
       } else {
         resolvedPage = (location.hash || '').replace('#', '') || 'dashboard';
       }

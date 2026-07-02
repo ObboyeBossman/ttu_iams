@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1a48">
+  <title>Audit Log | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .filter-row { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-lg); align-items: flex-end; }
+    .filter-row input, .filter-row select { height: 36px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; background: var(--bg-input); color: var(--text-primary); min-width: 160px; }
+    .detail-cell code { font-size: 11px; background: var(--bg-page); padding: 2px 6px; border-radius: 4px; display: inline-block; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; cursor: pointer; }
+    .detail-cell code:hover { white-space: normal; max-width: none; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Audit Log</h1>
+            <p class="page-subtitle">All privileged actions performed by super admins</p>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <input type="date" id="filter-from" title="From date">
+          <input type="date" id="filter-to" title="To date">
+          <select id="filter-action">
+            <option value="">All actions</option>
+            <option value="create_faculty">create_faculty</option>
+            <option value="update_faculty">update_faculty</option>
+            <option value="delete_faculty">delete_faculty</option>
+            <option value="create_department">create_department</option>
+            <option value="update_department">update_department</option>
+            <option value="delete_department">delete_department</option>
+            <option value="create_programme">create_programme</option>
+            <option value="update_programme">update_programme</option>
+            <option value="delete_programme">delete_programme</option>
+            <option value="bulk_import_students">bulk_import_students</option>
+            <option value="bulk_import_supervisors">bulk_import_supervisors</option>
+            <option value="create_admin">create_admin</option>
+            <option value="update_admin">update_admin</option>
+            <option value="deactivate_admin">deactivate_admin</option>
+            <option value="reactivate_admin">reactivate_admin</option>
+          </select>
+          <select id="filter-target">
+            <option value="">All types</option>
+            <option>faculty</option>
+            <option>department</option>
+            <option>programme</option>
+            <option>students</option>
+            <option>supervisors</option>
+            <option>admin</option>
+          </select>
+          <button class="btn btn-outline" id="filter-clear-btn">Clear</button>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead><tr>
+                <th>Timestamp</th><th>Actor</th><th>Action</th><th>Target Type</th><th>Target ID</th><th>Detail</th>
+              </tr></thead>
+              <tbody id="audit-tbody"><tr><td colspan="6" style="padding:32px;text-align:center;color:var(--text-muted);">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <div id="audit-pagination" style="padding:var(--space-md) var(--space-xl);border-top:1px solid var(--border-default);font-size:13px;color:var(--text-muted);"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./system-audit.js"></script>
+</body>
+</html>

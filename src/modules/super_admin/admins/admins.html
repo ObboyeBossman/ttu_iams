@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a1a48">
+  <title>Admin Accounts | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .master-detail { display: grid; grid-template-columns: 320px 1fr; gap: var(--space-lg); align-items: start; }
+    @media (max-width: 768px) { .master-detail { grid-template-columns: 1fr; } }
+    .admin-list-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; }
+    .admin-list-header { padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-default); display: flex; align-items: center; justify-content: space-between; background: var(--bg-page); }
+    .admin-list-search { width: 100%; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-default); }
+    .admin-list-search input { width: 100%; height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; background: var(--bg-input); color: var(--text-primary); box-sizing: border-box; }
+    .admin-list-item { padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-default); cursor: pointer; transition: background 0.1s; }
+    .admin-list-item:last-child { border-bottom: none; }
+    .admin-list-item:hover { background: var(--bg-hover); }
+    .admin-list-item.selected { background: var(--bg-info); border-left: 3px solid var(--ttu-blue); }
+    [data-theme="dark"] .admin-list-item.selected { border-left-color: var(--text-link); background: rgba(26,58,140,0.2); }
+    .admin-list-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .admin-list-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-xl); }
+    .detail-empty { text-align: center; padding: var(--space-3xl) var(--space-xl); color: var(--text-muted); font-size: 14px; }
+    .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: var(--space-xl); padding-bottom: var(--space-xl); border-bottom: 1px solid var(--border-default); }
+    .detail-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--ttu-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; }
+    .detail-name { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .detail-meta { font-size: 13px; color: var(--text-muted); }
+    .detail-field { margin-bottom: var(--space-lg); }
+    .detail-field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 4px; }
+    .detail-field-value { font-size: 14px; color: var(--text-primary); }
+    .detail-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-xl); padding-top: var(--space-xl); border-top: 1px solid var(--border-default); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(10,15,26,0.55); z-index: 1000; display: none; align-items: center; justify-content: center; padding: var(--space-lg); }
+    .modal-overlay.open { display: flex; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Admin Accounts</h1>
+            <p class="page-subtitle">Manage Industrial Liaison Office administrator accounts</p>
+          </div>
+          <button class="btn btn-primary" id="create-admin-btn">+ Create Admin</button>
+        </div>
+
+        <div class="master-detail">
+          <div class="admin-list-panel">
+            <div class="admin-list-header">
+              <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);">Admins</span>
+              <span id="admin-count" style="font-size:12px;color:var(--text-muted);">—</span>
+            </div>
+            <div class="admin-list-search">
+              <input type="search" id="admin-search" placeholder="Search by name…">
+            </div>
+            <div id="admin-list"><div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">Loading…</div></div>
+          </div>
+
+          <div class="detail-panel" id="detail-panel">
+            <div class="detail-empty" id="detail-empty">Select an admin account to view details</div>
+            <div id="detail-content" style="display:none;">
+              <div class="detail-header">
+                <div style="display:flex;gap:var(--space-lg);align-items:center;">
+                  <div class="detail-avatar" id="detail-avatar"></div>
+                  <div>
+                    <div class="detail-name" id="detail-name"></div>
+                    <div class="detail-meta" id="detail-meta"></div>
+                  </div>
+                </div>
+                <span class="badge" id="detail-status-badge"></span>
+              </div>
+              <div class="detail-field"><div class="detail-field-label">Phone</div><div class="detail-field-value" id="detail-phone"></div></div>
+              <div class="detail-field"><div class="detail-field-label">Member Since</div><div class="detail-field-value" id="detail-since"></div></div>
+              <div class="detail-actions">
+                <button class="btn btn-outline" id="detail-edit-btn">Edit Details</button>
+                <button class="btn btn-outline" id="detail-reset-btn">Reset Password</button>
+                <button class="btn" id="detail-toggle-btn" style="margin-left:auto;"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Admin Modal -->
+      <div class="modal-overlay" id="create-modal">
+        <div class="modal-panel" style="max-width:440px;">
+          <div class="modal-header">
+            <h3 class="modal-title">Create Admin Account</h3>
+            <button class="modal-close-btn" data-close="create-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="field"><label class="field-label">Full Name <span class="required">*</span></label><input class="field-input" id="c-name" placeholder="e.g. Abena Boateng"></div>
+            <div class="field"><label class="field-label">Phone <span class="required">*</span></label><input class="field-input" id="c-phone" placeholder="e.g. 0244123456" type="tel"></div>
+            <div class="field"><label class="field-label">Email <span class="required">*</span></label><input class="field-input" id="c-email" placeholder="admin@ttu.edu.gh" type="email"></div>
+            <div class="form-error-banner hidden" id="create-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="create-err-msg"></span></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-close="create-modal">Cancel</button>
+            <button class="btn btn-primary" id="create-save-btn">Create Account</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Admin Modal -->
+      <div class="modal-overlay" id="edit-modal">
+        <div class="modal-panel" style="max-width:440px;">
+          <div class="modal-header">
+            <h3 class="modal-title">Edit Admin Details</h3>
+            <button class="modal-close-btn" data-close="edit-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="field"><label class="field-label">Full Name <span class="required">*</span></label><input class="field-input" id="e-name"></div>
+            <div class="field"><label class="field-label">Phone <span class="required">*</span></label><input class="field-input" id="e-phone" type="tel"></div>
+            <div class="form-error-banner hidden" id="edit-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="edit-err-msg"></span></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" data-close="edit-modal">Cancel</button>
+            <button class="btn btn-primary" id="edit-save-btn">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./admins.js"></script>
+</body>
+</html>

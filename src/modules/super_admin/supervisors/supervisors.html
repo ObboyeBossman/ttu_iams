@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supervisors | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .type-radio-row { display: flex; gap: var(--space-md); margin-bottom: var(--space-xl); }
+    .type-radio { display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; padding: 10px 18px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .type-radio input { margin: 0; cursor: pointer; }
+    .type-radio.selected { border-color: var(--ttu-blue); background: var(--bg-info); color: var(--ttu-blue); }
+    [data-theme="dark"] .type-radio.selected { border-color: var(--text-link); background: rgba(26,58,140,0.2); color: var(--text-link); }
+    .import-step { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-xl); margin-bottom: var(--space-xl); }
+    .step-header { display: flex; align-items: center; margin-bottom: var(--space-md); }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ttu-blue); color: #fff; font-size: 13px; font-weight: 700; margin-right: var(--space-sm); flex-shrink: 0; }
+    .step-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .preview-table-wrap { overflow-x: auto; margin-top: var(--space-lg); }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .preview-table th, .preview-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-default); }
+    .preview-table th { background: var(--bg-page); font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .preview-table .row-ok  td:first-child { border-left: 3px solid var(--green); }
+    .preview-table .row-err td:first-child { border-left: 3px solid var(--ttu-red); }
+    .err-cell { color: var(--ttu-red); font-size: 11px; }
+    .progress-bar-wrap { background: var(--border-default); border-radius: var(--radius-pill); height: 8px; overflow: hidden; margin: var(--space-md) 0; }
+    .progress-bar { height: 100%; background: var(--ttu-blue); border-radius: var(--radius-pill); transition: width 0.3s ease; width: 0%; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Supervisors</h1>
+            <p class="page-subtitle">Bulk import and manage supervisor accounts</p>
+          </div>
+        </div>
+
+        <div class="tabs-nav" style="margin-bottom:var(--space-xl);">
+          <button class="tab-btn active" data-tab="import">Import</button>
+          <button class="tab-btn" data-tab="directory">Directory</button>
+        </div>
+
+        <!-- Import Tab -->
+        <div id="tab-import">
+
+          <!-- Supervisor type selector -->
+          <div class="import-step">
+            <div class="step-header"><span class="step-num">0</span><span class="step-title">Supervisor Type</span></div>
+            <div class="type-radio-row">
+              <label class="type-radio selected" id="radio-school-label">
+                <input type="radio" name="sv-type" value="school_supervisor" checked id="radio-school"> School Supervisor
+              </label>
+              <label class="type-radio" id="radio-company-label">
+                <input type="radio" name="sv-type" value="company_supervisor" id="radio-company"> Company Supervisor
+              </label>
+            </div>
+          </div>
+
+          <div class="import-step">
+            <div class="step-header"><span class="step-num">1</span><span class="step-title">Download Template</span></div>
+            <p id="template-desc" style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-md);"></p>
+            <button class="btn btn-outline" id="download-template-btn">⬇ Download CSV Template</button>
+          </div>
+
+          <div class="import-step">
+            <div class="step-header"><span class="step-num">2</span><span class="step-title">Upload File</span></div>
+            <input type="file" id="import-file" accept=".csv,.xlsx" style="font-size:13px;">
+          </div>
+
+          <div class="import-step" id="step-preview" style="display:none;">
+            <div class="step-header"><span class="step-num">3</span><span class="step-title">Preview &amp; Validate</span></div>
+            <div id="validation-summary" style="margin-bottom:var(--space-md);"></div>
+            <div class="preview-table-wrap">
+              <table class="preview-table">
+                <thead id="preview-thead"><tr></tr></thead>
+                <tbody id="preview-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="import-step" id="step-confirm" style="display:none;">
+            <div class="step-header"><span class="step-num">4</span><span class="step-title">Confirm &amp; Import</span></div>
+            <div id="import-progress-wrap" style="display:none;">
+              <div class="progress-bar-wrap"><div class="progress-bar" id="import-progress-bar"></div></div>
+              <p id="import-progress-label" style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-md);"></p>
+            </div>
+            <div id="import-result" style="display:none;"></div>
+            <button class="btn btn-primary" id="confirm-import-btn">Import Supervisors</button>
+          </div>
+        </div>
+
+        <!-- Directory Tab -->
+        <div id="tab-directory" style="display:none;">
+          <div style="display:flex;gap:var(--space-md);margin-bottom:var(--space-lg);flex-wrap:wrap;">
+            <div class="tabs-nav">
+              <button class="tab-btn active" data-dir-type="school_supervisor">School Supervisors</button>
+              <button class="tab-btn" data-dir-type="company_supervisor">Company Supervisors</button>
+            </div>
+            <input type="search" id="dir-search" placeholder="Search name…" style="flex:1;min-width:200px;height:36px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 10px;font-size:13px;background:var(--bg-input);color:var(--text-primary);">
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table class="data-table">
+                <thead><tr><th>Name</th><th>Phone</th><th>Type</th><th>Staff ID / Company</th><th>Status</th><th>Joined</th></tr></thead>
+                <tbody id="dir-tbody"><tr><td colspan="6" class="text-center" style="padding:32px;color:var(--text-muted);">Select a tab to load</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./supervisors.js"></script>
+</body>
+</html>

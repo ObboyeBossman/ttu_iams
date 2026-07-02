@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){
+      var t = localStorage.getItem('iams_theme_mode');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Students | TTU IAMS Super Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/shell/shell.css">
+  <style>
+    .import-steps { display: flex; flex-direction: column; gap: var(--space-xl); }
+    .import-step  {
+      background: var(--bg-card); border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg); padding: var(--space-xl);
+    }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--ttu-blue); color: #fff; font-size: 13px; font-weight: 700;
+      margin-right: var(--space-sm); flex-shrink: 0;
+    }
+    .step-header { display: flex; align-items: center; margin-bottom: var(--space-md); }
+    .step-title  { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+
+    .preview-table-wrap { overflow-x: auto; margin-top: var(--space-lg); }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .preview-table th, .preview-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border-default); }
+    .preview-table th { background: var(--bg-page); font-weight: 600; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .preview-table .row-ok  td:first-child { border-left: 3px solid var(--green); }
+    .preview-table .row-err td:first-child { border-left: 3px solid var(--ttu-red); }
+    .err-cell { color: var(--ttu-red); font-size: 11px; }
+
+    .progress-bar-wrap { background: var(--border-default); border-radius: var(--radius-pill); height: 8px; overflow: hidden; margin: var(--space-md) 0; }
+    .progress-bar { height: 100%; background: var(--ttu-blue); border-radius: var(--radius-pill); transition: width 0.3s ease; width: 0%; }
+
+    .filter-row { display: flex; gap: var(--space-md); flex-wrap: wrap; margin-bottom: var(--space-lg); }
+    .filter-row select, .filter-row input { height: 36px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; background: var(--bg-input); color: var(--text-primary); min-width: 160px; }
+    .filter-row input { flex: 1; min-width: 200px; }
+  </style>
+</head>
+<body>
+<div id="app" class="app-shell">
+  <div class="main-content" id="main-content">
+    <main class="content-area" id="page-content">
+      <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
+
+      <div id="page-body" class="hidden page-container">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Students</h1>
+            <p class="page-subtitle">Bulk import and manage all student accounts</p>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-nav" style="margin-bottom:var(--space-xl);">
+          <button class="tab-btn active" data-tab="import">Import</button>
+          <button class="tab-btn" data-tab="directory">Directory</button>
+        </div>
+
+        <!-- Import Tab -->
+        <div id="tab-import">
+          <div class="import-steps">
+
+            <!-- Step 1: Download template -->
+            <div class="import-step">
+              <div class="step-header"><span class="step-num">1</span><span class="step-title">Download Template</span></div>
+              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-md);">Download the CSV template, fill it in with student data, then upload it below.</p>
+              <button class="btn btn-outline" id="download-template-btn">⬇ Download CSV Template</button>
+            </div>
+
+            <!-- Step 2: Upload -->
+            <div class="import-step">
+              <div class="step-header"><span class="step-num">2</span><span class="step-title">Upload Completed File</span></div>
+              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-md);">Upload your filled CSV or Excel (.xlsx) file.</p>
+              <input type="file" id="import-file" accept=".csv,.xlsx" style="font-size:13px;">
+            </div>
+
+            <!-- Step 3: Preview & Validate -->
+            <div class="import-step" id="step-preview" style="display:none;">
+              <div class="step-header"><span class="step-num">3</span><span class="step-title">Preview &amp; Validate</span></div>
+              <div id="validation-summary" style="margin-bottom:var(--space-md);"></div>
+              <div class="preview-table-wrap">
+                <table class="preview-table">
+                  <thead><tr>
+                    <th>#</th><th>Name</th><th>Index No.</th><th>Email</th><th>Phone</th>
+                    <th>Level</th><th>Programme</th><th>Dept Code</th><th>Faculty Code</th><th>Status</th>
+                  </tr></thead>
+                  <tbody id="preview-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Step 4: Confirm -->
+            <div class="import-step" id="step-confirm" style="display:none;">
+              <div class="step-header"><span class="step-num">4</span><span class="step-title">Confirm &amp; Import</span></div>
+              <div id="import-progress-wrap" style="display:none;">
+                <div class="progress-bar-wrap"><div class="progress-bar" id="import-progress-bar"></div></div>
+                <p id="import-progress-label" style="font-size:13px;color:var(--text-secondary);margin-bottom:var(--space-md);"></p>
+              </div>
+              <div id="import-result" style="display:none;"></div>
+              <button class="btn btn-primary" id="confirm-import-btn">Import Valid Students</button>
+              <p style="font-size:12px;color:var(--text-muted);margin-top:var(--space-sm);">Default password: <code style="background:var(--bg-page);padding:2px 6px;border-radius:4px;">IndexNumber@IAMS</code> (slashes removed)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Directory Tab -->
+        <div id="tab-directory" style="display:none;">
+          <div class="filter-row">
+            <input type="search" id="dir-search" placeholder="Search name or index number…">
+            <select id="dir-faculty"><option value="">All faculties</option></select>
+            <select id="dir-dept"><option value="">All departments</option></select>
+            <select id="dir-prog"><option value="">All programmes</option></select>
+            <select id="dir-level"><option value="">All levels</option>
+              <option>HND 1</option><option>HND 2</option>
+              <option>B-Tech 3</option><option>B-Tech 4</option>
+            </select>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Index No.</th><th>Name</th><th>Programme</th><th>Dept</th><th>Level</th><th>Status</th><th>Joined</th>
+                </tr></thead>
+                <tbody id="dir-tbody"><tr><td colspan="7" class="text-center" style="padding:32px;color:var(--text-muted);">Loading…</td></tr></tbody>
+              </table>
+            </div>
+            <div id="dir-pagination" style="padding:var(--space-md) var(--space-xl);border-top:1px solid var(--border-default);font-size:13px;color:var(--text-muted);"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div id="shell-overlays"></div>
+<script type="module" src="./students.js"></script>
+</body>
+</html>

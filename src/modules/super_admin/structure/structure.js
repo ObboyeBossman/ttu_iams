@@ -176,11 +176,19 @@ async function loadProgrammes(deptId) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-document.querySelectorAll('[data-close]').forEach(btn => {
-  btn.addEventListener('click', () => closeModal(btn.dataset.close));
-});
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', (e) => { if (e.target === el) closeModal(el.id); });
+// Use event delegation for closing modals to guarantee it works even if DOM is replaced
+document.body.addEventListener('click', (e) => {
+  const closeBtn = e.target.closest('[data-close]');
+  if (closeBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeModal(closeBtn.dataset.close);
+    return;
+  }
+  
+  if (e.target.classList.contains('modal-overlay')) {
+    closeModal(e.target.id);
+  }
 });
 
 function showErr(bannerEl, msgEl, msg) {

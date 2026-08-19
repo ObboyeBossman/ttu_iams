@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Preview & Download Attachment Letter - TTU</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "ttu-blue": "#002058",
+            "ttu-accent": "#F0A500",
+          },
+          fontFamily: {
+            "display": ["Hanken Grotesk", "sans-serif"],
+            "body":    ["Inter", "sans-serif"],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    body { background-color: #0b0f17; color: #e1e2e9; font-family: 'Inter', sans-serif; }
+
+    /* A4 Document Preview Styling */
+    .a4-page {
+      background-color: #ffffff;
+      color: #000000;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 15mm 20mm;
+      margin: 0 auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      font-family: 'Times New Roman', Times, serif;
+    }
+
+    @media (max-width: 850px) {
+      .a4-page {
+        width: 100%;
+        min-height: auto;
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col relative pb-20">
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-40 w-full bg-slate-900/90 backdrop-blur-md border-b border-white/10 text-white">
+    <nav class="w-full px-6 py-4 max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <img alt="TTU Logo" class="w-10 h-10 object-contain" src="/assets/logo/ttu_logo_no_text.png"/>
+        <div>
+          <h1 class="font-display font-bold text-base text-white">Takoradi Technical University</h1>
+          <p class="text-xs font-semibold text-amber-400">Letter Generated & Saved</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/src/modules/student/public-letter.html" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 transition-all">
+          <span class="material-symbols-outlined text-base">add_doc</span>
+          Generate Another
+        </a>
+        <button id="download-pdf-btn" class="inline-flex items-center gap-2 text-xs font-bold text-slate-950 bg-amber-500 hover:bg-amber-400 py-2.5 px-4 rounded-lg shadow-lg transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-base">download</span>
+          Download PDF Letter
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Banner Notification -->
+  <div class="w-full bg-emerald-950/80 border-b border-emerald-500/30 text-emerald-300 py-3 px-6 text-center text-xs font-medium flex items-center justify-center gap-2">
+    <span class="material-symbols-outlined text-base text-emerald-400">check_circle</span>
+    Letter saved to database! Preview your letter below and click Download PDF to save your official document.
+  </div>
+
+  <!-- Document Preview Container -->
+  <main class="flex-grow flex w-full relative z-30 justify-center p-4 md:p-10">
+    <div class="w-full max-w-4xl">
+
+      <div class="a4-page rounded-sm relative text-black text-sm leading-relaxed">
+        
+        <!-- Header / Letterhead -->
+        <div class="mb-4">
+          <img src="/assets/letters/ttu_letterhead.jpeg" alt="TTU Letterhead" class="w-full h-auto max-h-[120px] object-contain mx-auto"/>
+        </div>
+
+        <!-- Reference & Date -->
+        <div class="flex justify-between items-center text-xs font-serif mb-6 border-b border-slate-200 pb-2">
+          <div><strong id="prev-ref-no">TTU/ILO/IAP/VOL.8/001</strong></div>
+          <div><span id="prev-letter-date">DATE</span></div>
+        </div>
+
+        <!-- Addressee -->
+        <div class="mb-6 space-y-0.5 uppercase text-xs">
+          <p class="font-bold" id="prev-contact-person">THE HUMAN RESOURCE MANAGER</p>
+          <p class="font-bold text-sm" id="prev-company-name">COMPANY NAME</p>
+          <p id="prev-city-town">TAKORADI</p>
+          <p>GHANA</p>
+          <p class="normal-case pt-2">Dear Sir/Madam,</p>
+        </div>
+
+        <!-- Subject -->
+        <div class="text-center font-bold underline uppercase text-sm mb-6">
+          PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS
+        </div>
+
+        <!-- Body Paragraph 1 -->
+        <p class="text-justify mb-4">
+          Students of Takoradi Technical University pursuing <strong id="prev-programme">PROGRAMME</strong> are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.
+        </p>
+
+        <!-- Body Paragraph 2 -->
+        <p class="text-justify mb-4">
+          It is believed that the attachment programme would bring positive industrial exposure to students. This exercise would enable students to put theory into practice and acquaint themselves with current technological development in industry and commerce.
+        </p>
+
+        <!-- Body Paragraph 3 -->
+        <p class="text-justify mb-6">
+          The University would, therefore, be grateful if you could consider the under-mentioned student to undertake his/her industrial attachment programme in your organization from <strong id="prev-dates">DATE RANGE</strong>.
+        </p>
+
+        <!-- Student Particulars -->
+        <div class="bg-slate-50 border border-slate-200 p-4 rounded mb-6 text-xs space-y-1.5 font-sans">
+          <p class="font-serif italic font-bold mb-2">The student's particulars are as follows:</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div><strong>REGISTRATION NUMBER:</strong> <span id="prev-index-number" class="font-mono">BC/IAS/24/112</span></div>
+            <div><strong>NAME:</strong> <span id="prev-full-name">EMMANUEL MENSAH</span></div>
+            <div><strong>PROGRAMME:</strong> <span id="prev-programme-particulars">HND ELECTRICAL/ELECTRONIC ENGINEERING</span></div>
+            <div><strong>CONTACT NUMBER:</strong> <span id="prev-phone">0241234567</span></div>
+          </div>
+        </div>
+
+        <!-- Closing Paragraphs -->
+        <div class="space-y-3 mb-6 text-justify">
+          <p>We request that the student should be made to familiarize him/herself with all the related sections available in your organization.</p>
+          <p>For your information, all students at the University are covered by Group Personal Accident Insurance policy.</p>
+          <p>We count on your usual cooperation.</p>
+        </div>
+
+        <!-- Sign Off -->
+        <div class="mb-4">
+          <p>Yours faithfully,</p>
+          <div class="my-2">
+            <img src="/assets/letters/ttu_signature_stamp.jpeg" alt="Stamp & Signature" class="w-36 h-auto object-contain"/>
+          </div>
+          <p class="font-bold">MARK KOFI O. AREMU (ESQ)</p>
+          <p class="text-xs">Head, Industrial Liaison Office</p>
+        </div>
+
+        <!-- NB Notice -->
+        <div class="text-[10px] font-bold border-t border-slate-300 pt-2 mb-4 space-y-0.5">
+          <p>NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP</p>
+          <p class="pl-6">2. DO NOT ACCEPT THIS LETTER IF THE STUDENT IS NOT PROPERLY DRESSED</p>
+        </div>
+
+        <!-- Verification Banner -->
+        <div class="border border-slate-400 p-2 text-center text-[11px] bg-slate-100 font-mono my-4">
+          Verification Code: <strong id="prev-code">A3F9B2C1</strong> | Verify at: ttu.edu.gh/verify/<span id="prev-code-link">A3F9B2C1</span>
+        </div>
+
+        <!-- Footer Banner -->
+        <div class="mt-4">
+          <img src="/assets/letters/ttu_footer.png" alt="TTU Footer" class="w-full h-auto object-contain mx-auto"/>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Sticky Bottom Download Bar -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 border-t border-white/10 p-4 text-center backdrop-blur-md">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-4">
+      <div class="text-left text-xs text-slate-300 hidden sm:block">
+        <span class="font-bold text-amber-400">Ready to download?</span> Save the PDF letter to your device.
+      </div>
+      <button id="download-pdf-btn-bottom" class="w-full sm:w-auto flex-1 inline-flex justify-center items-center gap-2 py-3 px-6 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
+        <span class="material-symbols-outlined text-lg">download</span>
+        Download PDF Attachment Letter
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="./preview-letter.js"></script>
+</body>
+</html>

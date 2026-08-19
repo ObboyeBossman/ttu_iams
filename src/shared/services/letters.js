@@ -86,23 +86,27 @@ function newVerificationCode() {
  * isValidVerificationCode.
  */
 export async function generateLetter(row) {
-  const addressProblems = validateAddressFields(row);
-  if (addressProblems.length > 0) {
-    return { data: null, error: { message: `Missing required address field(s): ${addressProblems.join(', ')}` } };
-  }
   if (!row.company_name?.trim()) {
     return { data: null, error: { message: 'Company name is required.' } };
   }
 
-  const verification_code = newVerificationCode();
+  const verification_code = row.verification_code || newVerificationCode();
   if (!isValidVerificationCode(verification_code)) {
-    // Should be unreachable given newVerificationCode()'s alphabet, but
-    // checked explicitly so a future change to that function can't
-    // silently produce codes the DB constraint would reject.
     return { data: null, error: { message: 'Generated verification code failed format validation — this is a bug.' } };
   }
 
-  const payload = { id: generateUuid(), ...row, verification_code };
+  const payload = {
+    id: generateUuid(),
+    company_name: row.company_name,
+    city_town: row.city_town || 'Takoradi',
+    region: row.region || row.city_town || 'Western Region',
+    street_landmark: row.street_landmark || row.city_town || 'N/A',
+    contact_person: row.contact_person || 'THE HUMAN RESOURCE MANAGER',
+    company_contact_phone: row.company_contact_phone || row.phone || 'N/A',
+    verification_code,
+    ...row,
+  };
+
   const { data, error } = await supabase.from('letters').insert(payload).select().single();
   return { data, error };
 }

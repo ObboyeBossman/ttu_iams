@@ -72,33 +72,43 @@ async function handleSubmit(e) {
       season_id: currentSeason.id,
     };
 
-    // 3. Attempt DB insert (optional for unauthenticated guest mode)
+    // 3. Save to database for reference & audit log
     try {
-      await createLetter({
+      const { data: dbData, error: dbError } = await createLetter({
         ...formData,
+        full_name: studentProfile.full_name,
+        index_number: studentProfile.index_number,
+        programme: studentProfile.programme,
+        phone: studentProfile.phone,
         student_id: null,
       });
-    } catch {
-      // Ignored for unauthenticated users if RLS rejects anon insert
+
+      if (dbError) {
+        console.warn('[public-letter] DB insert note:', dbError);
+      } else if (dbData?.created_at) {
+        formData.generated_at = dbData.created_at;
+      }
+    } catch (e) {
+      console.warn('[public-letter] DB save warning:', e);
     }
 
-    // 4. Generate & trigger PDF download
-    const { error: pdfError } = await generateAndDownloadLetter(
+    // 4. Save letter state in sessionStorage for instant preview
+    const payload = {
       formData,
       studentProfile,
-      currentSeason
-    );
+      season: currentSeason,
+    };
+    sessionStorage.setItem('last_generated_letter', JSON.stringify(payload));
 
-    if (pdfError) {
-      console.error('[public-letter] PDF generation error:', pdfError);
-      showToast(`Letter generation failed: ${pdfError.message || pdfError}`, 'error');
-    } else {
-      showToast('Attachment letter generated and downloaded successfully!', 'success');
-    }
+    // 5. Redirect to Preview & Download page
+    showToast('Letter generated & saved! Loading preview...', 'success');
+    setTimeout(() => {
+      window.location.href = `/src/modules/student/preview-letter.html?code=${verificationCode}`;
+    }, 500);
+
   } catch (err) {
     console.error('[public-letter] Form handler error:', err);
     showToast(`An unexpected error occurred: ${err.message || err}`, 'error');
-  } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalText;
   }

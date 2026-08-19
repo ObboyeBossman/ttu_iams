@@ -24,6 +24,7 @@ export default defineConfig({
         // Student
         studentDash:         path.resolve(root, 'src/modules/student/dashboard.html'),
         publicLetter:        path.resolve(root, 'src/modules/student/public-letter.html'),
+        previewLetter:       path.resolve(root, 'src/modules/student/preview-letter.html'),
         // Admin
         adminDash:           path.resolve(root, 'src/modules/admin_portal/dashboard/dashboard.html'),
         adminUsers:          path.resolve(root, 'src/modules/admin_portal/users/users.html'),

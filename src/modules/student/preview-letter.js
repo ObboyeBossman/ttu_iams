@@ -88,8 +88,7 @@ function renderPreview({ formData, studentProfile, season }) {
   const genIso = (formData.generated_at || new Date().toISOString()).slice(0, 10);
   const dateStr = formatLetterDate(genIso);
 
-  const startDateFormatted = formatAttachmentDate(season?.start_date || '2026-09-01');
-  const endDateFormatted = formatAttachmentDate(season?.end_date || '2026-11-30');
+  const ATTACHMENT_DATE_RANGE = 'Monday, 7th September, 2026 to Friday, 9th October, 2026';
 
   setText('prev-ref-no', formData.reference_number || 'TTU/ILO/IAP/VOL.8/001');
   setText('prev-letter-date', dateStr);
@@ -103,7 +102,7 @@ function renderPreview({ formData, studentProfile, season }) {
 
   setText('prev-programme', degreeOnly);
   setText('prev-programme-particulars', progUppercase);
-  setText('prev-dates', `${startDateFormatted} to ${endDateFormatted}`);
+  setText('prev-dates', ATTACHMENT_DATE_RANGE);
 
   setText('prev-index-number', studentProfile.index_number || 'BC/ITN/24/238');
   setText('prev-full-name', (studentProfile.full_name || 'RAFIA YAKUBU').toUpperCase());

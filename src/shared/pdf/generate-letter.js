@@ -339,7 +339,7 @@ async function buildPdf(formData, studentProfile, season, assets) {
 
   // ── Block 8 — Body paragraph 3  (4 mm gap, bold dates inline) ──────────
   y += 4;
-  const boldDates = `${formatAttachmentDate(season.start_date)} to ${formatAttachmentDate(season.end_date)}`;
+  const boldDates = 'Monday, 7th September, 2026 to Friday, 9th October, 2026';
   const p3prefix  =
     'The University would, therefore, be grateful if you could consider the under-mentioned ' +
     'student to undertake his/her industrial attachment programme in your organization from ';

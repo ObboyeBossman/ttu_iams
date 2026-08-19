@@ -97,9 +97,12 @@ function renderPreview({ formData, studentProfile, season }) {
   setText('prev-company-name', (formData.company_name || 'GHANA REVENUE AUTHORITY').toUpperCase());
   setText('prev-city-town', (formData.city_town || 'TAKORADI').toUpperCase());
 
-  const progName = (studentProfile.programme || 'BACHELOR OF TECHNOLOGY IN INFORMATION TECHNOLOGY').toUpperCase();
-  setText('prev-programme', progName);
-  setText('prev-programme-particulars', progName);
+  const rawProg = studentProfile.programme || 'Bachelor of Technology in Information Technology';
+  const progUppercase = rawProg.toUpperCase();
+  const progNormalized = toTitleCase(rawProg);
+
+  setText('prev-programme', progNormalized);
+  setText('prev-programme-particulars', progUppercase);
   setText('prev-dates', `${startDateFormatted} to ${endDateFormatted}`);
 
   setText('prev-index-number', studentProfile.index_number || 'BC/ITN/24/238');
@@ -107,6 +110,25 @@ function renderPreview({ formData, studentProfile, season }) {
   setText('prev-phone', studentProfile.phone || '0555728295');
 
   setText('prev-code', formData.verification_code || '0256895983');
+}
+
+function toTitleCase(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (['hnd', 'btech', 'b-tech', 'b.tech', 'b.tech.'].includes(lower)) {
+        return word.toUpperCase();
+      }
+      if (['in', 'of', 'and', 'for', 'the', 'or', 'to', '&'].includes(lower)) {
+        return lower;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    .replace(/^./, (c) => c.toUpperCase());
 }
 
 function formatLetterDate(iso) {

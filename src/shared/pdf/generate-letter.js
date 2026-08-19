@@ -324,7 +324,8 @@ async function buildPdf(formData, studentProfile, season, assets) {
   y += 8;
   doc.setFont('times', 'normal');
   doc.setFontSize(11);
-  const p1 = `Students of Takoradi Technical University pursuing ${studentProfile.programme} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
+  const progNorm = toTitleCase(studentProfile.programme || 'Bachelor of Technology in Information Technology');
+  const p1 = `Students of Takoradi Technical University pursuing ${progNorm} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
   const p1lines = doc.splitTextToSize(p1, BODY_W);
   doc.text(p1lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
   y += p1lines.length * LH;
@@ -463,4 +464,23 @@ export async function generateAndDownloadLetter(formData, studentProfile, season
   }
 
   return { data: { letterRow: true }, error: null };
+}
+
+function toTitleCase(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (['hnd', 'btech', 'b-tech', 'b.tech', 'b.tech.'].includes(lower)) {
+        return word.toUpperCase();
+      }
+      if (['in', 'of', 'and', 'for', 'the', 'or', 'to', '&'].includes(lower)) {
+        return lower;
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ')
+    .replace(/^./, (c) => c.toUpperCase());
 }

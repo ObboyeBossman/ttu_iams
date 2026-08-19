@@ -303,9 +303,10 @@ async function buildPdf(formData, studentProfile, season, assets) {
   let y = 52;
   doc.setFont('times', 'normal');
   doc.setFontSize(11);
-  doc.text('THE MANAGER',                                        LEFT, y); y += LH;
+  doc.text((formData.contact_person || 'THE HUMAN RESOURCE MANAGER').toUpperCase(), LEFT, y); y += LH;
   doc.text((formData.company_name ?? '').toUpperCase(),          LEFT, y); y += LH;
   doc.text((formData.city_town    ?? '').toUpperCase(),          LEFT, y); y += LH;
+  doc.text('GHANA',                                              LEFT, y); y += LH;
   doc.text('Dear Sir/Madam,',                                    LEFT, y);
 
   // ── Block 5 — Subject heading  (centred, bold) ───────────────────
@@ -404,25 +405,14 @@ async function buildPdf(formData, studentProfile, season, assets) {
   // ── Block 15 — NB Notice ───────────────────────────────────────────────
   y += 8;
   doc.setFont('times', 'bold');
-  doc.setFontSize(9);
-  doc.text('NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP', LEFT, y); y += 4;
+  doc.setFontSize(10);
+  doc.text('NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP', LEFT, y); y += 4.5;
   doc.text('       2. DO NOT ACCEPT THIS LETTER IF THE STUDENT IS NOT PROPERLY DRESSED', LEFT, y);
 
-  // ── Block 16 — Footer bar line and credits (fixed y=276) ───────────────
-  const FOOTER_Y = 276;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.line(LEFT, FOOTER_Y, RIGHT, FOOTER_Y);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text('Powered by Directorate of ICT Services', LEFT, FOOTER_Y + 4);
-
-  doc.setFont('courier', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(0, 0, 0);
-  doc.text(`Code: ${formData.verification_code}`, RIGHT, FOOTER_Y + 4, { align: 'right' });
+  // ── Block 16 — Official Footer Graphic (ttu_footer.png) ────────────────
+  if (assets.footer?.data) {
+    doc.addImage(assets.footer.data, 'PNG', 12, 272, 186, 18);
+  }
 
   return doc;
 }

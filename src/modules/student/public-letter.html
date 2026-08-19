@@ -120,6 +120,7 @@
           <p class="text-sm subtext mt-2">Enter your student information and target company details below to immediately generate and download your official TTU attachment letter.</p>
         </div>
 
+        <!-- Form -->
         <form id="public-letter-form" class="space-y-8">
 
           <!-- Section 1: Student Particulars -->
@@ -173,12 +174,34 @@
           <div class="pt-4">
             <button id="submit-btn" type="submit"
                     class="w-full flex justify-center items-center gap-2 py-4 px-6 rounded-xl font-display font-bold text-base bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-slate-950 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
-              <span class="material-symbols-outlined text-xl">download</span>
-              Generate & Download Letter
+              <span class="material-symbols-outlined text-xl">description</span>
+              Generate & Preview Letter
             </button>
           </div>
 
         </form>
+
+        <!-- Loader / Processing Overlay Container (Hidden by default) -->
+        <div id="processing-container" class="hidden py-12 px-4 text-center space-y-6">
+          <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
+            <div class="absolute inset-0 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin"></div>
+            <img src="/assets/logo/ttu_logo_no_text.png" alt="TTU Logo" class="w-12 h-12 object-contain animate-pulse"/>
+          </div>
+
+          <div class="space-y-2">
+            <h3 class="font-display font-bold text-xl md:text-2xl heading-text">Generating Your Attachment Letter...</h3>
+            <p class="text-sm subtext max-w-md mx-auto" id="processing-step-text">Connecting to TTU Industrial Liaison System...</p>
+          </div>
+
+          <!-- Animated Progress Bar -->
+          <div class="w-full max-w-md mx-auto bg-slate-200 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5">
+            <div id="processing-progress-bar" class="bg-gradient-to-r from-amber-500 to-amber-400 h-full rounded-full w-1/12 transition-all duration-300"></div>
+          </div>
+
+          <div class="pt-4 text-xs font-semibold uppercase tracking-wider text-amber-500 animate-pulse">
+            Please wait a moment while we process and store your document
+          </div>
+        </div>
 
       </div>
 

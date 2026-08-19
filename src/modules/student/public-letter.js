@@ -38,15 +38,23 @@ async function init() {
 async function handleSubmit(e) {
   e.preventDefault();
 
-  const submitBtn = document.getElementById('submit-btn');
-  const originalText = submitBtn.innerHTML;
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = `
-    <span class="inline-block animate-spin border-2 border-slate-900 border-t-transparent rounded-full w-5 h-5"></span>
-    Generating PDF...
-  `;
+  const form = document.getElementById('public-letter-form');
+  const loaderContainer = document.getElementById('processing-container');
+  const stepText = document.getElementById('processing-step-text');
+  const progressBar = document.getElementById('processing-progress-bar');
+
+  // Transition UI: Hide form, show processing screen
+  if (form) form.classList.add('hidden');
+  if (loaderContainer) loaderContainer.classList.remove('hidden');
+
+  const updateProgress = (pct, text) => {
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (stepText) stepText.textContent = text;
+  };
 
   try {
+    updateProgress(20, 'Connecting to TTU Industrial Liaison Database...');
+
     // 1. Gather student profile inputs
     const studentProfile = {
       full_name: document.getElementById('full_name').value.trim(),
@@ -72,6 +80,9 @@ async function handleSubmit(e) {
       season_id: currentSeason.id,
     };
 
+    await new Promise((r) => setTimeout(r, 600));
+    updateProgress(55, 'Saving letter request and generating security code...');
+
     // 3. Save to database for reference & audit log
     try {
       const { data: dbData, error: dbError } = await createLetter({
@@ -92,6 +103,9 @@ async function handleSubmit(e) {
       console.warn('[public-letter] DB save warning:', e);
     }
 
+    await new Promise((r) => setTimeout(r, 600));
+    updateProgress(90, 'Building document preview and preparing PDF package...');
+
     // 4. Save letter state in sessionStorage for instant preview
     const payload = {
       formData,
@@ -100,17 +114,17 @@ async function handleSubmit(e) {
     };
     sessionStorage.setItem('last_generated_letter', JSON.stringify(payload));
 
+    await new Promise((r) => setTimeout(r, 500));
+    updateProgress(100, 'Letter generated successfully! Redirecting...');
+
     // 5. Redirect to Preview & Download page
-    showToast('Letter generated & saved! Loading preview...', 'success');
-    setTimeout(() => {
-      window.location.href = `/src/modules/student/preview-letter.html?code=${verificationCode}`;
-    }, 500);
+    window.location.href = `/src/modules/student/preview-letter.html?code=${verificationCode}`;
 
   } catch (err) {
     console.error('[public-letter] Form handler error:', err);
     showToast(`An unexpected error occurred: ${err.message || err}`, 'error');
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = originalText;
+    if (loaderContainer) loaderContainer.classList.add('hidden');
+    if (form) form.classList.remove('hidden');
   }
 }
 

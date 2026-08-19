@@ -74,12 +74,14 @@ async function init() {
   // Render document preview
   renderPreview(letterData);
 
-  // Setup download handlers
+  // Setup download & print handlers
   const topBtn = document.getElementById('download-pdf-btn');
   const bottomBtn = document.getElementById('download-pdf-btn-bottom');
+  const printBtn = document.getElementById('print-btn');
 
   if (topBtn) topBtn.addEventListener('click', handleDownload);
   if (bottomBtn) bottomBtn.addEventListener('click', handleDownload);
+  if (printBtn) printBtn.addEventListener('click', () => window.print());
 }
 
 function renderPreview({ formData, studentProfile, season }) {

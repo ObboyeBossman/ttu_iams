@@ -99,9 +99,9 @@ function renderPreview({ formData, studentProfile, season }) {
 
   const rawProg = studentProfile.programme || 'Bachelor of Technology in Information Technology';
   const progUppercase = rawProg.toUpperCase();
-  const progNormalized = toTitleCase(rawProg);
+  const degreeOnly = getDegreeOnly(rawProg);
 
-  setText('prev-programme', progNormalized);
+  setText('prev-programme', degreeOnly);
   setText('prev-programme-particulars', progUppercase);
   setText('prev-dates', `${startDateFormatted} to ${endDateFormatted}`);
 
@@ -110,6 +110,12 @@ function renderPreview({ formData, studentProfile, season }) {
   setText('prev-phone', studentProfile.phone || '0555728295');
 
   setText('prev-code', formData.verification_code || '0256895983');
+}
+
+function getDegreeOnly(str) {
+  if (!str) return 'Bachelor of Technology';
+  const parts = str.trim().split(/\s+in\s+/i);
+  return toTitleCase(parts[0]);
 }
 
 function toTitleCase(str) {

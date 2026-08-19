@@ -319,8 +319,8 @@ async function buildPdf(formData, studentProfile, season, assets) {
   y += 8;
   doc.setFont('times', 'normal');
   doc.setFontSize(11);
-  const progNorm = toTitleCase(studentProfile.programme || 'Bachelor of Technology in Information Technology');
-  const p1 = `Students of Takoradi Technical University pursuing ${progNorm} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
+  const degreeOnly = getDegreeOnly(studentProfile.programme || 'Bachelor of Technology in Information Technology');
+  const p1 = `Students of Takoradi Technical University pursuing ${degreeOnly} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
   const p1lines = doc.splitTextToSize(p1, BODY_W);
   doc.text(p1lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
   y += p1lines.length * LH;
@@ -459,6 +459,12 @@ export async function generateAndDownloadLetter(formData, studentProfile, season
   }
 
   return { data: { letterRow: true }, error: null };
+}
+
+function getDegreeOnly(str) {
+  if (!str) return 'Bachelor of Technology';
+  const parts = str.trim().split(/\s+in\s+/i);
+  return toTitleCase(parts[0]);
 }
 
 function toTitleCase(str) {

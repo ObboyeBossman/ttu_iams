@@ -191,21 +191,28 @@ async function handleDownload() {
         import('https://esm.sh/jspdf@2'),
       ]);
 
-      // Temporarily remove all clipping constraints so the full footer is captured
-      const prevOverflow  = cardEl.style.overflow;
-      const prevMaxHeight = cardEl.style.maxHeight;
-      const prevHeight    = cardEl.style.height;
-      cardEl.style.overflow  = 'visible';
-      cardEl.style.maxHeight = 'none';
-      cardEl.style.height    = 'auto';
+      // Clone the element off-screen with all clipping constraints removed
+      const clone = cardEl.cloneNode(true);
+      clone.style.cssText = `
+        position: fixed !important;
+        left: -9999px !important;
+        top: 0 !important;
+        width: ${cardEl.offsetWidth}px !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        z-index: -1 !important;
+      `;
+      document.body.appendChild(clone);
 
-      // Allow browser to reflow and measure full scrollHeight
-      await new Promise(r => setTimeout(r, 80));
+      // Wait two animation frames to guarantee full reflow + repaint
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      const fullH = cardEl.scrollHeight;
-      const fullW = cardEl.scrollWidth;
+      const fullH = clone.scrollHeight;
+      const fullW = clone.scrollWidth;
 
-      const canvas = await html2canvas(cardEl, {
+      const canvas = await html2canvas(clone, {
         scale: 3,
         useCORS: true,
         logging: false,
@@ -216,10 +223,7 @@ async function handleDownload() {
         windowHeight: fullH,
       });
 
-      // Restore original styles
-      cardEl.style.overflow  = prevOverflow;
-      cardEl.style.maxHeight = prevMaxHeight;
-      cardEl.style.height    = prevHeight;
+      document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

@@ -308,17 +308,12 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.text((formData.city_town    ?? '').toUpperCase(),          LEFT, y); y += LH;
   doc.text('Dear Sir/Madam,',                                    LEFT, y);
 
-  // ── Block 5 — Subject heading  (centred, bold, underlined) ───────
+  // ── Block 5 — Subject heading  (centred, bold) ───────────────────
   y += 8;
   const subject = 'PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS';
   doc.setFont('times', 'bold');
   doc.setFontSize(11);
   doc.text(subject, 105, y, { align: 'center' });
-  const sw = doc.getTextWidth(subject);
-  const sx = 105 - sw / 2;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.line(sx, y + 1, sx + sw, y + 1);
 
   // ── Block 6 — Body paragraph 1  (justified) ──────────────────────
   y += 8;

@@ -112,9 +112,16 @@ function renderPreview({ formData, studentProfile, season }) {
 }
 
 function getDegreeOnly(str) {
-  if (!str) return 'Bachelor of Technology';
+  if (!str) return 'Bachelor of Technology (B. Tech.)';
   const parts = str.trim().split(/\s+in\s+/i);
-  return toTitleCase(parts[0]);
+  let base = toTitleCase(parts[0]);
+  if (base.toLowerCase().includes('bachelor of technology') || base.toLowerCase().includes('btech') || base.toLowerCase().includes('b.tech')) {
+    return 'Bachelor of Technology (B. Tech.)';
+  }
+  if (base.toLowerCase().includes('higher national diploma') || base.toLowerCase().includes('hnd')) {
+    return 'Higher National Diploma (HND)';
+  }
+  return base;
 }
 
 function toTitleCase(str) {

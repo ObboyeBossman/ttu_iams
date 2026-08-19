@@ -352,17 +352,21 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.setFontSize(11);
   doc.text("The student's particulars are as follows:", LEFT, y);
 
-  // ── Block 10 — Student particulars  (bold, lh=5.5 mm) ────────────────────
+  // ── Block 10 — Student particulars  (bold labels, normal values, lh=5.5 mm) ──
   y += LH;
-  doc.setFont('times', 'bold');
-  doc.setFontSize(11);
-  for (const line of [
-    `REGISTRATION NUMBER: ${studentProfile.index_number}`,
-    `NAME: ${(studentProfile.full_name ?? '').toUpperCase()}`,
-    `PROGRAMME: ${(studentProfile.programme ?? '').toUpperCase()}`,
-    `CONTACT NUMBER: ${studentProfile.phone}`,
+  for (const item of [
+    { label: 'REGISTRATION NUMBER: ', val: studentProfile.index_number },
+    { label: 'NAME: ',                val: (studentProfile.full_name ?? '').toUpperCase() },
+    { label: 'PROGRAMME: ',           val: (studentProfile.programme ?? '').toUpperCase() },
+    { label: 'CONTACT NUMBER: ',       val: studentProfile.phone },
   ]) {
-    doc.text(line, LEFT, y);
+    doc.setFont('times', 'bold');
+    doc.setFontSize(11);
+    doc.text(item.label, LEFT, y);
+    const lw = doc.getTextWidth(item.label);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11);
+    doc.text(String(item.val ?? ''), LEFT + lw, y);
     y += LH;
   }
 
@@ -452,9 +456,16 @@ export async function generateAndDownloadLetter(formData, studentProfile, season
 }
 
 function getDegreeOnly(str) {
-  if (!str) return 'Bachelor of Technology';
+  if (!str) return 'Bachelor of Technology (B. Tech.)';
   const parts = str.trim().split(/\s+in\s+/i);
-  return toTitleCase(parts[0]);
+  let base = toTitleCase(parts[0]);
+  if (base.toLowerCase().includes('bachelor of technology') || base.toLowerCase().includes('btech') || base.toLowerCase().includes('b.tech')) {
+    return 'Bachelor of Technology (B. Tech.)';
+  }
+  if (base.toLowerCase().includes('higher national diploma') || base.toLowerCase().includes('hnd')) {
+    return 'Higher National Diploma (HND)';
+  }
+  return base;
 }
 
 function toTitleCase(str) {

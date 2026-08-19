@@ -58,14 +58,15 @@ async function handleSubmit(e) {
     // 2. Gather letter/company details
     const verificationCode = generateVerificationCode();
     const nowIso = new Date().toISOString();
+    const companyLocation = document.getElementById('city_town').value.trim();
 
     const formData = {
       company_name: document.getElementById('company_name').value.trim(),
-      region: document.getElementById('region').value.trim(),
-      city_town: document.getElementById('city_town').value.trim(),
-      street_landmark: document.getElementById('street_landmark').value.trim(),
-      contact_person: document.getElementById('contact_person').value.trim(),
-      company_contact_phone: document.getElementById('company_contact_phone').value.trim(),
+      region: companyLocation,
+      city_town: companyLocation,
+      street_landmark: companyLocation,
+      contact_person: 'THE HUMAN RESOURCE MANAGER',
+      company_contact_phone: studentProfile.phone,
       verification_code: verificationCode,
       generated_at: nowIso,
       season_id: currentSeason.id,

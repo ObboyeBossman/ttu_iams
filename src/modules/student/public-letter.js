@@ -8,31 +8,38 @@ import { createLetter } from '/shared/services/letters.js';
 import { generateAndDownloadLetter } from '/shared/pdf/generate-letter.js';
 import { generateVerificationCode, showToast } from '/shared/utils.js';
 
-let currentSeason = null;
+let seasonPromise = null;
 
-async function init() {
-  try {
-    const { data } = await getOpenSeason();
-    currentSeason = data;
-  } catch (e) {
-    console.warn('[public-letter] Could not fetch active season:', e);
+function fetchSeason() {
+  if (!seasonPromise) {
+    seasonPromise = (async () => {
+      try {
+        const { data } = await getOpenSeason();
+        if (data) return data;
+      } catch (e) {
+        console.warn('[public-letter] Could not fetch active season:', e);
+      }
+      const currentYear = new Date().getFullYear();
+      return {
+        id: 'e5000000-0000-0000-0000-000000000002',
+        name: `${currentYear} Industrial Attachment`,
+        start_date: `${currentYear}-09-01`,
+        end_date: `${currentYear}-11-30`,
+      };
+    })();
   }
+  return seasonPromise;
+}
 
-  // Fallback season dates if no active season is configured in DB
-  if (!currentSeason) {
-    const currentYear = new Date().getFullYear();
-    currentSeason = {
-      id: 'e5000000-0000-0000-0000-000000000002',
-      name: `${currentYear} Industrial Attachment`,
-      start_date: `${currentYear}-09-01`,
-      end_date: `${currentYear}-11-30`,
-    };
-  }
-
+function init() {
+  // 1. Immediately register submit listener synchronously to prevent default browser GET submits
   const form = document.getElementById('public-letter-form');
   if (form) {
     form.addEventListener('submit', handleSubmit);
   }
+
+  // 2. Pre-fetch season in background
+  fetchSeason();
 }
 
 async function handleSubmit(e) {
@@ -54,6 +61,9 @@ async function handleSubmit(e) {
 
   try {
     updateProgress(20, 'Connecting to TTU Industrial Liaison Database...');
+
+    // Resolve season (fetches if not ready)
+    const season = await fetchSeason();
 
     // 1. Gather student profile inputs
     const studentProfile = {
@@ -77,7 +87,7 @@ async function handleSubmit(e) {
       company_contact_phone: studentProfile.phone,
       verification_code: verificationCode,
       generated_at: nowIso,
-      season_id: currentSeason.id,
+      season_id: season.id,
     };
 
     await new Promise((r) => setTimeout(r, 600));
@@ -110,7 +120,7 @@ async function handleSubmit(e) {
     const payload = {
       formData,
       studentProfile,
-      season: currentSeason,
+      season,
     };
     sessionStorage.setItem('last_generated_letter', JSON.stringify(payload));
 
@@ -128,4 +138,8 @@ async function handleSubmit(e) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

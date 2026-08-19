@@ -13,60 +13,56 @@ async function init() {
   const urlParams = new URLSearchParams(window.location.search);
   const codeParam = urlParams.get('code');
 
-  // 1. Try loading from sessionStorage first (immediate submit state)
-  const cachedStr = sessionStorage.getItem('last_generated_letter');
-  if (cachedStr) {
-    try {
-      letterData = JSON.parse(cachedStr);
-    } catch {
-      letterData = null;
-    }
+  if (!codeParam) {
+    showToast('Access Denied. Invalid or missing verification code.', 'error');
+    setTimeout(() => {
+      window.location.href = '/src/modules/auth/login.html';
+    }, 1500);
+    return;
   }
 
-  // 2. If codeParam exists and cached letter code differs, query Supabase DB
-  if (codeParam && (!letterData || letterData.formData?.verification_code !== codeParam)) {
-    try {
-      const { data, error } = await supabase
-        .from('letters')
-        .select('*')
-        .eq('verification_code', codeParam)
-        .maybeSingle();
+  // Strictly verify against Supabase DB
+  try {
+    const { data, error } = await supabase
+      .from('letters')
+      .select('*')
+      .eq('verification_code', codeParam)
+      .maybeSingle();
 
-      if (data && !error) {
-        const currentYear = new Date().getFullYear();
-        letterData = {
-          formData: {
-            company_name: data.company_name,
-            region: data.region || data.city_town,
-            city_town: data.city_town,
-            street_landmark: data.street_landmark || data.city_town,
-            contact_person: data.contact_person || 'THE HUMAN RESOURCE MANAGER',
-            company_contact_phone: data.company_contact_phone || 'N/A',
-            verification_code: data.verification_code,
-            generated_at: data.generated_at,
-            season_id: data.season_id,
-          },
-          studentProfile: {
-            full_name: data.full_name || 'STUDENT NAME',
-            index_number: data.index_number || 'REG NUMBER',
-            programme: data.programme || 'PROGRAMME OF STUDY',
-            phone: data.phone || 'PHONE NUMBER',
-          },
-          season: {
-            start_date: `${currentYear}-09-01`,
-            end_date: `${currentYear}-11-30`,
-          },
-        };
-      }
-    } catch (e) {
-      console.warn('[preview-letter] DB lookup error:', e);
+    if (data && !error) {
+      const currentYear = new Date().getFullYear();
+      letterData = {
+        formData: {
+          company_name: data.company_name,
+          region: data.region || data.city_town,
+          city_town: data.city_town,
+          street_landmark: data.street_landmark || data.city_town,
+          contact_person: data.contact_person || 'THE HUMAN RESOURCE MANAGER',
+          company_contact_phone: data.company_contact_phone || 'N/A',
+          verification_code: data.verification_code,
+          generated_at: data.generated_at,
+          season_id: data.season_id,
+        },
+        studentProfile: {
+          full_name: data.full_name || 'STUDENT NAME',
+          index_number: data.index_number || 'REG NUMBER',
+          programme: data.programme || 'PROGRAMME OF STUDY',
+          phone: data.phone || 'PHONE NUMBER',
+        },
+        season: {
+          start_date: `${currentYear}-09-01`,
+          end_date: `${currentYear}-11-30`,
+        },
+      };
     }
+  } catch (e) {
+    console.warn('[preview-letter] DB lookup error:', e);
   }
 
   if (!letterData) {
-    showToast('No letter data found. Redirecting to form...', 'error');
+    showToast('Access Denied. Verified letter not found in database. Redirecting...', 'error');
     setTimeout(() => {
-      window.location.href = '/src/modules/student/public-letter.html';
+      window.location.href = '/src/modules/auth/login.html';
     }, 2000);
     return;
   }

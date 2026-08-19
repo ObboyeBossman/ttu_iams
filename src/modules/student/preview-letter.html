@@ -31,23 +31,28 @@
   <style>
     body { background-color: #0b0f17; color: #e1e2e9; font-family: 'Inter', sans-serif; }
 
-    /* A4 Document Preview Styling */
+    /* A4 Document Preview Styling - Single Page Lock */
     .a4-page {
       background-color: #ffffff;
       color: #000000;
       width: 210mm;
-      min-height: 297mm;
-      padding: 15mm 20mm;
+      height: 297mm;
+      max-height: 297mm;
+      padding: 10mm 16mm 8mm 16mm;
       margin: 0 auto;
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       font-family: 'Times New Roman', Times, serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
     }
 
     @media print {
       body { background-color: #ffffff !important; color: #000000 !important; }
       header, footer, .fixed, .bg-emerald-950\/80 { display: none !important; }
       main { padding: 0 !important; }
-      .a4-page { box-shadow: none !important; width: 100% !important; padding: 0 !important; }
+      .a4-page { box-shadow: none !important; width: 210mm !important; height: 297mm !important; padding: 10mm 16mm 8mm 16mm !important; }
     }
   </style>
 </head>
@@ -91,52 +96,52 @@
   <main class="flex-grow flex w-full relative z-30 justify-center p-4 md:p-10">
     <div class="w-full max-w-4xl">
 
-      <div class="a4-page rounded-sm relative text-black text-[12pt] leading-relaxed font-serif">
+      <div class="a4-page rounded-sm relative text-black text-[11pt] leading-normal font-serif">
         
         <!-- Header / Letterhead -->
-        <div class="mb-4">
+        <div class="mb-2">
           <img src="/assets/letters/ttu_letterhead.jpeg" alt="TTU Letterhead" class="w-full h-auto object-contain mx-auto"/>
         </div>
 
         <!-- Reference & Date -->
-        <div class="flex justify-between items-center text-[12pt] mb-6">
+        <div class="flex justify-between items-center text-[11pt] mb-3">
           <div><span id="prev-ref-no">TTU/ILO/IAP/VOL.8/001</span></div>
           <div><span id="prev-letter-date">13TH AUGUST, 2026</span></div>
         </div>
 
         <!-- Addressee -->
-        <div class="mb-6 space-y-0.5 text-[12pt]">
+        <div class="mb-3 space-y-0.5 text-[11pt]">
           <p id="prev-contact-person">THE HUMAN RESOURCE MANAGER</p>
           <p id="prev-company-name">GHANA REVENUE AUTHORITY</p>
           <p id="prev-city-town">TAKORADI</p>
           <p>GHANA</p>
-          <p class="pt-3">Dear Sir/Madam,</p>
+          <p class="pt-1.5">Dear Sir/Madam,</p>
         </div>
 
         <!-- Subject -->
-        <div class="text-center font-bold uppercase text-[12pt] mb-6">
+        <div class="text-center font-bold uppercase text-[11pt] mb-3">
           PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS
         </div>
 
         <!-- Body Paragraph 1 -->
-        <p class="text-justify mb-4 text-[12pt] leading-relaxed">
+        <p class="text-justify mb-2.5 text-[11pt] leading-normal">
           Students of Takoradi Technical University pursuing <span id="prev-programme">PROGRAMME</span> are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.
         </p>
 
         <!-- Body Paragraph 2 -->
-        <p class="text-justify mb-4 text-[12pt] leading-relaxed">
+        <p class="text-justify mb-2.5 text-[11pt] leading-normal">
           It is believed that the attachment programme would bring positive industrial exposure to students. This exercise would enable students to put theory into practice and acquaint themselves with current technological development in industry and commerce.
         </p>
 
         <!-- Body Paragraph 3 -->
-        <p class="text-justify mb-6 text-[12pt] leading-relaxed">
+        <p class="text-justify mb-3 text-[11pt] leading-normal">
           The University would, therefore, be grateful if you could consider the under-mentioned student to undertake his/her industrial attachment programme in your organization from <strong id="prev-dates">DATE RANGE</strong>.
         </p>
 
         <!-- Student Particulars -->
-        <div class="mb-6 text-[12pt] space-y-2">
+        <div class="mb-3 text-[11pt] space-y-1">
           <p>The student's particulars are as follows:</p>
-          <div class="space-y-1.5 pl-0">
+          <div class="space-y-0.5 pl-0">
             <p><strong>REGISTRATION NUMBER:</strong> <span id="prev-index-number">BC/ITN/24/238</span></p>
             <p><strong>NAME:</strong> <span id="prev-full-name">RAFIA YAKUBU</span></p>
             <p><strong>PROGRAMME:</strong> <span id="prev-programme-particulars">BACHELOR OF TECHNOLOGY IN INFORMATION TECHNOLOGY</span></p>
@@ -145,30 +150,30 @@
         </div>
 
         <!-- Closing Paragraphs -->
-        <div class="space-y-3 mb-6 text-justify text-[12pt] leading-relaxed">
+        <div class="space-y-1.5 mb-3 text-justify text-[11pt] leading-normal">
           <p>We request that the student should be made to familiarize him/herself with all the related sections available in your organization.</p>
           <p>For your information, all students at the University are covered by Group Personal Accident Insurance policy.</p>
           <p>We count on your usual cooperation.</p>
         </div>
 
         <!-- Sign Off -->
-        <div class="mb-4 text-[12pt]">
+        <div class="mb-2 text-[11pt]">
           <p>Yours faithfully,</p>
-          <div class="my-2">
-            <img src="/assets/letters/ttu_signature_stamp.jpeg" alt="Stamp & Signature" class="w-48 h-auto object-contain"/>
+          <div class="my-1">
+            <img src="/assets/letters/ttu_signature_stamp.jpeg" alt="Stamp & Signature" class="w-40 h-auto object-contain"/>
           </div>
           <p class="font-bold">MARK KOFI O. AREMU (ESQ)</p>
-          <p class="text-[11pt]">Head, Industrial Liaison Office</p>
+          <p class="text-[10pt]">Head, Industrial Liaison Office</p>
         </div>
 
         <!-- NB Notice -->
-        <div class="text-[11.5pt] font-bold pt-2 mb-6 space-y-0.5">
+        <div class="text-[10pt] font-bold mb-2 space-y-0.5">
           <p>NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP</p>
           <p class="pl-6">2. DO NOT ACCEPT THIS LETTER IF THE STUDENT IS NOT PROPERLY DRESSED</p>
         </div>
 
         <!-- Official Letter Footer Bar -->
-        <div class="mt-8 overflow-hidden">
+        <div class="mt-auto pt-1 overflow-hidden">
           <img src="/assets/letters/ttu_footer.png" alt="TTU Footer" class="w-[106%] -mx-[3%] max-w-[106%] h-auto object-contain"/>
         </div>
 

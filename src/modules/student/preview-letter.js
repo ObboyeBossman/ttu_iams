@@ -191,12 +191,26 @@ async function handleDownload() {
         import('https://esm.sh/jspdf@2'),
       ]);
 
+      // Temporarily remove overflow:hidden so the full footer is captured
+      const prevOverflow = cardEl.style.overflow;
+      const prevMaxHeight = cardEl.style.maxHeight;
+      cardEl.style.overflow = 'visible';
+      cardEl.style.maxHeight = 'none';
+
       const canvas = await html2canvas(cardEl, {
         scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: cardEl.scrollWidth,
+        height: cardEl.scrollHeight,
+        windowWidth: cardEl.scrollWidth,
+        windowHeight: cardEl.scrollHeight,
       });
+
+      // Restore original overflow styles
+      cardEl.style.overflow = prevOverflow;
+      cardEl.style.maxHeight = prevMaxHeight;
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

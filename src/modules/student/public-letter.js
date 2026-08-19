@@ -22,7 +22,7 @@ async function init() {
   if (!currentSeason) {
     const currentYear = new Date().getFullYear();
     currentSeason = {
-      id: 'public-default-season',
+      id: 'e5000000-0000-0000-0000-000000000002',
       name: `${currentYear} Industrial Attachment`,
       start_date: `${currentYear}-09-01`,
       end_date: `${currentYear}-11-30`,

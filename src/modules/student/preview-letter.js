@@ -184,21 +184,31 @@ async function handleDownload() {
   showToast('Generating PDF attachment letter...', 'info');
 
   try {
-    const { error } = await generateAndDownloadLetter(
-      letterData.formData,
-      letterData.studentProfile,
-      letterData.season
-    );
+    const element = document.querySelector('.a4-page');
+    const code = letterData?.formData?.verification_code || 'letter';
 
-    if (error) {
-      console.error('[preview-letter] PDF download error:', error);
-      showToast(`Download failed: ${error.message || error}`, 'error');
+    if (window.html2pdf && element) {
+      const opt = {
+        margin: 0,
+        filename: `TTU_Attachment_Letter_${code}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+      await window.html2pdf().set(opt).from(element).save();
+      showToast('PDF downloaded successfully!', 'success');
     } else {
+      const { error } = await generateAndDownloadLetter(
+        letterData.formData,
+        letterData.studentProfile,
+        letterData.season
+      );
+      if (error) throw error;
       showToast('PDF downloaded successfully!', 'success');
     }
   } catch (err) {
-    console.error('[preview-letter] Exception:', err);
-    showToast(`Failed to generate PDF: ${err.message}`, 'error');
+    console.error('[preview-letter] PDF download exception:', err);
+    showToast(`Failed to generate PDF: ${err.message || err}`, 'error');
   } finally {
     setButtonsLoading(false);
   }

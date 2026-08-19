@@ -184,31 +184,55 @@ async function handleDownload() {
   showToast('Generating PDF attachment letter...', 'info');
 
   try {
-    const element = document.querySelector('.a4-page');
-    const code = letterData?.formData?.verification_code || 'letter';
+    const cardEl = document.querySelector('.a4-page');
+    if (cardEl) {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('https://esm.sh/html2canvas@1.4.1'),
+        import('https://esm.sh/jspdf@2'),
+      ]);
 
-    if (window.html2pdf && element) {
-      const opt = {
-        margin: 0,
-        filename: `TTU_Attachment_Letter_${code}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      };
-      await window.html2pdf().set(opt).from(element).save();
+      const canvas = await html2canvas(cardEl, {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      
+      const fileName = `TTU_Attachment_Letter_${letterData.formData.verification_code || 'ILO'}.pdf`;
+      pdf.save(fileName);
       showToast('PDF downloaded successfully!', 'success');
+      return;
+    }
+
+    // Fallback to programmatic generator
+    const { error } = await generateAndDownloadLetter(
+      letterData.formData,
+      letterData.studentProfile,
+      letterData.season
+    );
+
+    if (error) {
+      console.error('[preview-letter] PDF download error:', error);
+      showToast(`Download failed: ${error.message || error}`, 'error');
     } else {
-      const { error } = await generateAndDownloadLetter(
+      showToast('PDF downloaded successfully!', 'success');
+    }
+  } catch (err) {
+    console.error('[preview-letter] Exception during DOM PDF export, trying generator fallback:', err);
+    try {
+      await generateAndDownloadLetter(
         letterData.formData,
         letterData.studentProfile,
         letterData.season
       );
-      if (error) throw error;
       showToast('PDF downloaded successfully!', 'success');
+    } catch (fallbackErr) {
+      showToast(`Failed to generate PDF: ${fallbackErr.message}`, 'error');
     }
-  } catch (err) {
-    console.error('[preview-letter] PDF download exception:', err);
-    showToast(`Failed to generate PDF: ${err.message || err}`, 'error');
   } finally {
     setButtonsLoading(false);
   }

@@ -274,10 +274,10 @@ async function buildPdf(formData, studentProfile, season, assets) {
   const LEFT   = 20;
   const RIGHT  = 195;   // 210 − 15 mm right margin
   const BODY_W = 175;   // RIGHT − LEFT
-  const LH     = 5;     // line height in mm at 11 pt
+  const LH     = 5.5;   // line height in mm at 12 pt
 
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
 
   // ── Block 1 — Letterhead (x=15, y=3, 180×38 mm) ─────────────────────
@@ -287,7 +287,7 @@ async function buildPdf(formData, studentProfile, season, assets) {
 
   // ── Block 2 — Reference number  (left, y=45) ───────────────────────────
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
   doc.text(refNo, LEFT, 45);
 
@@ -299,10 +299,10 @@ async function buildPdf(formData, studentProfile, season, assets) {
   );
   doc.text(dateStr, RIGHT, 45, { align: 'right' });
 
-  // ── Block 4 — Addressee block  (y=52, lh=5 mm) ────────────────────────
+  // ── Block 4 — Addressee block  (y=52, lh=5.5 mm) ────────────────────────
   let y = 52;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.text((formData.contact_person || 'THE HUMAN RESOURCE MANAGER').toUpperCase(), LEFT, y); y += LH;
   doc.text((formData.company_name ?? '').toUpperCase(),          LEFT, y); y += LH;
   doc.text((formData.city_town    ?? '').toUpperCase(),          LEFT, y); y += LH;
@@ -310,26 +310,26 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.text('Dear Sir/Madam,',                                    LEFT, y);
 
   // ── Block 5 — Subject heading  (centred, bold) ───────────────────
-  y += 8;
+  y += 7;
   const subject = 'PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS';
   doc.setFont('times', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.text(subject, 105, y, { align: 'center' });
 
   // ── Block 6 — Body paragraph 1  (justified) ──────────────────────
-  y += 8;
+  y += 7;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   const degreeOnly = getDegreeOnly(studentProfile.programme || 'Bachelor of Technology in Information Technology');
   const p1 = `Students of Takoradi Technical University pursuing ${degreeOnly} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
   const p1lines = doc.splitTextToSize(p1, BODY_W);
   doc.text(p1lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
   y += p1lines.length * LH;
 
-  // ── Block 7 — Body paragraph 2  (4 mm gap, justified) ──────────────────
-  y += 4;
+  // ── Block 7 — Body paragraph 2  (3.5 mm gap, justified) ──────────────────
+  y += 3.5;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   const p2 =
     'It is believed that the attachment programme would bring positive industrial exposure to ' +
     'students. This exercise would enable students to put theory into practice and acquaint ' +
@@ -338,18 +338,18 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.text(p2lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
   y += p2lines.length * LH;
 
-  // ── Block 8 — Body paragraph 3  (4 mm gap, bold dates inline) ──────────
-  y += 4;
+  // ── Block 8 — Body paragraph 3  (3.5 mm gap, bold dates inline) ──────────
+  y += 3.5;
   const boldDates = 'Monday, 7th September, 2026 to Friday, 9th October, 2026';
   const p3prefix  =
     'The University would, therefore, be grateful if you could consider the under-mentioned ' +
     'student to undertake his/her industrial attachment programme in your organization from ';
-  y = drawMixedBoldPara(doc, p3prefix, boldDates, '.', LEFT, y, BODY_W, LH, 11);
+  y = drawMixedBoldPara(doc, p3prefix, boldDates, '.', LEFT, y, BODY_W, LH, 12);
 
-  // ── Block 9 — Particulars intro  (4 mm gap) ────────────────────────────
-  y += 4;
+  // ── Block 9 — Particulars intro  (3.5 mm gap) ────────────────────────────
+  y += 3.5;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.text("The student's particulars are as follows:", LEFT, y);
 
   // ── Block 10 — Student particulars  (bold labels, normal values, lh=5.5 mm) ──
@@ -361,19 +361,19 @@ async function buildPdf(formData, studentProfile, season, assets) {
     { label: 'CONTACT NUMBER: ',       val: studentProfile.phone },
   ]) {
     doc.setFont('times', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.text(item.label, LEFT, y);
     const lw = doc.getTextWidth(item.label);
     doc.setFont('times', 'normal');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.text(String(item.val ?? ''), LEFT + lw, y);
     y += LH;
   }
 
-  // ── Block 11 — Closing paragraphs  (4 mm gap, justified) ───────────────
-  y += 4;
+  // ── Block 11 — Closing paragraphs  (3.5 mm gap, justified) ───────────────
+  y += 3.5;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   for (const para of [
     'We request that the student should be made to familiarize him/herself with all the related sections available in your organization.',
     'For your information, all students at the University are covered by Group Personal Accident Insurance policy.',
@@ -381,29 +381,29 @@ async function buildPdf(formData, studentProfile, season, assets) {
   ]) {
     const lines = doc.splitTextToSize(para, BODY_W);
     doc.text(lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
-    y += lines.length * LH + 3;
+    y += lines.length * LH + 2.5;
   }
 
   // ── Block 12 — Sign-off ─────────────────────────────────────────────────
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.text('Yours faithfully,', LEFT, y);
 
-  // ── Block 13 — Signature/stamp image  (3 mm gap, 45×18 mm) ────────────
-  y += 3;
+  // ── Block 13 — Signature/stamp image  (2.5 mm gap, 45×18 mm) ────────────
+  y += 2.5;
   if (assets.stamp.data) {
     doc.addImage(assets.stamp.data, 'JPEG', LEFT, y, 45, 18);
   }
   y += 18;
 
-  // ── Block 14 — Signatory name and title  (3 mm gap) ────────────────────
-  y += 3;
+  // ── Block 14 — Signatory name and title  (2.5 mm gap) ────────────────────
+  y += 2.5;
   doc.setFont('times', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.text('MARK KOFI O. AREMU (ESQ)', LEFT, y);
   y += LH;
   doc.setFont('times', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.text('Head, Industrial Liaison Office', LEFT, y);
 
   // ── Block 15 — NB Notice ───────────────────────────────────────────────

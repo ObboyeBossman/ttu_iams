@@ -91,30 +91,43 @@
   <main class="flex-grow flex w-full relative z-30 justify-center p-4 md:p-10">
     <div class="w-full max-w-4xl">
 
-      <div class="a4-page rounded-sm relative text-black text-sm leading-relaxed">
+      <div class="a4-page rounded-sm relative text-black text-[11pt] leading-normal font-serif">
         
         <!-- Header / Letterhead -->
-        <div class="mb-4">
-          <img src="/assets/letters/ttu_letterhead.jpeg" alt="TTU Letterhead" class="w-full h-auto max-h-[120px] object-contain mx-auto"/>
+        <div class="pb-3 border-b border-black mb-6">
+          <div class="flex justify-between items-start">
+            <div class="flex items-center gap-3">
+              <img src="/assets/logo/ttu_logo_no_text.png" alt="TTU Logo" class="w-16 h-16 object-contain"/>
+              <div class="font-bold text-base leading-tight tracking-tight uppercase">
+                TAKORADI<br/>TECHNICAL<br/>UNIVERSITY
+              </div>
+            </div>
+            <div class="text-right text-[9pt] leading-tight font-sans">
+              <p class="font-bold text-sm tracking-wide text-black uppercase mb-0.5">INDUSTRIAL LIAISON OFFICE</p>
+              <p class="text-slate-700">P.O. BOX 256, TAKORADI - GHANA</p>
+              <p class="text-slate-700">Website: www.ttu.edu.gh &nbsp; Email: liaison@ttu.edu.gh / ilo@ttu.edu.gh</p>
+              <p class="text-slate-700">Tel: +233 312 022 643</p>
+            </div>
+          </div>
         </div>
 
         <!-- Reference & Date -->
-        <div class="flex justify-between items-center text-xs font-serif mb-6 border-b border-slate-200 pb-2">
-          <div><strong id="prev-ref-no">TTU/ILO/IAP/VOL.8/001</strong></div>
-          <div><span id="prev-letter-date">DATE</span></div>
+        <div class="flex justify-between items-center text-[11pt] mb-6">
+          <div><span id="prev-ref-no">TTU/ILO/IAP/VOL.8/001</span></div>
+          <div><span id="prev-letter-date">13TH AUGUST, 2026</span></div>
         </div>
 
         <!-- Addressee -->
-        <div class="mb-6 space-y-0.5 uppercase text-xs">
-          <p class="font-bold" id="prev-contact-person">THE HUMAN RESOURCE MANAGER</p>
-          <p class="font-bold text-sm" id="prev-company-name">COMPANY NAME</p>
+        <div class="mb-6 space-y-0.5 text-[11pt]">
+          <p id="prev-contact-person">THE HUMAN RESOURCE MANAGER</p>
+          <p id="prev-company-name">GHANA REVENUE AUTHORITY</p>
           <p id="prev-city-town">TAKORADI</p>
           <p>GHANA</p>
-          <p class="normal-case pt-2">Dear Sir/Madam,</p>
+          <p class="pt-3">Dear Sir/Madam,</p>
         </div>
 
         <!-- Subject -->
-        <div class="text-center font-bold underline uppercase text-sm mb-6">
+        <div class="text-center font-bold underline uppercase text-[11pt] mb-6">
           PRACTICAL INDUSTRIAL TRAINING PROGRAMME FOR STUDENTS
         </div>
 
@@ -134,13 +147,13 @@
         </p>
 
         <!-- Student Particulars -->
-        <div class="bg-slate-50 border border-slate-200 p-4 rounded mb-6 text-xs space-y-1.5 font-sans">
-          <p class="font-serif italic font-bold mb-2">The student's particulars are as follows:</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div><strong>REGISTRATION NUMBER:</strong> <span id="prev-index-number" class="font-mono">BC/IAS/24/112</span></div>
-            <div><strong>NAME:</strong> <span id="prev-full-name">EMMANUEL MENSAH</span></div>
-            <div><strong>PROGRAMME:</strong> <span id="prev-programme-particulars">HND ELECTRICAL/ELECTRONIC ENGINEERING</span></div>
-            <div><strong>CONTACT NUMBER:</strong> <span id="prev-phone">0241234567</span></div>
+        <div class="mb-6 text-[11pt] space-y-2">
+          <p>The student's particulars are as follows:</p>
+          <div class="space-y-1 pl-0">
+            <p><strong>REGISTRATION NUMBER:</strong> <span id="prev-index-number">BC/ITN/24/238</span></p>
+            <p><strong>NAME:</strong> <span id="prev-full-name">RAFIA YAKUBU</span></p>
+            <p><strong>PROGRAMME:</strong> <span id="prev-programme-particulars">BACHELOR OF TECHNOLOGY IN INFORMATION TECHNOLOGY</span></p>
+            <p><strong>CONTACT NUMBER:</strong> <span id="prev-phone">0555728295</span></p>
           </div>
         </div>
 
@@ -155,26 +168,25 @@
         <div class="mb-4">
           <p>Yours faithfully,</p>
           <div class="my-2">
-            <img src="/assets/letters/ttu_signature_stamp.jpeg" alt="Stamp & Signature" class="w-36 h-auto object-contain"/>
+            <img src="/assets/letters/ttu_signature_stamp.jpeg" alt="Stamp & Signature" class="w-44 h-auto object-contain"/>
           </div>
           <p class="font-bold">MARK KOFI O. AREMU (ESQ)</p>
-          <p class="text-xs">Head, Industrial Liaison Office</p>
+          <p class="text-[10pt]">Head, Industrial Liaison Office</p>
         </div>
 
         <!-- NB Notice -->
-        <div class="text-[10px] font-bold border-t border-slate-300 pt-2 mb-4 space-y-0.5">
+        <div class="text-[9pt] font-bold border-t border-black pt-2 mb-6 space-y-0.5">
           <p>NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP</p>
           <p class="pl-6">2. DO NOT ACCEPT THIS LETTER IF THE STUDENT IS NOT PROPERLY DRESSED</p>
         </div>
 
-        <!-- Verification Banner -->
-        <div class="border border-slate-400 p-2 text-center text-[11px] bg-slate-100 font-mono my-4">
-          Verification Code: <strong id="prev-code">A3F9B2C1</strong> | Verify at: ttu.edu.gh/verify/<span id="prev-code-link">A3F9B2C1</span>
-        </div>
-
-        <!-- Footer Banner -->
-        <div class="mt-4">
-          <img src="/assets/letters/ttu_footer.png" alt="TTU Footer" class="w-full h-auto object-contain mx-auto"/>
+        <!-- Footer Bar -->
+        <div class="border-t border-black pt-2 mt-8 flex justify-between items-center text-[9pt]">
+          <div class="text-slate-700">Powered by Directorate of ICT Services</div>
+          <div class="flex items-center gap-2 font-mono">
+            <span id="prev-code">0256895983</span>
+            <img src="/assets/logo/ttu_logo_no_text.png" alt="TTU Emblem" class="w-5 h-5 object-contain"/>
+          </div>
         </div>
 
       </div>

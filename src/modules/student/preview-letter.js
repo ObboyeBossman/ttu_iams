@@ -85,42 +85,45 @@ async function init() {
 }
 
 function renderPreview({ formData, studentProfile, season }) {
-  const dateStr = new Date(formData.generated_at || Date.now()).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).toUpperCase();
+  const genIso = (formData.generated_at || new Date().toISOString()).slice(0, 10);
+  const dateStr = formatLetterDate(genIso);
 
-  const startDateFormatted = new Date((season?.start_date || '2026-09-01') + 'T00:00:00').toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const endDateFormatted = new Date((season?.end_date || '2026-11-30') + 'T00:00:00').toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const startDateFormatted = formatAttachmentDate(season?.start_date || '2026-09-01');
+  const endDateFormatted = formatAttachmentDate(season?.end_date || '2026-11-30');
 
   setText('prev-ref-no', formData.reference_number || 'TTU/ILO/IAP/VOL.8/001');
   setText('prev-letter-date', dateStr);
   setText('prev-contact-person', (formData.contact_person || 'THE HUMAN RESOURCE MANAGER').toUpperCase());
-  setText('prev-company-name', (formData.company_name || 'COMPANY NAME').toUpperCase());
+  setText('prev-company-name', (formData.company_name || 'GHANA REVENUE AUTHORITY').toUpperCase());
   setText('prev-city-town', (formData.city_town || 'TAKORADI').toUpperCase());
 
-  setText('prev-programme', (studentProfile.programme || '').toUpperCase());
-  setText('prev-programme-particulars', (studentProfile.programme || '').toUpperCase());
+  const progName = (studentProfile.programme || 'BACHELOR OF TECHNOLOGY IN INFORMATION TECHNOLOGY').toUpperCase();
+  setText('prev-programme', progName);
+  setText('prev-programme-particulars', progName);
   setText('prev-dates', `${startDateFormatted} to ${endDateFormatted}`);
 
-  setText('prev-index-number', studentProfile.index_number || '');
-  setText('prev-full-name', (studentProfile.full_name || '').toUpperCase());
-  setText('prev-phone', studentProfile.phone || '');
+  setText('prev-index-number', studentProfile.index_number || 'BC/ITN/24/238');
+  setText('prev-full-name', (studentProfile.full_name || 'RAFIA YAKUBU').toUpperCase());
+  setText('prev-phone', studentProfile.phone || '0555728295');
 
-  setText('prev-code', formData.verification_code || '');
-  setText('prev-code-link', formData.verification_code || '');
+  setText('prev-code', formData.verification_code || '0256895983');
+}
+
+function formatLetterDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const day = d.getDate();
+  const months = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  const suffix = (day % 100 >= 11 && day % 100 <= 13) ? 'TH' : (day % 10 === 1 ? 'ST' : (day % 10 === 2 ? 'ND' : (day % 10 === 3 ? 'RD' : 'TH')));
+  return `${day}${suffix} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+}
+
+function formatAttachmentDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const day = d.getDate();
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const suffix = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : (day % 10 === 1 ? 'st' : (day % 10 === 2 ? 'nd' : (day % 10 === 3 ? 'rd' : 'th')));
+  return `${daysOfWeek[d.getDay()]}, ${day}${suffix} ${months[d.getMonth()]}, ${d.getFullYear()}`;
 }
 
 function setText(id, value) {
@@ -167,4 +170,8 @@ async function handleDownload() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}

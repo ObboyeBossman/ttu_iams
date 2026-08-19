@@ -405,24 +405,28 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.setFontSize(11);
   doc.text('Head, Industrial Liaison Office', LEFT, y);
 
-  // ── Block 15 — Verification code box  (fixed y=258) ────────────────────
-  doc.setDrawColor(136, 136, 136);
-  doc.setLineWidth(0.3);
-  doc.rect(LEFT, 258, BODY_W, 9);
-  doc.setFont('times', 'normal');
+  // ── Block 15 — NB Notice ───────────────────────────────────────────────
+  y += 8;
+  doc.setFont('times', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(68, 68, 68);
-  doc.text(
-    `Verification Code: ${formData.verification_code}  |  Verify at: ttu.edu.gh/verify/${formData.verification_code}`,
-    LEFT + BODY_W / 2,
-    264,
-    { align: 'center' }
-  );
+  doc.text('NB: 1. DO NOT ACCEPT THIS LETTER IF IT DOES NOT BEAR THE ORIGINAL STAMP', LEFT, y); y += 4;
+  doc.text('       2. DO NOT ACCEPT THIS LETTER IF THE STUDENT IS NOT PROPERLY DRESSED', LEFT, y);
 
-  // ── Block 16 — Footer image  (fixed y=268, x=15, 180×19 mm) ───────────
-  if (assets.footer.data) {
-    doc.addImage(assets.footer.data, 'PNG', 15, 268, 180, 19);
-  }
+  // ── Block 16 — Footer bar line and credits (fixed y=276) ───────────────
+  const FOOTER_Y = 276;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(LEFT, FOOTER_Y, RIGHT, FOOTER_Y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Powered by Directorate of ICT Services', LEFT, FOOTER_Y + 4);
+
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Code: ${formData.verification_code}`, RIGHT, FOOTER_Y + 4, { align: 'right' });
 
   return doc;
 }

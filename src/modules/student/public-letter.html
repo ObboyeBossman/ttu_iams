@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Generate Attachment Letter - Takoradi Technical University</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "dark-primary":                "#b2c5ff",
+            "dark-primary-container":      "#2a4482",
+            "dark-on-primary":             "#002d6f",
+            "dark-surface":                "#101415",
+            "dark-surface-container":      "#1d2024",
+            "dark-on-surface":             "#e1e2e9",
+            "dark-subtext":                "#c4c6d1",
+            "light-primary":               "#002058",
+            "light-surface":               "#f4f6fc",
+            "light-on-surface":            "#141b2b",
+            "ttu-accent":                  "#F0A500",
+          },
+          fontFamily: {
+            "display": ["Hanken Grotesk", "sans-serif"],
+            "body":    ["Inter", "sans-serif"],
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f4f6fc;
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-border: rgba(0, 32, 88, 0.12);
+      --heading: #002058;
+      --text: #141b2b;
+      --subtext: #444650;
+      --input-bg: #ffffff;
+      --input-border: #d1d5db;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101415;
+        --card-bg: rgba(29, 32, 36, 0.85);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --heading: #ffffff;
+        --text: #e1e2e9;
+        --subtext: #c4c6d1;
+        --input-bg: rgba(11, 15, 16, 0.6);
+        --input-border: #444650;
+      }
+    }
+
+    body { background-color: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; }
+    .card { background-color: var(--card-bg); border-color: var(--card-border); }
+    .heading-text { color: var(--heading); }
+    .subtext { color: var(--subtext); }
+
+    .form-input, .form-select {
+      background-color: var(--input-bg) !important;
+      border-color: var(--input-border) !important;
+      color: var(--text) !important;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: #002058 !important;
+      ring-color: rgba(0, 32, 88, 0.2) !important;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col relative">
+
+  <!-- Background -->
+  <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    <div class="absolute inset-0 bg-slate-900/60 dark:bg-black/80 z-10 backdrop-blur-[2px]"></div>
+    <img alt="University Campus Background" class="object-cover w-full h-full filter grayscale-[30%]" src="/assets/images/campus.jpeg"/>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="relative z-30 w-full bg-slate-900/80 backdrop-blur-md border-b border-white/10 text-white">
+    <nav class="w-full px-6 py-4 max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <img alt="TTU Logo" class="w-12 h-12 object-contain drop-shadow-md" src="/assets/logo/ttu_logo_no_text.png"/>
+        <div>
+          <h1 class="font-display font-bold text-lg leading-tight text-white">Takoradi Technical University</h1>
+          <p class="text-xs font-semibold uppercase tracking-wider text-amber-400">Industrial Liaison Office</p>
+        </div>
+      </div>
+      <div>
+        <a href="/src/modules/auth/login.html" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 hover:text-amber-400 transition-colors py-2 px-4 rounded-lg bg-white/10 hover:bg-white/20">
+          <span class="material-symbols-outlined text-lg">arrow_back</span>
+          Return to Sign In
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-grow flex w-full relative z-30 justify-center p-4 md:p-8 py-10">
+    <div class="w-full max-w-3xl">
+
+      <div class="card p-6 md:p-10 rounded-3xl border shadow-2xl backdrop-blur-xl relative">
+
+        <div class="mb-8 border-b border-slate-200 dark:border-slate-800 pb-6 text-center md:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 font-semibold text-xs uppercase tracking-wider mb-3">
+            <span class="material-symbols-outlined text-sm">badge</span> Public Service
+          </div>
+          <h2 class="font-display text-2xl md:text-3xl font-bold heading-text">Generate Industrial Attachment Letter</h2>
+          <p class="text-sm subtext mt-2">Enter your student information and target company details below to immediately generate and download your official TTU attachment letter.</p>
+        </div>
+
+        <form id="public-letter-form" class="space-y-8">
+
+          <!-- Section 1: Student Particulars -->
+          <div class="space-y-4">
+            <h3 class="text-base font-bold uppercase tracking-wider text-amber-500 flex items-center gap-2 border-b border-amber-500/20 pb-2">
+              <span class="material-symbols-outlined">person</span> 1. Student Information
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="full_name">Full Name <span class="text-red-500">*</span></label>
+                <input id="full_name" required type="text" placeholder="e.g. Emmanuel Mensah" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="index_number">Registration / Index Number <span class="text-red-500">*</span></label>
+                <input id="index_number" required type="text" placeholder="e.g. BC/IAS/24/112" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="programme">Programme of Study <span class="text-red-500">*</span></label>
+                <input id="programme" required type="text" placeholder="e.g. HND Electrical/Electronic Engineering" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="phone">Student Phone Number <span class="text-red-500">*</span></label>
+                <input id="phone" required type="tel" placeholder="e.g. 0241234567" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Company Details -->
+          <div class="space-y-4 pt-2">
+            <h3 class="text-base font-bold uppercase tracking-wider text-amber-500 flex items-center gap-2 border-b border-amber-500/20 pb-2">
+              <span class="material-symbols-outlined">business</span> 2. Company & Attachment Details
+            </h3>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="company_name">Company / Organization Name <span class="text-red-500">*</span></label>
+              <input id="company_name" required type="text" placeholder="e.g. Electricity Company of Ghana" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="region">Region <span class="text-red-500">*</span></label>
+                <select id="region" required class="form-select form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm">
+                  <option value="">-- Select Region --</option>
+                  <option value="Western Region">Western Region</option>
+                  <option value="Greater Accra Region">Greater Accra Region</option>
+                  <option value="Ashanti Region">Ashanti Region</option>
+                  <option value="Central Region">Central Region</option>
+                  <option value="Eastern Region">Eastern Region</option>
+                  <option value="Volta Region">Volta Region</option>
+                  <option value="Northern Region">Northern Region</option>
+                  <option value="Upper East Region">Upper East Region</option>
+                  <option value="Upper West Region">Upper West Region</option>
+                  <option value="Bono Region">Bono Region</option>
+                  <option value="Bono East Region">Bono East Region</option>
+                  <option value="Ahafo Region">Ahafo Region</option>
+                  <option value="Oti Region">Oti Region</option>
+                  <option value="Savannah Region">Savannah Region</option>
+                  <option value="North East Region">North East Region</option>
+                  <option value="Western North Region">Western North Region</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="city_town">City / Town <span class="text-red-500">*</span></label>
+                <input id="city_town" required type="text" placeholder="e.g. Takoradi" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="street_landmark">Street / Landmark Address <span class="text-red-500">*</span></label>
+              <input id="street_landmark" required type="text" placeholder="e.g. Harbour Road, Near Market Circle" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="contact_person">Contact Person / Addressee <span class="text-red-500">*</span></label>
+                <input id="contact_person" required type="text" placeholder="e.g. The Human Resource Manager" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5 subtext" for="company_contact_phone">Company Phone Number <span class="text-red-500">*</span></label>
+                <input id="company_contact_phone" required type="tel" placeholder="e.g. 0312012345" class="form-input w-full px-4 py-3 rounded-xl text-sm transition-all shadow-sm"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="pt-4">
+            <button id="submit-btn" type="submit"
+                    class="w-full flex justify-center items-center gap-2 py-4 px-6 rounded-xl font-display font-bold text-base bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-slate-950 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
+              <span class="material-symbols-outlined text-xl">download</span>
+              Generate & Download Letter
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-30 w-full bg-slate-950/80 border-t border-white/10 text-slate-400 py-6 text-center text-xs">
+    <p>© 2024 Takoradi Technical University. Industrial Liaison Office. All rights reserved.</p>
+  </footer>
+
+  <script type="module" src="./public-letter.js"></script>
+</body>
+</html>

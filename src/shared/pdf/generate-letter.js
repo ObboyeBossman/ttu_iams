@@ -223,12 +223,52 @@ function drawMixedBoldPara(doc, prefix, boldText, suffix, x, y, width, lineHeigh
 }
 
 // ---------------------------------------------------------------------------
+// Dynamic reference number generator
+// ---------------------------------------------------------------------------
+
+async function generateReferenceNumber() {
+  try {
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/letters?select=id`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Prefer: 'count=exact',
+          Range: '0-0',
+        },
+      });
+
+      if (res.ok) {
+        const contentRange = res.headers.get('content-range');
+        let totalCount = 0;
+        if (contentRange) {
+          const match = contentRange.match(/\/(\d+)$/);
+          if (match) totalCount = parseInt(match[1], 10);
+        }
+        const BASE_VOLUME = 8;
+        const volume = BASE_VOLUME + Math.floor(totalCount / 1000);
+        const sequence = (totalCount % 1000) + 1;
+        const seqPadded = String(sequence).padStart(3, '0');
+        return `TTU/ILO/IAP/VOL.${volume}/${seqPadded}`;
+      }
+    }
+  } catch (e) {
+    console.warn('[generate-letter] Could not compute dynamic reference number:', e);
+  }
+  return 'TTU/ILO/IAP/VOL.8/001';
+}
+
+// ---------------------------------------------------------------------------
 // PDF builder
 // ---------------------------------------------------------------------------
 
 async function buildPdf(formData, studentProfile, season, assets) {
   const jsPDF = await getJsPDF();
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const refNo = formData.reference_number || await generateReferenceNumber();
 
   // Layout constants — A4 is 210 × 297 mm
   const LEFT   = 20;
@@ -249,7 +289,7 @@ async function buildPdf(formData, studentProfile, season, assets) {
   doc.setFont('times', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text('TTU/ILO/IAP/VOL.2/16', LEFT, 45);
+  doc.text(refNo, LEFT, 45);
 
   // ── Block 3 — Date  (right-aligned, same y=45) ─────────────────────────
   const dateStr = formatLetterDate(

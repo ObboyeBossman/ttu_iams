@@ -32,111 +32,18 @@ function fetchSeason() {
 }
 
 function init() {
-  // Disallow anonymous access completely on page load
-  showAccessDeniedOnLoad();
-}
-
-function showAccessDeniedOnLoad() {
+  // Register submit listener synchronously to prevent default browser GET submits
   const form = document.getElementById('public-letter-form');
-  const loaderContainer = document.getElementById('processing-container');
-  if (form) form.classList.add('hidden');
-  if (loaderContainer) loaderContainer.classList.add('hidden');
-
-  let denied = document.getElementById('access-denied-panel');
-  if (!denied) {
-    denied = document.createElement('div');
-    denied.id = 'access-denied-panel';
-    denied.innerHTML = `
-      <div class="flex flex-col items-center justify-center gap-5 py-14 px-6 text-center">
-        <div class="relative flex items-center justify-center w-24 h-24 rounded-full bg-red-500/10 border-2 border-red-500/30">
-          <span class="material-symbols-outlined text-5xl text-red-400">lock</span>
-        </div>
-        <div class="space-y-2">
-          <h3 class="font-display font-bold text-2xl text-red-400">Access Denied</h3>
-          <p class="text-sm subtext max-w-sm mx-auto leading-relaxed">
-            Public attachment letter generation has been disabled.<br/>
-            Please sign in to your student account to access attachment services.
-          </p>
-        </div>
-        <div class="flex items-center gap-3 mt-2 px-5 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-          <span class="material-symbols-outlined text-amber-400">call</span>
-          <div class="text-left">
-            <p class="text-xs font-semibold uppercase tracking-wider text-amber-400">Contact Support</p>
-            <p class="text-sm font-bold text-amber-300">0593529509 — Bossman</p>
-          </div>
-        </div>
-        <a href="/src/modules/auth/login.html"
-          class="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-white transition-colors px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600">
-          <span class="material-symbols-outlined text-base">login</span>
-          Return to Sign In
-        </a>
-      </div>`;
-    const card = document.querySelector('.card') || document.body;
-    card.appendChild(denied);
-  } else {
-    denied.classList.remove('hidden');
+  if (form) {
+    form.addEventListener('submit', handleSubmit);
   }
-}
 
-// =============================================================================
-// TEMPORARY BLOCK — set to false to re-enable letter generation
-// =============================================================================
-const LETTER_GENERATION_BLOCKED = true;
+  // Pre-fetch season in background
+  fetchSeason();
+}
 
 async function handleSubmit(e) {
   e.preventDefault();
-
-  // ── Temporary access block ────────────────────────────────────────────────
-  if (LETTER_GENERATION_BLOCKED) {
-    // Hide form, show a styled access-denied screen
-    const form = document.getElementById('public-letter-form');
-    const loaderContainer = document.getElementById('processing-container');
-    if (form) form.classList.add('hidden');
-    if (loaderContainer) loaderContainer.classList.add('hidden');
-
-    // Inject or reveal the access-denied panel
-    let denied = document.getElementById('access-denied-panel');
-    if (!denied) {
-      denied = document.createElement('div');
-      denied.id = 'access-denied-panel';
-      denied.innerHTML = `
-        <div class="flex flex-col items-center justify-center gap-5 py-14 px-6 text-center">
-          <div class="relative flex items-center justify-center w-24 h-24 rounded-full bg-red-500/10 border-2 border-red-500/30">
-            <span class="material-symbols-outlined text-5xl text-red-400">lock</span>
-          </div>
-          <div class="space-y-2">
-            <h3 class="font-display font-bold text-2xl text-red-400">Access Denied</h3>
-            <p class="text-sm subtext max-w-sm mx-auto leading-relaxed">
-              Letter generation is temporarily unavailable.<br/>
-              Please contact support for assistance.
-            </p>
-          </div>
-          <div class="flex items-center gap-3 mt-2 px-5 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <span class="material-symbols-outlined text-amber-400">call</span>
-            <div class="text-left">
-              <p class="text-xs font-semibold uppercase tracking-wider text-amber-400">Contact Support</p>
-              <p class="text-sm font-bold text-amber-300">0593529509 — Bossman</p>
-            </div>
-          </div>
-          <button id="denied-back-btn"
-            class="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20">
-            <span class="material-symbols-outlined text-base">arrow_back</span>
-            Go Back
-          </button>
-        </div>`;
-      const card = document.querySelector('.card') || document.body;
-      card.appendChild(denied);
-
-      document.getElementById('denied-back-btn').addEventListener('click', () => {
-        denied.classList.add('hidden');
-        if (form) form.classList.remove('hidden');
-      });
-    } else {
-      denied.classList.remove('hidden');
-    }
-    return; // ← stop here; nothing below executes
-  }
-  // ── End temporary block ───────────────────────────────────────────────────
 
   const form = document.getElementById('public-letter-form');
   const loaderContainer = document.getElementById('processing-container');
@@ -210,11 +117,7 @@ async function handleSubmit(e) {
     updateProgress(90, 'Building document preview and preparing PDF package...');
 
     // 4. Save letter state in sessionStorage for instant preview
-    const payload = {
-      formData,
-      studentProfile,
-      season,
-    };
+    const payload = { formData, studentProfile, season };
     sessionStorage.setItem('last_generated_letter', JSON.stringify(payload));
 
     await new Promise((r) => setTimeout(r, 500));

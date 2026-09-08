@@ -31,6 +31,32 @@ async function init() {
 
     if (data && !error) {
       const currentYear = new Date().getFullYear();
+      let studentProfile = {
+        full_name: data.full_name,
+        index_number: data.index_number,
+        programme: data.programme,
+        phone: data.phone,
+      };
+
+      // If student_id is set and programme/name is missing on data, query student_profiles
+      if (data.student_id && (!studentProfile.full_name || !studentProfile.programme)) {
+        const { data: sp } = await supabase
+          .from('student_profiles')
+          .select('*')
+          .eq('id', data.student_id)
+          .maybeSingle();
+
+        if (sp) {
+          studentProfile.full_name = studentProfile.full_name || sp.full_name;
+          studentProfile.index_number = studentProfile.index_number || sp.index_number;
+          studentProfile.programme = studentProfile.programme || sp.programme || (sp.programme_type && sp.programme_name ? (sp.programme_name.toLowerCase().startsWith(sp.programme_type.toLowerCase()) ? sp.programme_name : `${sp.programme_type} in ${sp.programme_name}`) : sp.programme_name);
+          studentProfile.phone = studentProfile.phone || sp.phone;
+          studentProfile.level = sp.level;
+          studentProfile.programme_type = sp.programme_type;
+          studentProfile.programme_name = sp.programme_name;
+        }
+      }
+
       letterData = {
         formData: {
           company_name: data.company_name,
@@ -44,10 +70,13 @@ async function init() {
           season_id: data.season_id,
         },
         studentProfile: {
-          full_name: data.full_name || 'STUDENT NAME',
-          index_number: data.index_number || 'REG NUMBER',
-          programme: data.programme || 'PROGRAMME OF STUDY',
-          phone: data.phone || 'PHONE NUMBER',
+          full_name: studentProfile.full_name || 'STUDENT NAME',
+          index_number: studentProfile.index_number || 'REG NUMBER',
+          programme: studentProfile.programme || '',
+          phone: studentProfile.phone || 'PHONE NUMBER',
+          level: studentProfile.level || '',
+          programme_type: studentProfile.programme_type || '',
+          programme_name: studentProfile.programme_name || '',
         },
         season: {
           start_date: `${currentYear}-09-01`,
@@ -92,9 +121,9 @@ function renderPreview({ formData, studentProfile, season }) {
   setText('prev-company-name', (formData.company_name || 'GHANA REVENUE AUTHORITY').toUpperCase());
   setText('prev-city-town', (formData.city_town || 'TAKORADI').toUpperCase());
 
-  const rawProg = studentProfile.programme || 'Bachelor of Technology in Information Technology';
-  const progUppercase = rawProg.toUpperCase();
-  const degreeOnly = getDegreeOnly(rawProg);
+  const rawProg = getProgrammeString(studentProfile);
+  const progUppercase = rawProg ? rawProg.toUpperCase() : 'PROGRAMME OF STUDY';
+  const degreeOnly = getDegreeOnly(rawProg, studentProfile.level);
 
   setText('prev-programme', degreeOnly);
   setText('prev-programme-particulars', progUppercase);
@@ -107,17 +136,56 @@ function renderPreview({ formData, studentProfile, season }) {
   setText('prev-code', formData.verification_code || '0256895983');
 }
 
-function getDegreeOnly(str) {
-  if (!str) return 'Bachelor of Technology (B. Tech.)';
-  const parts = str.trim().split(/\s+in\s+/i);
-  let base = toTitleCase(parts[0]);
-  if (base.toLowerCase().includes('bachelor of technology') || base.toLowerCase().includes('btech') || base.toLowerCase().includes('b.tech')) {
-    return 'Bachelor of Technology (B. Tech.)';
+function getProgrammeString(sp) {
+  if (!sp) return '';
+  if (sp.programme) return sp.programme;
+  if (sp.programme_type || sp.programme_name) {
+    const type = (sp.programme_type || '').trim();
+    const name = (sp.programme_name || '').trim();
+    if (type && name) {
+      if (name.toLowerCase().startsWith(type.toLowerCase())) return name;
+      return `${type} in ${name}`;
+    }
+    return type || name;
   }
-  if (base.toLowerCase().includes('higher national diploma') || base.toLowerCase().includes('hnd')) {
+  if (sp.level) {
+    const lvl = String(sp.level).toLowerCase();
+    if (lvl.includes('hnd')) return 'Higher National Diploma';
+    if (lvl.includes('btech') || lvl.includes('b-tech') || lvl.includes('b.tech')) return 'Bachelor of Technology';
+  }
+  return '';
+}
+
+function getDegreeOnly(str, level = '') {
+  const s = String(str || '').trim();
+  const l = String(level || '').trim();
+  const sLower = s.toLowerCase();
+  const lLower = l.toLowerCase();
+
+  if (sLower.includes('higher national diploma') || sLower.includes('hnd') || lLower.includes('hnd')) {
     return 'Higher National Diploma (HND)';
   }
-  return base;
+  if (
+    sLower.includes('bachelor of technology') ||
+    sLower.includes('btech') ||
+    sLower.includes('b.tech') ||
+    sLower.includes('b-tech') ||
+    lLower.includes('btech') ||
+    lLower.includes('b-tech') ||
+    lLower.includes('b.tech')
+  ) {
+    return 'Bachelor of Technology (B. Tech.)';
+  }
+  if (sLower.includes('diploma') || lLower.includes('diploma')) {
+    return 'Diploma';
+  }
+
+  if (s) {
+    const parts = s.split(/\s+in\s+/i);
+    return toTitleCase(parts[0]);
+  }
+
+  return 'Higher National Diploma (HND)';
 }
 
 function toTitleCase(str) {

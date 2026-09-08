@@ -471,11 +471,40 @@ async function handleGenerateLetter(e) {
   btn.disabled = true;
   btn.textContent = 'Generating…';
 
+  let studentProfile = null;
+  try {
+    const { data } = await supabase
+      .from('student_profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+    studentProfile = data;
+  } catch (err) {
+    console.warn('[dashboard] Failed to pre-fetch student_profiles:', err);
+  }
+
+  const resolvedProg = studentProfile?.programme ||
+    (studentProfile?.programme_type && studentProfile?.programme_name
+      ? (studentProfile.programme_name.toLowerCase().startsWith(studentProfile.programme_type.toLowerCase())
+          ? studentProfile.programme_name
+          : `${studentProfile.programme_type} in ${studentProfile.programme_name}`)
+      : studentProfile?.programme_name) ||
+    (studentProfile?.level?.toLowerCase().includes('hnd') ? 'Higher National Diploma' : '');
+
+  const enrichedProfile = {
+    ...studentProfile,
+    programme: resolvedProg,
+  };
+
   const { data: letter, error } = await generateLetter({
     student_id: userId,
     season_id:  _season.id,
     company_name, contact_person, company_contact_phone,
     region, city_town, street_landmark,
+    full_name: studentProfile?.full_name,
+    index_number: studentProfile?.index_number,
+    programme: resolvedProg,
+    phone: studentProfile?.phone,
   });
 
   btn.disabled = false;
@@ -501,12 +530,7 @@ async function handleGenerateLetter(e) {
 
   // Trigger PDF download
   try {
-    const { data: studentProfile } = await supabase
-      .from('student_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    await generateAndDownloadLetter(letter, studentProfile, _season);
+    await generateAndDownloadLetter(letter, enrichedProfile, _season);
     showToast(`Letter for ${letter.company_name} recorded and downloaded.`, 'success');
   } catch (err) {
     console.error('PDF Generation Error:', err);

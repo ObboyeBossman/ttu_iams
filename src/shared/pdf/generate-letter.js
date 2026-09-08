@@ -320,7 +320,8 @@ async function buildPdf(formData, studentProfile, season, assets) {
   y += 7;
   doc.setFont('times', 'normal');
   doc.setFontSize(12);
-  const degreeOnly = getDegreeOnly(studentProfile.programme || 'Bachelor of Technology in Information Technology');
+  const rawProg = getProgrammeString(studentProfile);
+  const degreeOnly = getDegreeOnly(rawProg, studentProfile?.level);
   const p1 = `Students of Takoradi Technical University pursuing ${degreeOnly} are expected to undergo practical industrial training in industry as part of the requirements for the award of their certificate.`;
   const p1lines = doc.splitTextToSize(p1, BODY_W);
   doc.text(p1lines, LEFT, y, { align: 'justify', maxWidth: BODY_W });
@@ -357,7 +358,7 @@ async function buildPdf(formData, studentProfile, season, assets) {
   for (const item of [
     { label: 'REGISTRATION NUMBER: ', val: studentProfile.index_number },
     { label: 'NAME: ',                val: (studentProfile.full_name ?? '').toUpperCase() },
-    { label: 'PROGRAMME: ',           val: (studentProfile.programme ?? '').toUpperCase() },
+    { label: 'PROGRAMME: ',           val: (rawProg ?? '').toUpperCase() },
     { label: 'CONTACT NUMBER: ',       val: studentProfile.phone },
   ]) {
     doc.setFont('times', 'bold');
@@ -455,17 +456,56 @@ export async function generateAndDownloadLetter(formData, studentProfile, season
   return { data: { letterRow: true }, error: null };
 }
 
-function getDegreeOnly(str) {
-  if (!str) return 'Bachelor of Technology (B. Tech.)';
-  const parts = str.trim().split(/\s+in\s+/i);
-  let base = toTitleCase(parts[0]);
-  if (base.toLowerCase().includes('bachelor of technology') || base.toLowerCase().includes('btech') || base.toLowerCase().includes('b.tech')) {
-    return 'Bachelor of Technology (B. Tech.)';
+function getProgrammeString(sp) {
+  if (!sp) return '';
+  if (sp.programme) return sp.programme;
+  if (sp.programme_type || sp.programme_name) {
+    const type = (sp.programme_type || '').trim();
+    const name = (sp.programme_name || '').trim();
+    if (type && name) {
+      if (name.toLowerCase().startsWith(type.toLowerCase())) return name;
+      return `${type} in ${name}`;
+    }
+    return type || name;
   }
-  if (base.toLowerCase().includes('higher national diploma') || base.toLowerCase().includes('hnd')) {
+  if (sp.level) {
+    const lvl = String(sp.level).toLowerCase();
+    if (lvl.includes('hnd')) return 'Higher National Diploma';
+    if (lvl.includes('btech') || lvl.includes('b-tech') || lvl.includes('b.tech')) return 'Bachelor of Technology';
+  }
+  return '';
+}
+
+function getDegreeOnly(str, level = '') {
+  const s = String(str || '').trim();
+  const l = String(level || '').trim();
+  const sLower = s.toLowerCase();
+  const lLower = l.toLowerCase();
+
+  if (sLower.includes('higher national diploma') || sLower.includes('hnd') || lLower.includes('hnd')) {
     return 'Higher National Diploma (HND)';
   }
-  return base;
+  if (
+    sLower.includes('bachelor of technology') ||
+    sLower.includes('btech') ||
+    sLower.includes('b.tech') ||
+    sLower.includes('b-tech') ||
+    lLower.includes('btech') ||
+    lLower.includes('b-tech') ||
+    lLower.includes('b.tech')
+  ) {
+    return 'Bachelor of Technology (B. Tech.)';
+  }
+  if (sLower.includes('diploma') || lLower.includes('diploma')) {
+    return 'Diploma';
+  }
+
+  if (s) {
+    const parts = s.split(/\s+in\s+/i);
+    return toTitleCase(parts[0]);
+  }
+
+  return 'Higher National Diploma (HND)';
 }
 
 function toTitleCase(str) {

@@ -3,12 +3,20 @@
    Extracted from Prototype
    ============================================================================= */
 
+/* Container overflow isolation */
+#view-register-placement {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
 /* Floating interactive background blobs */
 .ambient-glow-1, .ambient-glow-2 {
   position: absolute;
   border-radius: 50%;
   filter: blur(140px);
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   opacity: 0.18;
   mix-blend-mode: screen;
@@ -48,9 +56,13 @@
    FULL-WIDTH UTILIZATION SHELL
    ------------------------------------------------------------- */
 .wizard-shell {
-  max-width: 100%;
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-2xl) var(--space-4xl);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
 }
 
 /* Spacious Adaptive Grid */
@@ -59,11 +71,19 @@
   grid-template-columns: 1fr;
   gap: var(--space-2xl);
   align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 @media (min-width: 1024px) {
   .main-workspace-grid {
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   }
+}
+
+.left-workspace-column,
+.sidebar-panel {
+  min-width: 0;
+  width: 100%;
 }
 
 /* Form panel card styling */
@@ -441,10 +461,11 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--border-default);
   font-size: 14px;
+  gap: 16px;
 }
 .review-row:last-child { border-bottom: none; }
-.review-row .k { color: var(--text-secondary); }
-.review-row .v { font-weight: 600; color: var(--text-primary); text-align: right; }
+.review-row .k { color: var(--text-secondary); flex-shrink: 0; }
+.review-row .v { font-weight: 600; color: var(--text-primary); text-align: right; word-break: break-word; min-width: 0; }
 
 /* --- Guidance Hub Accordeon --- */
 .guidance-title {

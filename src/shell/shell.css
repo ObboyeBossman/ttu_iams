@@ -1541,6 +1541,9 @@ body {
 .content-area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1551,6 +1554,10 @@ body {
 
 .page-view {
   display: none;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
 }
 
 .page-view.active {

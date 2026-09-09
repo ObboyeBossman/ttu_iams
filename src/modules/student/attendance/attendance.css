@@ -170,10 +170,84 @@
   margin-top: 12px;
 }
 
+#view-attendance .att-biometric-overlay {
+  background: linear-gradient(135deg, #091536 0%, #102456 100%);
+  border: 1px solid rgba(240, 165, 0, 0.3);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: #FFFFFF;
+}
+
 #view-attendance .att-biometric-overlay.active {
   max-height: 550px;
   opacity: 1;
-  margin-top: 12px;
+  margin-top: 16px;
+  padding: 24px;
+}
+
+#view-attendance .att-bio-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 4px;
+}
+
+#view-attendance .att-bio-tab-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+#view-attendance .att-bio-tab-btn.active {
+  background: var(--ttu-gold);
+  color: var(--ttu-blue-dark);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(240, 165, 0, 0.3);
+}
+
+#view-attendance .att-viewfinder-hud {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 3px solid var(--ttu-gold);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background: #000000;
+  box-shadow: 0 0 24px rgba(240, 165, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+/* Reticle ring around viewfinder */
+#view-attendance .att-viewfinder-hud::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(240, 165, 0, 0.5);
+  animation: attReticleSpin 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes attReticleSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Live Camera Laser Scanner */

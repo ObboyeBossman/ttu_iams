@@ -154,6 +154,8 @@ function _wireEvents() {
   });
 
   document.getElementById('att-bio-face-btn')?.addEventListener('click', () => {
+    document.getElementById('att-bio-face-btn')?.classList.add('active');
+    document.getElementById('att-bio-finger-btn')?.classList.remove('active');
     document.getElementById('att-face-scanner')?.classList.remove('hidden');
     document.getElementById('att-finger-scanner')?.classList.add('hidden');
     _startLiveFaceScan(true);
@@ -161,6 +163,8 @@ function _wireEvents() {
 
   document.getElementById('att-bio-finger-btn')?.addEventListener('click', () => {
     _stopCameraStream();
+    document.getElementById('att-bio-finger-btn')?.classList.add('active');
+    document.getElementById('att-bio-face-btn')?.classList.remove('active');
     document.getElementById('att-finger-scanner')?.classList.remove('hidden');
     document.getElementById('att-face-scanner')?.classList.add('hidden');
   });

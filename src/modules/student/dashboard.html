@@ -532,47 +532,52 @@
 
                 <!-- Biometric Overlay -->
                 <div class="att-biometric-overlay" id="att-biometric-overlay">
-                  <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Biometric Verification</h3>
-                  <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Please verify your identity to finalize check-in.</p>
-                  
-                  <div style="display:flex;gap:12px;margin-bottom:16px;">
-                    <button class="btn btn-outline" id="att-bio-face-btn" style="flex:1;">
-                      <i data-lucide="camera"></i> Face Match
-                    </button>
-                    <button class="btn btn-outline" id="att-bio-finger-btn" style="flex:1;">
-                      <i data-lucide="fingerprint"></i> Fingerprint
-                    </button>
+                  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:14px;">
+                    <div>
+                      <span style="font-size:10px;font-weight:800;background:var(--ttu-gold);color:var(--ttu-blue-dark);padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.06em;display:inline-block;margin-bottom:6px;">BIOMETRIC AUTHENTICATION</span>
+                      <h3 style="font-size:16px;font-weight:800;color:#FFFFFF;margin:0;">Identity Verification Scanner</h3>
+                    </div>
+                    <div class="att-bio-tabs" style="min-width:240px;">
+                      <button type="button" class="att-bio-tab-btn active" id="att-bio-face-btn">
+                        <i data-lucide="scan-face" style="width:14px;height:14px;"></i> Face Match
+                      </button>
+                      <button type="button" class="att-bio-tab-btn" id="att-bio-finger-btn">
+                        <i data-lucide="fingerprint" style="width:14px;height:14px;"></i> Fingerprint
+                      </button>
+                    </div>
                   </div>
 
                   <!-- Face Scanner UI (Real-Time Live Camera & Biometric Recognition) -->
-                  <div id="att-face-scanner" class="hidden" style="text-align:center;margin-bottom:16px;">
-                    <div class="att-viewfinder" id="att-viewfinder" style="width:140px;height:140px;border-radius:50%;border:3px solid var(--ttu-gold);margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#000000;box-shadow:0 0 20px rgba(240, 165, 0, 0.25);transition:all 0.3s ease;">
+                  <div id="att-face-scanner" style="text-align:center;margin-bottom:16px;">
+                    <div class="att-viewfinder-hud att-viewfinder" id="att-viewfinder">
                       <video id="att-camera-feed" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1);"></video>
-                      <i data-lucide="user" style="width:48px;height:48px;color:var(--text-muted);" id="att-face-icon"></i>
+                      <i data-lucide="user" style="width:52px;height:52px;color:rgba(255,255,255,0.4);" id="att-face-icon"></i>
                       <div class="att-scan-laser" id="att-scan-laser"></div>
                     </div>
-                    <div style="margin-top:12px;display:flex;justify-content:center;gap:8px;">
-                      <button type="button" class="btn btn-primary" id="att-start-camera-btn" style="font-size:12px;padding:6px 14px;">
-                        <i data-lucide="video"></i> Start Live Camera Scan
+
+                    <div style="margin-top:14px;display:flex;justify-content:center;gap:10px;">
+                      <button type="button" class="btn btn-primary" id="att-start-camera-btn" style="font-size:12px;padding:7px 16px;">
+                        <i data-lucide="video" style="width:14px;height:14px;"></i> Start Live Camera Scan
                       </button>
-                      <button type="button" class="btn btn-ghost" id="att-sim-face-btn" style="font-size:12px;padding:6px 12px;color:var(--ttu-gold);">
-                        <i data-lucide="sparkles"></i> Auto Detect
+                      <button type="button" class="btn btn-ghost" id="att-sim-face-btn" style="font-size:12px;padding:7px 16px;color:var(--ttu-gold);border:1px solid rgba(240,165,0,0.4);">
+                        <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Auto Detect
                       </button>
                     </div>
-                    <div id="att-face-status" style="font-size:12px;color:var(--ttu-gold);margin-top:10px;font-weight:700;min-height:18px;"></div>
+                    <div id="att-face-status" style="font-size:12.5px;color:var(--ttu-gold);margin-top:12px;font-weight:700;min-height:20px;"></div>
                   </div>
 
                   <!-- Fingerprint Scanner UI -->
                   <div id="att-finger-scanner" class="hidden" style="text-align:center;margin-bottom:16px;">
-                    <div id="att-finger-pad" style="width:80px;height:100px;border:2px solid var(--border-strong);border-radius:20px;margin:0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg-prefix);transition:all 0.3s;box-shadow:inset 0 0 10px rgba(0,0,0,0.1);">
-                      <i data-lucide="fingerprint" style="width:40px;height:40px;color:var(--text-muted);" id="att-finger-icon"></i>
+                    <div id="att-finger-pad" style="width:90px;height:110px;border:2px solid var(--ttu-gold);border-radius:24px;margin:0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(255,255,255,0.05);transition:all 0.3s;box-shadow:0 0 15px rgba(240,165,0,0.2);">
+                      <i data-lucide="fingerprint" style="width:48px;height:48px;color:rgba(255,255,255,0.5);" id="att-finger-icon"></i>
                     </div>
-                    <p style="font-size:11px;color:var(--text-secondary);margin-top:8px;">Touch sensor to verify</p>
-                    <div id="att-finger-status" style="font-size:12px;color:var(--ttu-gold);margin-top:8px;font-weight:700;"></div>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:10px;">Touch sensor to scan fingerprint vector</p>
+                    <div id="att-finger-status" style="font-size:12.5px;color:var(--ttu-gold);margin-top:8px;font-weight:700;"></div>
                   </div>
 
-                  <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button class="btn btn-ghost" id="att-bio-cancel-btn" style="padding:8px 16px;font-size:12px;">Cancel</button>
+                  <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:14px;margin-top:12px;">
+                    <span style="font-size:11.5px;color:rgba(255,255,255,0.6);"><i data-lucide="shield-check" style="width:13px;height:13px;vertical-align:middle;color:var(--ttu-gold);"></i> Encrypted biometric trace</span>
+                    <button type="button" class="btn btn-ghost" id="att-bio-cancel-btn" style="padding:6px 14px;font-size:12px;color:rgba(255,255,255,0.8);">Cancel</button>
                   </div>
                 </div>
 

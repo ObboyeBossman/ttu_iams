@@ -763,7 +763,9 @@
                   </li>
                   <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
                     <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
-                    Offline drafts with automatic IndexedDB sync
+                  <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
+                    <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
+                    Automatic offline drafting &amp; device auto-save
                   </li>
                   <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
                     <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
@@ -831,14 +833,14 @@
               </div>
             </div>
 
-            <!-- Card 4: IndexedDB Engine -->
+            <!-- Card 4: Device Auto-Save -->
             <div class="card" style="padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm);">
               <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(139, 92, 246, 0.12); color: #8B5CF6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i data-lucide="database" style="width: 22px; height: 22px;"></i>
+                <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
               </div>
               <div>
-                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Offline Draft Sync</span>
-                <h4 style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 2px 0 0 0;" id="lbStatSyncStatus">IndexedDB Active ✔</h4>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Auto-Save Protection</span>
+                <h4 style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 2px 0 0 0;" id="lbStatSyncStatus">Saved on device ✔</h4>
               </div>
             </div>
           </div>
@@ -856,8 +858,8 @@
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
                       <span style="font-size:11px; font-weight:800; color:var(--ttu-gold); text-transform:uppercase; letter-spacing:0.06em;">Industrial Attachment Logbook</span>
                       <div class="db-indicator" id="autosaveIndicator">
-                        <i data-lucide="database" style="width:12px; height:12px;"></i>
-                        <span id="autosaveStatusText">IndexedDB Locked ✔</span>
+                        <i data-lucide="check-circle" style="width:12px; height:12px;"></i>
+                        <span id="autosaveStatusText">Saved on device ✔</span>
                       </div>
                     </div>
                     <h2 style="font-size:22px; font-weight:800; color:var(--text-primary); margin:0;" id="weekRangeLabel">Week 1 Logbook Entry</h2>

@@ -39,12 +39,12 @@ function _flashSaved() {
   const text = document.getElementById('autosaveStatusText');
   if (!ind || !text) return;
   ind.className = 'db-indicator saving';
-  text.textContent = 'IndexedDB Autosaving…';
+  text.textContent = 'Saving draft…';
   setTimeout(() => {
     ind.className = 'db-indicator';
-    text.textContent = _lb.incognitoSimulated ? 'Memory Cache Only ⚠️' : 'IndexedDB Draft Saved ✔';
+    text.textContent = _lb.incognitoSimulated ? 'Temporary memory mode ⚠️' : 'Draft saved on device ✔';
     document.getElementById('lastSyncStamp').textContent =
-      `Autosaved: ${new Date().toLocaleTimeString()}`;
+      `Auto-saved: ${new Date().toLocaleTimeString()}`;
   }, 600);
 }
 
@@ -159,7 +159,7 @@ function _updateTelemetryStats() {
   if (certCountEl) certCountEl.textContent = `${certCount} Week${certCount !== 1 ? 's' : ''} Certified`;
 
   if (syncStatusEl) {
-    syncStatusEl.textContent = _lb.isOnline ? 'IndexedDB Active ✔' : 'Working Offline ⚠️';
+    syncStatusEl.textContent = _lb.isOnline ? 'Saved on device ✔' : 'Working offline ⚠️';
   }
 }
 
@@ -790,7 +790,7 @@ async function _renderInPageDailyLogs(week) {
         <p style="font-size:11.5px; color:var(--text-secondary); margin:2px 0 0 0;">Record technical tasks, tools used, and safety precautions observed for each working day.</p>
       </div>
       <span style="font-size:11px; font-weight:700; background:rgba(240,165,0,0.12); color:var(--ttu-gold); padding:3px 10px; border-radius:12px; border:1px solid rgba(240,165,0,0.25);">
-        ${isLocked ? '🔒 View Only' : '⚡ Auto-saves to IndexedDB'}
+        ${isLocked ? '🔒 View Only' : '⚡ Auto-saves as you type'}
       </span>
     </div>
     <div class="daily-cards-container" style="display:flex; flex-direction:column; gap:14px;">

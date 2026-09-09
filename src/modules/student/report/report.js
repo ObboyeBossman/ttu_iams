@@ -275,6 +275,18 @@ function _wireEvents() {
     _showPanel('stagePathSelection');
   };
 
+  const rptBypass = document.getElementById('rptBypassBtn');
+  if (rptBypass) {
+    rptBypass.onclick = () => {
+      localStorage.setItem('iams_bypass_paywall', 'true');
+      localStorage.setItem('iams_bypass_attachment_report', 'true');
+      _ctrl.hasPaid = true;
+      showToast('Paywall bypassed (Demo Mode active). Unlocking AI Report Assistant…', 'success');
+      _setStep(3, 'Supplementary Input Form', 'Provide organization context for report alignment.');
+      _showPanel('stageSupplementaryForm');
+    };
+  }
+
   // Payment Submit Form
   document.getElementById('paymentForm').onsubmit = async (e) => {
     e.preventDefault();

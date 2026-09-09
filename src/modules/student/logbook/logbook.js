@@ -1310,6 +1310,17 @@ function _wireLogbookPaymentGate() {
   const amountEl = document.getElementById('lbGateAmount');
   if (amountEl) amountEl.textContent = formatGHS(PAYMENT_FEES_PESEWAS.logbook_access);
 
+  const bypassBtn = document.getElementById('lbBypassBtn');
+  if (bypassBtn && !bypassBtn.dataset.wired) {
+    bypassBtn.dataset.wired = '1';
+    bypassBtn.onclick = async () => {
+      localStorage.setItem('iams_bypass_paywall', 'true');
+      localStorage.setItem('iams_bypass_logbook_access', 'true');
+      showToast('Paywall bypassed (Demo Mode active). Unlocking Digital Logbook…', 'success');
+      await initLogbook(_lb.studentId, _lb.seasonId, _lb.placement);
+    };
+  }
+
   const btn = document.getElementById('lbPayBtn');
   if (!btn || btn.dataset.wired) return; // don't double-bind on re-entry
   btn.dataset.wired = '1';

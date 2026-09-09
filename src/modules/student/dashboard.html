@@ -765,6 +765,9 @@
                 <button type="button" class="btn btn-primary" id="lbPayBtn" style="width: 100%; height: 44px; font-size: 14px; font-weight: 600;">
                   <i data-lucide="credit-card"></i> Pay with Paystack
                 </button>
+                <button type="button" class="btn btn-ghost" id="lbBypassBtn" style="width: 100%; height: 38px; font-size: 12.5px; font-weight: 600; margin-top: 8px; color: var(--ttu-gold); border: 1px dashed var(--border-strong);">
+                  <i data-lucide="unlock"></i> Bypass Paywall (Dev / Demo Mode)
+                </button>
                 <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 12px 0 0 0;">
                   Instant activation via Mobile Money or Bank Card.
                 </p>
@@ -1062,9 +1065,12 @@
                 <form id="paymentForm" novalidate style="margin-top: 20px;">
                   <p style="font-size:13px; color:var(--text-secondary); margin-bottom: 24px;">Click below to authorize your one-time payment securely via Paystack. All major networks and cards are supported.</p>
                   
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; flex-wrap:wrap; gap:10px;">
                     <button type="button" class="btn btn-ghost" id="btnPaymentBack"><i data-lucide="arrow-left"></i> Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btnPaymentSubmit"><i data-lucide="credit-card"></i> Pay with Paystack</button>
+                    <div style="display:flex; gap:8px;">
+                      <button type="button" class="btn btn-outline" id="rptBypassBtn" style="font-size:12.5px; border-color:var(--ttu-gold); color:var(--ttu-gold);"><i data-lucide="unlock"></i> Dev Bypass</button>
+                      <button type="submit" class="btn btn-primary" id="btnPaymentSubmit"><i data-lucide="credit-card"></i> Pay with Paystack</button>
+                    </div>
                   </div>
                 </form>
               </div>

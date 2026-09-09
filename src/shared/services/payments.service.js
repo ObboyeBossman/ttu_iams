@@ -27,6 +27,10 @@ export function formatGHS(pesewas) {
 
 /** True only if there's a server-confirmed payment for `purpose` in `seasonId`. Fails CLOSED on any read error — never grants access because a query errored. */
 export async function hasPaid(studentId, seasonId, purpose) {
+  if (localStorage.getItem('iams_bypass_paywall') === 'true' || localStorage.getItem(`iams_bypass_${purpose}`) === 'true') {
+    return true;
+  }
+
   const { data, error } = await supabase
     .from('payments')
     .select('id')

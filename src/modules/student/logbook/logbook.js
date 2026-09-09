@@ -95,14 +95,27 @@ function _esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Org profile sidebar ───────────────────────────────────────────────────────
+// ── Org profile sidebar & Telemetry ───────────────────────────────────────────
 function renderOrgProfileDetails() {
   const container = document.getElementById('profileDetailsContainer');
+  const orgNameEl = document.getElementById('orgNameBadge');
+  const lbCompanyEl = document.getElementById('lbStatCompany');
+
+  const companyName = _lb.placement?.company_name || 'Ghana Ports & Harbours Authority';
+  if (orgNameEl) orgNameEl.textContent = companyName;
+  if (lbCompanyEl) lbCompanyEl.textContent = companyName;
+
   if (!container) return;
 
-  const addr = [_lb.placement?.street_landmark, _lb.placement?.city_town, _lb.placement?.region].filter(Boolean).join(', ') || '—';
-  const nature = _lb.placement?.nature_of_business ?? '—';
+  const addr = [_lb.placement?.street_landmark, _lb.placement?.city_town, _lb.placement?.region].filter(Boolean).join(', ') || 'Takoradi Port, Western Region';
+  const nature = _lb.placement?.nature_of_business ?? 'Port Operations & Logistics';
+  const supervisorPhone = _lb.placement?.supervisor_phone ?? '+233 302 811 200';
   const supervisorEmail = _lb.placement?.supervisor_email ?? 'e.appiah@tullow.com.gh';
+
+  const natureEl = document.getElementById('orgNatureBadge');
+  const addrEl   = document.getElementById('orgAddressBadge');
+  if (natureEl) natureEl.textContent = nature;
+  if (addrEl)   addrEl.textContent   = addr;
 
   container.innerHTML = `
     <div class="profile-row">
@@ -113,15 +126,41 @@ function renderOrgProfileDetails() {
       <span class="profile-lbl">Official Address:</span>
       <span class="profile-val">${_esc(addr)}</span>
     </div>
-    <div class="profile-row" style="background: rgba(240, 165, 0, 0.1); padding: 4px; border-radius: 4px;">
+    <div class="profile-row" style="background: rgba(240, 165, 0, 0.1); padding: 6px 8px; border-radius: 4px; margin-top: 6px;">
       <span class="profile-lbl" style="color:var(--ttu-gold-light);">Supervisor Contact:</span>
-      <span class="profile-val" style="color:var(--ttu-gold-light);">+233 302 611 200</span>
+      <span class="profile-val" style="color:var(--ttu-gold-light);">${_esc(supervisorPhone)}</span>
     </div>
-    <div class="profile-row" style="background: rgba(240, 165, 0, 0.1); padding: 4px; border-radius: 4px;">
+    <div class="profile-row" style="background: rgba(240, 165, 0, 0.1); padding: 6px 8px; border-radius: 4px;">
       <span class="profile-lbl" style="color:var(--ttu-gold-light);">Supervisor Email:</span>
       <span class="profile-val" style="color:var(--ttu-gold-light);">${_esc(supervisorEmail)}</span>
     </div>
   `;
+
+  _updateTelemetryStats();
+}
+
+function _updateTelemetryStats() {
+  const companyEl   = document.getElementById('lbStatCompany');
+  const weekProgEl  = document.getElementById('lbStatWeekProgress');
+  const pctEl       = document.getElementById('lbStatPct');
+  const certCountEl = document.getElementById('lbStatCertCount');
+  const syncStatusEl= document.getElementById('lbStatSyncStatus');
+
+  if (companyEl) companyEl.textContent = _lb.placement?.company_name || 'Ghana Ports & Harbours';
+
+  const totalWeeks = Math.max(_lb.weeks.length, 12);
+  const activeWeekNum = (_lb.weeks[_lb.activeWeekIdx]?.week_number) ?? 1;
+  const pct = Math.round((activeWeekNum / totalWeeks) * 100);
+
+  if (weekProgEl)  weekProgEl.textContent  = `Week ${activeWeekNum} / ${totalWeeks}`;
+  if (pctEl)         pctEl.textContent       = `${pct}%`;
+
+  const certCount = _lb.weeks.filter(w => w.status === 'certified').length;
+  if (certCountEl) certCountEl.textContent = `${certCount} Week${certCount !== 1 ? 's' : ''} Certified`;
+
+  if (syncStatusEl) {
+    syncStatusEl.textContent = _lb.isOnline ? 'IndexedDB Active ✔' : 'Working Offline ⚠️';
+  }
 }
 
 // ── Month/Week drill-down accordion ───────────────────────────────────────────
@@ -745,11 +784,128 @@ function _updateCertBox(status) {
   if (window.lucide) window.lucide.createIcons();
 }
 
+// ── In-page Daily Activity Logs rendering ──────────────────────────────────────
+async function _renderInPageDailyLogs(week) {
+  const container = document.getElementById('dailyLogsInputs');
+  if (!container) return;
+
+  const isLocked = week.status === 'submitted' || week.status === 'certified' || _lb.logbookFinalized;
+  const DAYS_FULL = _lb.gap4Days === '5day'
+    ? ['Monday','Tuesday','Wednesday','Thursday','Friday']
+    : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const DAYS_SHORT = _lb.gap4Days === '5day'
+    ? ['Mon','Tue','Wed','Thu','Fri']
+    : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  const monday = new Date(week.week_start);
+
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-default);">
+      <div>
+        <h4 style="font-size:14.5px; font-weight:800; color:var(--text-primary); margin:0; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="book-open-check" style="width:16px;height:16px;color:var(--ttu-gold);"></i>
+          <span>Daily Activity Logs</span>
+        </h4>
+        <p style="font-size:11.5px; color:var(--text-secondary); margin:2px 0 0 0;">Record technical tasks, tools used, and safety precautions observed for each working day.</p>
+      </div>
+      <span style="font-size:11px; font-weight:700; background:rgba(240,165,0,0.12); color:var(--ttu-gold); padding:3px 10px; border-radius:12px; border:1px solid rgba(240,165,0,0.25);">
+        ${isLocked ? '🔒 View Only' : '⚡ Auto-saves to IndexedDB'}
+      </span>
+    </div>
+    <div class="daily-cards-container" style="display:flex; flex-direction:column; gap:14px;">
+  `;
+
+  for (let i = 0; i < DAYS_FULL.length; i++) {
+    const day = DAYS_FULL[i];
+    const date = new Date(monday); date.setDate(date.getDate() + i);
+    const dateStr = date.toISOString().split('T')[0];
+    const shortDay = DAYS_SHORT[i];
+    const dotKey = `${week.id}_dot_${shortDay}`;
+    const status = _lb._dotStatus?.[dotKey] ?? 'empty';
+    const previewKey = `${week.id}_${dateStr}`;
+    let val = _lb._dayPreviews?.[previewKey] ?? '';
+
+    if (!val) {
+      val = await _lbDraftGet(`${week.id}_${dateStr}`);
+    }
+
+    const formattedDate = date.toLocaleDateString('en-GH', { month: 'short', day: 'numeric', year: 'numeric' });
+    const isToday = date.toDateString() === new Date().toDateString();
+
+    const statusBadge = status === 'done'
+      ? `<span class="badge-status present" style="background:var(--green-bg); color:var(--green); font-size:10.5px; padding:2px 8px; border-radius:4px; font-weight:700;"><i data-lucide="check" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Saved</span>`
+      : status === 'draft'
+      ? `<span class="badge-status" style="background:var(--amber-bg); color:var(--amber); font-size:10.5px; padding:2px 8px; border-radius:4px; font-weight:700;"><i data-lucide="pencil" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Draft</span>`
+      : `<span class="badge-status" style="background:var(--bg-prefix); color:var(--text-muted); font-size:10.5px; padding:2px 8px; border-radius:4px; font-weight:600;">Empty</span>`;
+
+    html += `
+      <div class="daily-entry-card" style="background:var(--bg-prefix); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:14px 16px; transition:all 0.2s; ${isToday ? 'border-color:var(--ttu-gold); box-shadow:0 0 12px rgba(240,165,0,0.12);' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:34px; height:34px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-default); color:var(--ttu-gold); font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center;">
+              ${shortDay}
+            </div>
+            <div>
+              <div style="font-size:13.5px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+                ${day} <span style="font-size:11.5px; font-weight:600; color:var(--text-muted); font-family:var(--font-mono);">${formattedDate}</span>
+                ${isToday ? '<span style="background:var(--ttu-gold); color:var(--ttu-blue-dark); font-size:9px; font-weight:800; padding:1px 5px; border-radius:3px; text-transform:uppercase;">Today</span>' : ''}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            ${statusBadge}
+            <button type="button" class="btn btn-ghost btn-sm lb-day-modal-trigger" data-weekid="${week.id}" data-day="${day}" data-date="${dateStr}" data-daylabel="${shortDay}" data-locked="${isLocked}" style="font-size:11px; padding:3px 9px; height:26px; border:1px solid var(--border-default); border-radius:6px;">
+              <i data-lucide="maximize-2" style="width:11px;height:11px;margin-right:4px;"></i> Full Editor
+            </button>
+          </div>
+        </div>
+
+        <div class="textarea-wrapper" style="border-radius: var(--radius-sm);">
+          <div class="formatting-toolbar" id="toolbar-daily_${week.id}_${dateStr}">
+            <button class="format-btn" onclick="applyFormatting('daily_ta_${week.id}_${dateStr}', 'bold')" title="Bold" ${isLocked ? 'disabled' : ''}><i data-lucide="bold"></i></button>
+            <button class="format-btn" onclick="applyFormatting('daily_ta_${week.id}_${dateStr}', 'italic')" title="Italic" ${isLocked ? 'disabled' : ''}><i data-lucide="italic"></i></button>
+            <button class="format-btn" onclick="applyFormatting('daily_ta_${week.id}_${dateStr}', 'list')" title="Bullet List" ${isLocked ? 'disabled' : ''}><i data-lucide="list"></i></button>
+            <button class="format-btn" onclick="applyFormatting('daily_ta_${week.id}_${dateStr}', 'code')" title="Code" ${isLocked ? 'disabled' : ''}><i data-lucide="code"></i></button>
+            <button class="format-btn" onclick="applyFormatting('daily_ta_${week.id}_${dateStr}', 'clear')" title="Clear" ${isLocked ? 'disabled' : ''}><i data-lucide="trash-2"></i></button>
+          </div>
+          <textarea id="daily_ta_${week.id}_${dateStr}" class="day-textarea lb-inpage-ta" data-weekid="${week.id}" data-date="${dateStr}" data-day="${day}" data-shortday="${shortDay}" style="min-height:85px; font-size:13px;" placeholder="Describe technical operations, tools handled, or learnings on ${day}…" ${isLocked ? 'disabled' : ''}>${_esc(val)}</textarea>
+        </div>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+
+  // Bind live autosave event handlers for in-page textareas
+  container.querySelectorAll('.lb-inpage-ta').forEach(ta => {
+    if (isLocked) return;
+    ta.addEventListener('input', _debounce(async () => {
+      const { weekid, date, day, shortday } = ta.dataset;
+      const value = ta.value;
+      await _saveDayEntry({ weekId: weekid, weekIdx: _lb.activeWeekIdx, day, date, dayLabel: shortday, value, asDraft: true });
+    }, 400));
+  });
+
+  // Bind full editor modal triggers
+  container.querySelectorAll('.lb-day-modal-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { weekid, day, date, daylabel, locked } = btn.dataset;
+      _openDayModal({
+        weekId: weekid,
+        weekIdx: _lb.activeWeekIdx,
+        day,
+        date,
+        dayLabel: daylabel,
+        isLocked: locked === 'true',
+      });
+    });
+  });
+
+  if (window.lucide) window.lucide.createIcons();
+}
+
 // ── Week content ──────────────────────────────────────────────────────────────
-// The day-entry grid is now owned by the drilldown + modal (_buildDayGrid /
-// _openDayModal).  _selectWeek is kept as a lightweight coordinator that
-// updates the week meta panel (dept, remarks, submit button) and the right-hand
-// side panels (timeline, cert box) whenever the active week changes.
 async function _selectWeek(idx, { skipRender = false } = {}) {
   if (idx < 0 || idx >= _lb.weeks.length) return;
   _lb.activeWeekIdx = idx;
@@ -761,16 +917,15 @@ async function _selectWeek(idx, { skipRender = false } = {}) {
   const week     = _lb.weeks[idx];
   const isLocked = week.status === 'submitted' || week.status === 'certified' || _lb.logbookFinalized;
 
-  // Update the heading label (used by the header panel)
+  // Update heading label
   const rangeLabel = document.getElementById('weekRangeLabel');
   if (rangeLabel) rangeLabel.textContent = `Week ${week.week_number} Logbook Entry`;
 
-  // Clear the old textarea grid if it still exists in the DOM
-  const oldGrid = document.getElementById('dailyLogsInputs');
-  if (oldGrid) oldGrid.innerHTML = '';
-
   // Load this week's entries into the drilldown cache (dots + previews)
   await _loadWeekEntriesIntoCache(week);
+
+  // Render in-page daily entry cards for Monday through Sunday
+  await _renderInPageDailyLogs(week);
 
   // Meta fields (dept / remarks)
   const dept    = document.getElementById('weekDeptField');
@@ -790,6 +945,7 @@ async function _selectWeek(idx, { skipRender = false } = {}) {
 
   evaluateTimelineState();
   _updateCertBox(week.status);
+  _updateTelemetryStats();
 
   // Refresh the drilldown so dot status + previews reflect the loaded data
   if (!skipRender) _renderMonthWeekDrilldown();

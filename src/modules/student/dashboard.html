@@ -785,12 +785,62 @@
         </div>
 
         <div class="logbook-shell hidden" id="lb-content">
-          <div class="page-header" style="margin-bottom: 24px;">
+          <div class="page-header" style="margin-bottom: 20px;">
             <div>
               <h1 class="page-title">Digital Logbook Workspace</h1>
               <p class="page-subtitle" id="lb-season-label">Loading…</p>
             </div>
             <div id="lb-offline-indicator"></div>
+          </div>
+
+          <!-- TOP TELEMETRY KPI CARDS -->
+          <div class="lb-telemetry-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <!-- Card 1: Active Placement -->
+            <div class="card" style="padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(245, 158, 11, 0.12); color: var(--ttu-gold); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="building-2" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Active Placement</span>
+                <h4 style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin: 2px 0 0 0;" id="lbStatCompany">Ghana Ports &amp; Harbours</h4>
+              </div>
+            </div>
+
+            <!-- Card 2: Attachment Progress -->
+            <div class="card" style="padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(37, 99, 235, 0.12); color: var(--ttu-blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="calendar-check" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Logbook Progress</span>
+                <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 2px;">
+                  <h4 style="font-size: 15px; font-weight: 800; color: var(--text-primary); margin: 0;" id="lbStatWeekProgress">Week 1 / 12</h4>
+                  <span style="font-size: 11px; font-weight: 700; color: var(--ttu-gold);" id="lbStatPct">8%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Certified Weeks -->
+            <div class="card" style="padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="award" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Supervisor Certified</span>
+                <h4 style="font-size: 14px; font-weight: 800; color: #10B981; margin: 2px 0 0 0;" id="lbStatCertCount">0 Weeks Certified</h4>
+              </div>
+            </div>
+
+            <!-- Card 4: IndexedDB Engine -->
+            <div class="card" style="padding: 16px 20px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-sm);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(139, 92, 246, 0.12); color: #8B5CF6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="database" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div>
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Offline Draft Sync</span>
+                <h4 style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 2px 0 0 0;" id="lbStatSyncStatus">IndexedDB Active ✔</h4>
+              </div>
+            </div>
           </div>
 
           <div class="main-workspace-grid">
@@ -826,7 +876,7 @@
                   <!-- dynamically generated week tabs -->
                 </div>
                 <div class="workspace-tabs" style="border-top: 1px solid var(--border-default); padding-top: var(--space-sm);">
-                  <button class="tab-btn" id="btn-tab-monthly">Monthly Summaries</button>
+                  <button class="tab-btn" id="btn-tab-monthly"><i data-lucide="file-text" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Monthly Summaries</button>
                 </div>
 
                 <div id="weeklyFormContainer">

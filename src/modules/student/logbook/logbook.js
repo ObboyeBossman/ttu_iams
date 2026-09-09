@@ -237,8 +237,23 @@ function _renderMonthWeekDrilldown() {
   if (!container) return;
 
   if (!_lb.weeks || _lb.weeks.length === 0) {
-    container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">No active weeks found</div>`;
-    return;
+    _lb.weeks = [];
+    const baseMonday = _getMonday(new Date());
+    for (let w = 1; w <= 12; w++) {
+      const wStart = new Date(baseMonday);
+      wStart.setDate(wStart.getDate() + (w - 1) * 7);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wEnd.getDate() + 6);
+      _lb.weeks.push({
+        id: `week_gen_${w}`,
+        week_number: w,
+        week_start: wStart.toISOString().split('T')[0],
+        week_end: wEnd.toISOString().split('T')[0],
+        status: 'draft',
+        department_section: '',
+        student_remarks: ''
+      });
+    }
   }
 
   const isMonthlyActive = !document.getElementById('monthlySummaryContainer')?.classList.contains('hidden');
@@ -752,6 +767,9 @@ async function _renderInPageDailyLogs(week) {
   const container = document.getElementById('dailyLogsInputs');
   if (!container) return;
 
+  week = week || _lb.weeks[_lb.activeWeekIdx] || _lb.weeks[0];
+  if (!week) return;
+
   const isLocked = week.status === 'submitted' || week.status === 'certified' || _lb.logbookFinalized;
   const DAYS_FULL = _lb.gap4Days === '5day'
     ? ['Monday','Tuesday','Wednesday','Thursday','Friday']
@@ -760,7 +778,7 @@ async function _renderInPageDailyLogs(week) {
     ? ['Mon','Tue','Wed','Thu','Fri']
     : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-  const monday = new Date(week.week_start);
+  const monday = (week.week_start && !isNaN(new Date(week.week_start))) ? new Date(week.week_start) : _getMonday(new Date());
 
   let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-default);">
@@ -870,7 +888,8 @@ async function _renderInPageDailyLogs(week) {
 
 // ── Week content ──────────────────────────────────────────────────────────────
 async function _selectWeek(idx, { skipRender = false } = {}) {
-  if (idx < 0 || idx >= _lb.weeks.length) return;
+  if (!_lb.weeks || _lb.weeks.length === 0) return;
+  idx = Math.max(0, Math.min(Number(idx) || 0, _lb.weeks.length - 1));
   _lb.activeWeekIdx = idx;
 
   // Keep the week-meta area visible, monthly panel hidden
@@ -1529,32 +1548,52 @@ export async function initLogbook(studentId, seasonId, placement) {
   const { data: weeks } = await listLogbookWeeks(studentId, seasonId);
   _lb.weeks = weeks ?? [];
 
-  // Ensure this week exists
   const today  = new Date();
   const monday = _getMonday(today);
-  const weekNum = _calcWeekNumber(new Date(placement.start_date), monday);
-  if (weekNum > 0) {
-    const exists = _lb.weeks.find(w => w.week_number === weekNum);
-    if (!exists) {
-      const { data: newWeek } = await getOrCreateWeek(studentId, seasonId, _lb.placementId, weekNum, monday);
-      if (newWeek) { _lb.weeks.push(newWeek); _lb.weeks.sort((a,b) => a.week_number - b.week_number); }
+
+  // If no weeks exist in database yet, generate 12 default attachment weeks
+  if (_lb.weeks.length === 0) {
+    const startDate = (placement?.start_date && !isNaN(new Date(placement.start_date)))
+      ? new Date(placement.start_date)
+      : today;
+    const baseMonday = _getMonday(startDate);
+
+    for (let w = 1; w <= 12; w++) {
+      const wStart = new Date(baseMonday);
+      wStart.setDate(wStart.getDate() + (w - 1) * 7);
+      const wEnd = new Date(wStart);
+      wEnd.setDate(wEnd.getDate() + 6);
+
+      _lb.weeks.push({
+        id: `week_gen_${w}`,
+        week_number: w,
+        week_start: wStart.toISOString().split('T')[0],
+        week_end: wEnd.toISOString().split('T')[0],
+        status: 'draft',
+        department_section: '',
+        student_remarks: ''
+      });
     }
   }
 
+  _lb.weeks.sort((a,b) => a.week_number - b.week_number);
+
+  const weekNum = _calcWeekNumber(new Date(placement?.start_date || today), monday) || 1;
+  const defaultIdx = _lb.weeks.findIndex(w => w.week_number === weekNum);
+  const bootIdx    = defaultIdx >= 0 ? defaultIdx : 0;
+  _lb.activeWeekIdx = bootIdx;
+
   _renderMonthWeekDrilldown();
 
-  // Pre-load this week's entries into cache so dots show immediately on boot
-  const defaultIdx = _lb.weeks.findIndex(w => w.week_number === weekNum);
-  const bootIdx    = defaultIdx >= 0 ? defaultIdx : _lb.weeks.length - 1;
-  _lb.activeWeekIdx = bootIdx;
-  if (_lb.weeks[bootIdx]) {
-    await _loadWeekEntriesIntoCache(_lb.weeks[bootIdx]);
-    _drilldown.openWeeks.add(_lb.weeks[bootIdx].id);
-    _renderMonthWeekDrilldown();    // re-render now dots are populated
+  // Load active week entries into cache and render daily log cards
+  const bootWeek = _lb.weeks[bootIdx];
+  if (bootWeek) {
+    await _loadWeekEntriesIntoCache(bootWeek);
+    _drilldown.openWeeks.add(bootWeek.id);
   }
 
-  // Update meta panel and side panels for the boot week (drilldown already rendered above)
-  await _selectWeek(bootIdx, { skipRender: true });
+  // Update form & daily cards for the active week
+  await _selectWeek(bootIdx);
 
   // Wire monthly summary tab
   _initMonthlyPanel();

@@ -828,29 +828,37 @@ body {
    ------------------------------------------------------------- */
 
 .topbar {
-  height: 76px;
-  background: var(--bg-page);
-  border-bottom: 0.5px solid var(--border-default);
+  height: 72px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  justify-content: space-between;
+  gap: var(--space-lg);
   padding: 0 var(--space-xl);
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 100;
 }
 
-/* Left: mobile hamburger + brand title.
-   flex-shrink:1 + min-width:0 lets this section yield space to the search
-   bar and actions instead of crushing them off-screen. */
+[data-theme="dark"] .topbar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Left: mobile hamburger + brand title. */
 .topbar-left {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  flex-shrink: 1;
-  min-width: 0;            /* required for text-overflow to work on children */
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .topbar-title {
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
@@ -859,6 +867,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  letter-spacing: -0.01em;
 }
 
 /* Full brand name — visible on wider screens */
@@ -871,7 +880,7 @@ body {
   display: none;
 }
 
-/* Switch to initials on tablet (sidebar is a drawer, space is tight) */
+/* Switch to initials on tablet */
 @media (max-width: 900px) {
   .topbar-brand-full {
     display: none;
@@ -882,7 +891,6 @@ body {
   }
 }
 
-/* Restore full name only on true desktop (sidebar is always visible) */
 @media (min-width: 901px) {
   .topbar-brand-full {
     display: inline;
@@ -893,7 +901,7 @@ body {
   }
 }
 
-/* Mobile hamburger — hidden on desktop */
+/* Mobile hamburger */
 .mobile-menu-btn {
   display: none;
   width: 36px;
@@ -918,21 +926,29 @@ body {
   height: 20px;
 }
 
-/* Search bar — pill shape, grey fill, fills middle space on desktop/tablet */
+/* Search bar — pill shape */
 .topbar-search {
   flex: 1;
-  max-width: 380px;
-  min-width: 0;          /* allow shrinking on narrow tablet */
+  max-width: 440px;
+  min-width: 0;
   position: relative;
+  margin: 0 auto;
 }
 
 .topbar-search .inp {
   padding-left: 38px;
   border-radius: var(--radius-pill);
-  background: var(--bg-card);
+  background: var(--bg-prefix);
   border: 1px solid var(--border-default);
   height: 38px;
   font-size: 13px;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .topbar-search .inp {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
   color: var(--text-primary);
 }
 
@@ -943,7 +959,13 @@ body {
 .topbar-search .inp:focus {
   background: var(--bg-card);
   border-color: var(--ttu-blue);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+[data-theme="dark"] .topbar-search .inp:focus {
+  background: var(--bg-card);
+  border-color: var(--ttu-gold);
+  box-shadow: 0 0 0 3px rgba(240, 165, 0, 0.2);
 }
 
 .topbar-search-icon {
@@ -966,8 +988,6 @@ body {
     display: none;
   }
 
-  /* When search is gone, make topbar-left grow so it
-     acts as the flexible spacer, pushing actions to the right */
   .topbar-left {
     flex: 1;
   }
@@ -978,7 +998,8 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* Bell / icon button */
@@ -1026,18 +1047,43 @@ body {
 .topbar-avatar-btn {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  background: transparent;
-  border: none;
+  gap: 10px;
+  background: var(--bg-prefix);
+  border: 1px solid var(--border-default);
   cursor: pointer;
-  padding: 4px 6px 4px 4px;
-  border-radius: var(--radius-md);
-  transition: background 0.12s;
+  padding: 4px 12px 4px 5px;
+  border-radius: var(--radius-pill);
+  transition: all 0.15s ease;
   font-family: inherit;
+}
+
+[data-theme="dark"] .topbar-avatar-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-default);
 }
 
 .topbar-avatar-btn:hover {
   background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+.topbar-avatar-btn .avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ttu-blue), var(--ttu-blue-dark));
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .topbar-avatar-btn .avatar {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  color: #FFFFFF;
 }
 
 /* Name + ID stacked vertically */
@@ -1066,14 +1112,13 @@ body {
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
-  max-width: 160px;        /* clamp email on tablet so it doesn't burst layout */
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Hide old chevron */
 .topbar-avatar-btn svg.chev {
-  display: none;
+  display: block;
 }
 
 /* Topbar responsive padding */

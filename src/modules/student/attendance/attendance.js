@@ -21,11 +21,11 @@ function haversineM(lat1, lon1, lat2, lon2) {
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 function _fmtTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return 'Not Checked In';
   return new Date(ts).toLocaleTimeString('en-GH', { hour: '2-digit', minute: '2-digit' });
 }
 function _duration(inTs, outTs) {
-  if (!inTs || !outTs) return '—';
+  if (!inTs || !outTs) return 'Pending Checkout';
   const m = Math.round((new Date(outTs) - new Date(inTs)) / 60000);
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
 }
@@ -36,7 +36,7 @@ function _statusColor(s) {
     : 'var(--text-muted)';
 }
 function _statusLabel(s) {
-  return s === 'flagged_location' ? 'Flagged' : (s ? s.charAt(0).toUpperCase() + s.slice(1) : '—');
+  return s === 'flagged_location' ? 'Flagged Location' : (s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Not Checked In');
 }
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -97,9 +97,9 @@ export async function initAttendance(studentId, seasonId, placement, studentName
   _calViewDate.setDate(1);
 
   // Populate ticket
-  _tickSet('att-tick-student', _studentName || 'You');
-  _tickSet('att-tick-company', placement.company_name);
-  _tickSet('att-tick-anchor', placement.latitude ? 'GPS Locked ✔' : 'Pending Supervisor Visit');
+  _tickSet('att-tick-student', _studentName || 'Student Account');
+  _tickSet('att-tick-company', placement?.company_name || 'Not Assigned');
+  _tickSet('att-tick-anchor', placement?.latitude ? 'GPS Locked ✓' : 'Awaiting Setup');
 
   // Load data
   const { data: todayLog }  = await getTodayLog(studentId, seasonId);
@@ -443,16 +443,15 @@ function _updateHelpText() {
   el.textContent = map[_dailyState] || '';
 }
 
-// ── Day title ────────────────────────────────────────────────────────────────
+// ── Day title & Status ────────────────────────────────────────────────────────
 function _updateTicketStatus() {
-  const today = new Date();
   const el = document.getElementById('att-day-title');
-  if (el) el.textContent = today.toLocaleDateString('en-GH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  if (el) el.textContent = 'Daily Verification Hub';
 
   const tickStatus = document.getElementById('att-tick-status');
   if (tickStatus) {
     const s = _todayLog?.status;
-    tickStatus.textContent = _statusLabel(s) || 'Pending';
+    tickStatus.textContent = s ? _statusLabel(s) : 'Not Checked In';
     tickStatus.style.color = s ? _statusColor(s) : 'var(--ttu-gold)';
   }
 }
@@ -468,7 +467,7 @@ function _renderMetrics() {
   _elSet('att-m-present', present);
   _elSet('att-m-absent',  absent);
   _elSet('att-m-flagged', flagged);
-  _elSet('att-m-rate',    total > 0 ? `${rate}%` : '—');
+  _elSet('att-m-rate',    total > 0 ? `${rate}%` : '0%');
   _elSet('att-record-count', `${_allLogs.length} record${_allLogs.length !== 1 ? 's' : ''}`);
 }
 

@@ -30,29 +30,85 @@
       <section id="view-dashboard" class="page-view active">
   <div id="page-loading" class="page-loading-overlay"><div class="spinner-lg"></div></div>
 
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Supervisor Dashboard</h1>
-      <p class="page-subtitle" id="welcome-msg">Welcome</p>
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Supervisor Dashboard</h1>
+        <p class="page-subtitle" id="welcome-msg">Welcome to your industrial attachment supervision portal.</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <a href="./students.html" class="btn btn-outline">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Assigned Students
+        </a>
+        <a href="./visits.html" class="btn btn-accent">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Log Site Visit
+        </a>
+      </div>
     </div>
-  </div>
 
-  <div class="cards-grid">
-    <div class="stat-card">
-      <div class="stat-card-title">My Zones</div>
-      <div class="stat-card-value" id="stat-zones">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-card-title">Assigned Placements</div>
-      <div class="stat-card-value" id="stat-placements">0</div>
-    </div>
-  </div>
+    <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card accent-blue">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Assigned Zones</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="stat-zones">0</div>
+      </div>
 
-  <div class="card" style="margin-top:24px">
-    <div class="card-header-row">
-      <h2 class="card-title">My Assigned Zones</h2>
+      <div class="stat-card accent-gold">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Assigned Students</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="stat-placements">0</div>
+      </div>
+
+      <div class="stat-card accent-green">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Visits Logged</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="stat-visits">0</div>
+      </div>
+
+      <div class="stat-card accent-red">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Active Companies</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="stat-companies">0</div>
+      </div>
     </div>
-    <div id="zones-list" style="padding:16px">Loading…</div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      <!-- Assigned Zones -->
+      <div class="card">
+        <div class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h2 class="card-title" style="font-size:16px;font-weight:600;margin:0;">My Assigned Zones</h2>
+          <span class="badge badge-gold" id="zones-count-badge">0 Zones</span>
+        </div>
+        <div id="zones-list">Loading…</div>
+      </div>
+
+      <!-- Students in My Zones -->
+      <div class="card">
+        <div class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h2 class="card-title" style="font-size:16px;font-weight:600;margin:0;">Students in My Zones</h2>
+          <a href="./students.html" class="btn btn-ghost btn-sm">View All →</a>
+        </div>
+        <div id="recent-placements-list">Loading…</div>
+      </div>
+    </div>
   </div>
       </section>
     </main>

@@ -28,36 +28,81 @@
   <div class="main-content" id="main-content">
     <main class="content-area" id="page-content">
       <section id="view-students" class="page-view active">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Assigned Students</h1>
-      <p class="page-subtitle">Students placed in your assigned zones.</p>
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Assigned Students</h1>
+        <p class="page-subtitle">Students placed in your assigned supervision zones.</p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div class="topbar-search" style="max-width:280px;margin:0;">
+          <span class="topbar-search-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input type="text" id="search-students" class="inp" placeholder="Search student or company…">
+        </div>
+      </div>
     </div>
-  </div>
-  
-  <div class="card" style="margin-top:24px">
-    <div class="card-header-row">
-      <h2 class="card-title">Students in My Zones</h2>
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="table" style="width:100%">
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Index Number</th>
-            <th>Programme</th>
-            <th>Company</th>
-            <th>Location</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="students-tbody">
-          <tr><td colspan="6" class="text-center py-4">Loading students...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
+    <!-- Stat cards grid -->
+    <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card accent-blue">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Total Assigned</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="st-total">0</div>
+      </div>
+
+      <div class="stat-card accent-green">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Active Placements</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="st-active">0</div>
+      </div>
+
+      <div class="stat-card accent-gold">
+        <div class="stat-card-header">
+          <span class="stat-card-title">Zones Covered</span>
+          <div class="stat-card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          </div>
+        </div>
+        <div class="stat-card-value" id="st-zones">0</div>
+      </div>
+    </div>
+
+    <!-- Students Data Card -->
+    <div class="card">
+      <div class="card-header-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <h2 class="card-title" style="font-size:16px;font-weight:600;margin:0;">Students in My Zones</h2>
+        <span class="badge badge-gray" id="students-count-badge">0 Students</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Index Number</th>
+              <th>Programme & Dept</th>
+              <th>Company & Zone</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="students-tbody">
+            <tr><td colspan="7" class="text-center py-4">Loading students...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
       </section>
     </main>
   </div>

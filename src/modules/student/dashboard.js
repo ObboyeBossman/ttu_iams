@@ -173,7 +173,7 @@ function renderDashboard() {
   countEl.textContent = _letterCount;
   const tier = letterCountTier(_letterCount);
   countEl.style.color = tier === 'danger' ? 'var(--ttu-red)' : tier === 'warning' ? 'var(--amber)' : 'var(--text-primary)';
-  tierEl.textContent = _season ? `this season (${_season.name})` : '—';
+  tierEl.textContent = _season ? `this season (${_season.name})` : 'No Active Season';
 
   // Placement badge
   const badgeEl = document.getElementById('dash-placement-badge');
@@ -187,10 +187,10 @@ function renderDashboard() {
 
   // Window
   const windowOpen = isPlacementWindowOpen(_season);
-  document.getElementById('dash-window-status').textContent = windowOpen ? 'Open' : (_season ? 'Closed' : '—');
+  document.getElementById('dash-window-status').textContent = windowOpen ? 'Open' : (_season ? 'Closed' : 'Not Configured');
   document.getElementById('dash-window-status').style.color = windowOpen ? 'var(--green)' : 'var(--text-secondary)';
   document.getElementById('dash-window-dates').textContent  = _season
-    ? `${formatDate(_season.placement_window_start)} – ${formatDate(_season.placement_window_end)}` : '—';
+    ? `${formatDate(_season.placement_window_start)} – ${formatDate(_season.placement_window_end)}` : 'Dates Not Scheduled';
 
   // Journey timeline
   _renderJourneyTimeline();
@@ -228,7 +228,7 @@ async function _renderAttendanceStat() {
   const el    = document.getElementById('dash-attendance-count');
   const label = document.getElementById('dash-attendance-label');
   if (!_placement || _placement.status !== 'assigned' || !_season) {
-    if (el) el.textContent = '—';
+    if (el) el.textContent = '0';
     if (label) label.textContent = 'no active placement';
     return;
   }
@@ -242,7 +242,7 @@ async function _renderAttendanceStat() {
 async function _renderLogbookStat() {
   const el = document.getElementById('dash-logbook-weeks');
   if (!_placement || _placement.status !== 'assigned' || !_season) {
-    if (el) el.textContent = '—';
+    if (el) el.textContent = '0';
     return;
   }
   const { data: weeks } = await listLogbookWeeks(userId, _season.id);
@@ -255,7 +255,7 @@ async function _renderReportStat() {
   const elPath = document.getElementById('dash-report-path');
   
   if (!_placement || _placement.status !== 'assigned' || !_season) {
-    if (elStatus) elStatus.textContent = '—';
+    if (elStatus) elStatus.textContent = 'Not Required';
     if (elPath) elPath.textContent = 'no active placement';
     return;
   }

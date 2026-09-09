@@ -27,51 +27,94 @@ export async function initProfile(userId) {
   }
 
   card.innerHTML = `
-    <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;">
-      <div id="profile-avatar" style="width:60px;height:60px;border-radius:50%;background:var(--ttu-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;">${_initials(profile.full_name)}</div>
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${_esc(profile.full_name)}</div>
-        <div style="font-size:13px;color:var(--text-secondary)">${_esc(profile.index_number)}</div>
+    <!-- Left Column: Student Hero Card -->
+    <div class="card profile-hero-card">
+      <div class="profile-avatar-wrapper">
+        <div id="profile-avatar" class="profile-avatar-circle">
+          ${_initials(profile.full_name)}
+        </div>
+        <span class="profile-status-dot" title="Active Account"></span>
+      </div>
+      
+      <h2 class="profile-user-name">${_esc(profile.full_name)}</h2>
+      <div class="profile-index-pill">${_esc(profile.index_number)}</div>
+      
+      <div class="profile-badge-group">
+        <span class="badge badge-success">Active Student</span>
+        <span class="badge badge-neutral">${_esc(profile.level)}</span>
+      </div>
+
+      <div class="profile-hero-divider"></div>
+
+      <div class="profile-hero-info">
+        <div class="hero-info-item">
+          <span class="hero-info-label">Department</span>
+          <span class="hero-info-val">${_esc(profile.department)}</span>
+        </div>
+        <div class="hero-info-item">
+          <span class="hero-info-label">Programme</span>
+          <span class="hero-info-val">${_esc(profile.programme)}</span>
+        </div>
       </div>
     </div>
-    <div id="profile-fields">
-      <div class="profile-field-row">
-        <div class="profile-field-label">Department</div>
-        <div class="profile-field-value">${_esc(profile.department)}</div>
+
+    <!-- Right Column: Details & Security Stack -->
+    <div class="profile-details-stack">
+      
+      <!-- Academic & Contact Details Card -->
+      <div class="card">
+        <div class="sec-header">
+          <h3 class="sec-title"><i data-lucide="user-check"></i> Academic &amp; Contact Information</h3>
+        </div>
+        <div id="profile-fields" class="profile-fields-list">
+          <div class="profile-field-row">
+            <div class="profile-field-label">Department</div>
+            <div class="profile-field-value">${_esc(profile.department)}</div>
+          </div>
+          <div class="profile-field-row">
+            <div class="profile-field-label">Programme</div>
+            <div class="profile-field-value">${_esc(profile.programme)}</div>
+          </div>
+          <div class="profile-field-row">
+            <div class="profile-field-label">Level / Year</div>
+            <div class="profile-field-value"><span class="level-chip">${_esc(profile.level)}</span></div>
+          </div>
+          <div class="profile-field-row" id="phone-row">
+            <div class="profile-field-label">Phone</div>
+            <div class="profile-field-value" id="phone-display">${_esc(profile.phone)}</div>
+            <button class="btn btn-secondary btn-sm profile-edit-btn" id="phone-edit-btn">
+              <i data-lucide="edit-3"></i> Edit
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="profile-field-row">
-        <div class="profile-field-label">Programme</div>
-        <div class="profile-field-value">${_esc(profile.programme)}</div>
+
+      <!-- Security & Password Card -->
+      <div class="card" style="margin-top: 20px;">
+        <div class="sec-header">
+          <h3 class="sec-title"><i data-lucide="shield-check"></i> Security &amp; Password</h3>
+          <p class="sec-desc">Update your account password. Minimum 8 characters.</p>
+        </div>
+        
+        <div class="change-pw-form open" id="change-pw-form">
+          <div class="form-row">
+            <label for="pw-new">New Password</label>
+            <input class="inp" type="password" id="pw-new" placeholder="Enter new password (min. 8 chars)" autocomplete="new-password">
+          </div>
+          <div class="form-row">
+            <label for="pw-confirm">Confirm New Password</label>
+            <input class="inp" type="password" id="pw-confirm" placeholder="Re-enter new password" autocomplete="new-password">
+          </div>
+          <div class="alert alert-danger hidden" id="pw-error" style="margin-bottom:12px;"></div>
+          <button class="btn btn-primary" id="pw-save-btn">
+            <i data-lucide="key-round"></i> Save New Password
+          </button>
+        </div>
       </div>
-      <div class="profile-field-row">
-        <div class="profile-field-label">Level</div>
-        <div class="profile-field-value">${_esc(profile.level)}</div>
-      </div>
-      <div class="profile-field-row" id="phone-row">
-        <div class="profile-field-label">Phone</div>
-        <div class="profile-field-value" id="phone-display">${_esc(profile.phone)}</div>
-        <button class="profile-edit-btn" id="phone-edit-btn">Edit</button>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div>
-      <button class="btn btn-ghost" id="toggle-pw-btn" style="font-size:13px;padding:0;color:var(--ttu-blue);">
-        <i data-lucide="lock"></i> Change Password
-      </button>
-    </div>
-    <div class="change-pw-form" id="change-pw-form">
-      <div class="form-row">
-        <label for="pw-new">New Password</label>
-        <input class="inp" type="password" id="pw-new" placeholder="At least 8 characters" autocomplete="new-password">
-      </div>
-      <div class="form-row">
-        <label for="pw-confirm">Confirm New Password</label>
-        <input class="inp" type="password" id="pw-confirm" placeholder="Repeat password" autocomplete="new-password">
-      </div>
-      <div class="alert alert-danger hidden" id="pw-error" style="margin-bottom:12px;"></div>
-      <button class="btn btn-primary btn-sm" id="pw-save-btn">Save New Password</button>
+
     </div>`;
 
+  if (window.lucide) window.lucide.createIcons();
   _wirePhoneEdit(userId, profile.phone);
   _wirePwChange();
 }

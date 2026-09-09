@@ -142,7 +142,7 @@
             outside the active season window.
           </div>
 
-          <div class="card" style="max-width:640px;">
+          <div class="card" style="width:100%;">
             <form id="gl-form" novalidate>
               <div style="margin-bottom:16px;">
                 <label style="font-size:12.5px;font-weight:600;display:block;margin-bottom:6px;" for="gl-company">Company Name <span style="color:var(--ttu-red)">*</span></label>
@@ -472,17 +472,17 @@
 
                 <!-- Daily Action Card -->
                 <div class="att-action-box">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
                     <div>
-                      <div class="att-day-label" id="att-day-label">Today's Standings</div>
-                      <h2 class="att-day-title" id="att-day-title">—</h2>
+                      <div class="att-day-label" id="att-day-label">GPS &amp; BIOMETRIC TELEMETRY</div>
+                      <h2 class="att-day-title" id="att-day-title">Daily Verification Hub</h2>
                     </div>
                     <div class="att-sync-pill hidden" id="att-sync-pill">
                       <i data-lucide="wifi-off" style="width:14px;height:14px;"></i>
                       <span>Offline — actions queued locally</span>
                     </div>
                   </div>
-                  <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px;" id="att-help-text">
+                  <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;" id="att-help-text">
                     Establishing connection… tap Check In to record your arrival.
                   </p>
 
@@ -496,8 +496,8 @@
                         <i data-lucide="map-pin" style="width:28px;height:28px;"></i>
                       </div>
                     </div>
-                    <div id="att-sensor-status" style="font-weight:700;font-size:13.5px;margin-bottom:4px;">Sensors Idle</div>
-                    <div id="att-sensor-sub" style="font-size:11.5px;color:var(--text-muted);">Coordinate trace stamps occur in background</div>
+                    <div id="att-sensor-status" style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text-primary);">Sensors Idle</div>
+                    <div id="att-sensor-sub" style="font-size:12px;color:var(--text-muted);">Coordinate trace stamps occur in background</div>
                   </div>
 
                   <!-- Action Buttons -->
@@ -576,39 +576,39 @@
                 <!-- Metrics Row -->
                 <div class="att-metric-row" id="att-metric-row">
                   <div class="att-metric-tile">
-                    <div class="att-metric-val" id="att-m-present">—</div>
+                    <div class="att-metric-val" id="att-m-present">0</div>
                     <div class="att-metric-lbl">Present</div>
                   </div>
                   <div class="att-metric-tile">
-                    <div class="att-metric-val" id="att-m-absent">—</div>
+                    <div class="att-metric-val" id="att-m-absent">0</div>
                     <div class="att-metric-lbl">Absences</div>
                   </div>
                   <div class="att-metric-tile">
-                    <div class="att-metric-val" id="att-m-flagged" style="color:#F87171;">—</div>
+                    <div class="att-metric-val" id="att-m-flagged" style="color:#F87171;">0</div>
                     <div class="att-metric-lbl" style="color:#F87171;">Flagged</div>
                   </div>
                   <div class="att-metric-tile">
-                    <div class="att-metric-val" id="att-m-rate">—%</div>
+                    <div class="att-metric-val" id="att-m-rate">0%</div>
                     <div class="att-metric-lbl">Attendance Rate</div>
                   </div>
                 </div>
 
                 <!-- Calendar -->
                 <div class="att-panel">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <span style="font-size:15px;font-weight:800;">Attachment Calendar</span>
-                    <span style="font-size:11.5px;color:var(--text-muted);" id="att-record-count">Loading…</span>
-                  </div>
-                  <div class="att-cal-nav">
-                    <button class="att-cal-btn" id="att-cal-prev"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>
-                    <div class="att-cal-month" id="att-cal-month">—</div>
-                    <button class="att-cal-btn" id="att-cal-next"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>
+                  <div class="att-cal-header">
+                    <span style="font-size:16px;font-weight:800;color:var(--text-primary);">Attachment Calendar</span>
+                    <div class="att-cal-nav">
+                      <button class="att-cal-btn" id="att-cal-prev" title="Previous Month"><i data-lucide="chevron-left" style="width:14px;height:14px;"></i></button>
+                      <div class="att-cal-month" id="att-cal-month">Select Month</div>
+                      <button class="att-cal-btn" id="att-cal-next" title="Next Month"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></button>
+                    </div>
+                    <span style="font-size:12px;color:var(--text-muted);" id="att-record-count">Loading…</span>
                   </div>
                   <div class="att-cal-grid" id="att-cal-grid"></div>
                   <div class="att-cal-legend">
-                    <div class="att-cal-legend-item"><div class="att-cal-legend-dot" style="background:var(--green);"></div>Present</div>
+                    <div class="att-cal-legend-item"><div class="att-cal-legend-dot" style="background:#10B981;"></div>Present</div>
                     <div class="att-cal-legend-item"><div class="att-cal-legend-dot" style="background:#EF4444;"></div>Absent</div>
-                    <div class="att-cal-legend-item"><div class="att-cal-legend-dot" style="background:#F87171;"></div>Flagged</div>
+                    <div class="att-cal-legend-item"><div class="att-cal-legend-dot" style="background:#F87171;"></div>Flagged Location</div>
                   </div>
                 </div>
 
@@ -619,21 +619,21 @@
 
                 <!-- Verification Ticket -->
                 <div class="att-ticket" id="att-ticket">
-                  <span style="font-size:10px;font-weight:800;background:var(--ttu-gold);color:var(--ttu-blue-dark);padding:3px 8px;border-radius:4px;text-transform:uppercase;display:inline-block;margin-bottom:12px;">Verification Ticket</span>
-                  <h3 style="font-size:15px;font-weight:800;margin-bottom:2px;">Takoradi Technical University</h3>
-                  <p style="font-size:11px;opacity:.8;margin-bottom:16px;">Daily Telemetry &amp; GPS Verification</p>
+                  <span style="font-size:10px;font-weight:800;background:var(--ttu-gold);color:var(--ttu-blue-dark);padding:3px 8px;border-radius:4px;text-transform:uppercase;display:inline-block;margin-bottom:12px;letter-spacing:0.04em;">Verification Ticket</span>
+                  <h3 style="font-size:16px;font-weight:800;margin-bottom:2px;letter-spacing:-0.01em;">Takoradi Technical University</h3>
+                  <p style="font-size:12px;opacity:.8;margin-bottom:16px;">Daily Telemetry &amp; GPS Verification</p>
                   <div style="border-top:1.5px dashed rgba(255,255,255,.2);padding-top:12px;">
                     <div class="att-ticket-row">
                       <span class="att-ticket-lbl">Student:</span>
-                      <span class="att-ticket-val" id="att-tick-student">—</span>
+                      <span class="att-ticket-val" id="att-tick-student">Student Account</span>
                     </div>
                     <div class="att-ticket-row">
                       <span class="att-ticket-lbl">Placement:</span>
-                      <span class="att-ticket-val" id="att-tick-company">—</span>
+                      <span class="att-ticket-val" id="att-tick-company">Not Assigned</span>
                     </div>
                     <div class="att-ticket-row">
                       <span class="att-ticket-lbl">Location Anchor:</span>
-                      <span class="att-ticket-val" id="att-tick-anchor">—</span>
+                      <span class="att-ticket-val" id="att-tick-anchor">Awaiting Setup</span>
                     </div>
                     <div class="att-ticket-row">
                       <span class="att-ticket-lbl">Tolerance Margin:</span>
@@ -641,7 +641,7 @@
                     </div>
                     <div class="att-ticket-row">
                       <span class="att-ticket-lbl">Today's Status:</span>
-                      <span class="att-ticket-val" id="att-tick-status" style="color:var(--ttu-gold);">Pending</span>
+                      <span class="att-ticket-val" id="att-tick-status" style="color:var(--ttu-gold);">Not Checked In</span>
                     </div>
                   </div>
                 </div>
@@ -703,11 +703,12 @@
 
       <!-- ── LOGBOOK ────────────────────────────────────────────────────── -->
       <section id="view-logbook" class="page-view">
-        <!-- Private/Incognito Warning Banner -->
-        <div id="incognitoBanner" class="system-banner hidden">
-          <i data-lucide="alert-octagon"></i>
-          <span>Private Browsing/Incognito Mode detected. Weekly logs autosave to memory only. Please use standard browsing for local backup persistence.</span>
-        </div>
+        <div class="page-container">
+          <!-- Private/Incognito Warning Banner -->
+          <div id="incognitoBanner" class="system-banner hidden">
+            <i data-lucide="alert-octagon"></i>
+            <span>Private Browsing/Incognito Mode detected. Weekly logs autosave to memory only. Please use standard browsing for local backup persistence.</span>
+          </div>
 
         <!-- No placement empty state -->
         <div class="empty-state hidden" id="lb-no-placement" style="margin-top:48px;">
@@ -718,23 +719,57 @@
         </div>
 
         <!-- Logbook payment gate -->
-        <div class="hidden" id="lb-payment-gate" style="display:flex; justify-content:center; padding-top:40px;">
-          <div class="payment-screen" style="max-width:480px;">
-            <div style="text-align:center;">
-              <span class="path-card-badge ai-badge" style="margin-bottom:8px;">Logbook Access</span>
-              <h2>Unlock Your Digital Logbook</h2>
-              <div class="payment-amount" id="lbGateAmount">GH¢ 20.00</div>
-              <div class="payment-per">one-time payment per season</div>
+        <div class="hidden" id="lb-payment-gate" style="width:100%;">
+          <div class="page-header" style="margin-bottom: 24px;">
+            <div>
+              <h1 class="page-title">Digital Logbook Workspace</h1>
+              <p class="page-subtitle">Access your weekly industrial attachment logbook entries.</p>
             </div>
-            <ul class="payment-features" style="padding-left:0;">
-              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Unlimited weekly entries for the season</li>
-              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Offline drafts with autosave</li>
-              <li style="margin-bottom:8px;"><i data-lucide="check"></i> Required before attachment report submission</li>
-            </ul>
-            <button type="button" class="btn btn-primary" id="lbPayBtn" style="width:100%; margin-top:20px;">
-              <i data-lucide="credit-card"></i> Pay with Paystack
-            </button>
-            <p style="font-size:12px; color:var(--text-secondary); text-align:center; margin-top:12px;">Secure one-time payment via Paystack. Cards and mobile money supported.</p>
+          </div>
+
+          <div class="card payment-hero-card" style="width:100%; padding: 36px 32px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-xl); box-shadow: 0 8px 32px rgba(0,0,0,0.25);">
+            <div class="payment-hero-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center;">
+              <!-- Left Column: Pricing & Info -->
+              <div>
+                <span class="badge badge-warning" style="margin-bottom: 14px; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="lock" style="width:12px; height:12px;"></i> Season Logbook Access
+                </span>
+                <h2 style="font-size: 26px; font-weight: 800; color: var(--text-primary); margin: 0 0 10px 0;">Unlock Your Digital Logbook</h2>
+                <p style="font-size: 14px; color: var(--text-secondary); margin: 0 0 20px 0; line-height: 1.6;">
+                  Complete your daily activities, track attendance, and record weekly logs directly online with automatic offline drafting and supervisor review.
+                </p>
+
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;">
+                  <span style="font-size: 36px; font-weight: 800; color: var(--ttu-gold);" id="lbGateAmount">GH¢ 20.00</span>
+                  <span style="font-size: 13px; color: var(--text-muted);">/ one-time payment per season</span>
+                </div>
+              </div>
+
+              <!-- Right Column: Features & CTA -->
+              <div style="background: var(--bg-hover); padding: 28px; border-radius: var(--radius-lg); border: 1px solid var(--border-default);">
+                <h4 style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 0 0 16px 0;">Included Features</h4>
+                <ul style="list-style: none; padding: 0; margin: 0 0 24px 0; display: flex; flex-direction: column; gap: 12px;">
+                  <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
+                    <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
+                    Unlimited weekly entries for the season
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
+                    <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
+                    Offline drafts with automatic IndexedDB sync
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text-primary);">
+                    <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10B981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><i data-lucide="check" style="width: 14px; height: 14px;"></i></div>
+                    Prerequisite verification for final attachment report
+                  </li>
+                </ul>
+                <button type="button" class="btn btn-primary" id="lbPayBtn" style="width: 100%; height: 44px; font-size: 14px; font-weight: 600;">
+                  <i data-lucide="credit-card"></i> Pay with Paystack
+                </button>
+                <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin: 12px 0 0 0;">
+                  Instant activation via Mobile Money or Bank Card.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -928,23 +963,28 @@
               </div>
 
           </div>
-
         </div>
       </section>
 
       <!-- ── ATTACHMENT REPORT ────────────────────────────────────────── -->
       <section id="view-attachment-report" class="page-view">
         <div class="page-container">
+          <div class="page-header" style="margin-bottom:24px;">
+            <div>
+              <h1 class="page-title">Attachment Report</h1>
+              <p class="page-subtitle">Final industrial attachment report submission portal.</p>
+            </div>
+          </div>
           
           <!-- ACCESS GATE VIEW (LOCKED STATE) -->
           <div class="report-gate hidden" id="reportGate">
             <div class="report-gate-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             </div>
-            <h2>Premium Report Gate Locked</h2>
+            <h2>Attachment Report Locked</h2>
             <p>To unlock the attachment report submission workflow, you must fulfill the following department prerequisites:</p>
-            <div id="reportGateLocks" style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center;">
-              <!-- dynamically populated checklist e.g. "Week 4 logbook is in Draft" -->
+            <div id="reportGateLocks" style="margin-top: 16px; width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center;">
+              <!-- dynamically populated checklist -->
             </div>
             <div style="margin-top: 24px;">
               <a href="#logbook" class="btn btn-primary"><i data-lucide="book-open"></i> Go to Logbook Workspace</a>
@@ -1224,7 +1264,7 @@
             </div>
           </div>
 
-          <div class="card" style="max-width:520px;" id="profile-card">
+          <div class="profile-grid" id="profile-card">
             <div class="skeleton skel-text" style="width:50%;margin-bottom:12px;"></div>
             <div class="skeleton skel-text" style="width:70%;margin-bottom:8px;"></div>
             <div class="skeleton skel-text" style="width:40%;"></div>
@@ -1242,24 +1282,43 @@
             </div>
           </div>
 
-          <div class="card" style="max-width:560px;">
+          <div class="card settings-card" style="width:100%;">
             <!-- Settings tabs -->
             <div class="settings-tabs">
-              <button class="settings-tab active" data-stab="appearance" id="stab-appearance">Appearance</button>
-              <button class="settings-tab" data-stab="notifications" id="stab-notifications">Notifications</button>
-              <button class="settings-tab" data-stab="account" id="stab-account">Account</button>
+              <button class="settings-tab active" data-stab="appearance" id="stab-appearance">
+                <i data-lucide="palette"></i> Appearance
+              </button>
+              <button class="settings-tab" data-stab="notifications" id="stab-notifications">
+                <i data-lucide="bell"></i> Notifications
+              </button>
+              <button class="settings-tab" data-stab="account" id="stab-account">
+                <i data-lucide="user-cog"></i> Account
+              </button>
             </div>
 
             <!-- Appearance panel -->
             <div class="settings-tab-panel active" id="spanel-appearance">
-              <div class="sec-label" style="margin-bottom:12px;">Theme</div>
+              <div class="sec-label" style="margin-bottom:16px;">Interface Theme</div>
               <div class="appearance-toggle-row">
-                <button class="appearance-btn" data-theme-mode="light" id="theme-btn-light">☀ Light</button>
-                <button class="appearance-btn" data-theme-mode="dark" id="theme-btn-dark">🌙 Dark</button>
-                <button class="appearance-btn" data-theme-mode="system" id="theme-btn-system">⚙ System</button>
+                <button class="appearance-btn" data-theme-mode="light" id="theme-btn-light">
+                  <div class="theme-icon"><i data-lucide="sun"></i></div>
+                  <div class="theme-name">Light</div>
+                  <div class="theme-desc">Bright &amp; clear daytime theme</div>
+                </button>
+                <button class="appearance-btn" data-theme-mode="dark" id="theme-btn-dark">
+                  <div class="theme-icon"><i data-lucide="moon"></i></div>
+                  <div class="theme-name">Dark</div>
+                  <div class="theme-desc">Matte obsidian OLED contrast</div>
+                </button>
+                <button class="appearance-btn" data-theme-mode="system" id="theme-btn-system">
+                  <div class="theme-icon"><i data-lucide="laptop"></i></div>
+                  <div class="theme-name">System</div>
+                  <div class="theme-desc">Matches your OS theme setting</div>
+                </button>
               </div>
-              <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">
-                Your preference is saved locally on this device.
+              <p style="font-size:12.5px;color:var(--text-secondary);margin-top:16px;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="info" style="width:14px;height:14px;color:var(--ttu-gold)"></i>
+                Your appearance preference is stored locally on this device.
               </p>
             </div>
 
@@ -1267,8 +1326,8 @@
             <div class="settings-tab-panel" id="spanel-notifications">
               <div class="toggle-row">
                 <div>
-                  <div class="toggle-row-label">Placement assigned</div>
-                  <div class="toggle-row-sub">Email me when my placement is assigned by the admin.</div>
+                  <div class="toggle-row-label">Placement Assigned Notification</div>
+                  <div class="toggle-row-sub">Receive updates when your industrial attachment placement is approved.</div>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="notif-placement" checked>
@@ -1277,33 +1336,34 @@
               </div>
               <div class="toggle-row">
                 <div>
-                  <div class="toggle-row-label">Supervisor visit</div>
-                  <div class="toggle-row-sub">Email me when a supervisor visit is recorded.</div>
+                  <div class="toggle-row-label">Supervisor Visit Alerts</div>
+                  <div class="toggle-row-sub">Get notified when a university supervisor logs a site visit.</div>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="notif-visit">
                   <span class="toggle-slider"></span>
                 </label>
               </div>
-              <p style="font-size:12px;color:var(--text-secondary);margin-top:16px;">
-                Email delivery will be connected in a future update. Preferences are saved locally for now.
+              <p style="font-size:12.5px;color:var(--text-secondary);margin-top:20px;display:flex;align-items:center;gap:6px;">
+                <i data-lucide="mail-check" style="width:14px;height:14px;color:var(--ttu-blue)"></i>
+                Preferences are saved locally to your current workspace profile.
               </p>
             </div>
 
             <!-- Account panel -->
             <div class="settings-tab-panel" id="spanel-account">
               <div class="account-info-row">
-                <div class="account-info-label">Email</div>
+                <div class="account-info-label">Account Email</div>
                 <div class="account-info-value" id="settings-email">—</div>
-                <div class="account-info-note">Contact support to change your email.</div>
+                <div class="account-info-note">Contact ICT support to request email changes.</div>
               </div>
               <div class="account-info-row">
-                <div class="account-info-label">Member since</div>
+                <div class="account-info-label">Registration Date</div>
                 <div class="account-info-value" id="settings-created">—</div>
               </div>
-              <div style="margin-top:20px;">
-                <button class="btn btn-danger" id="settings-signout-btn" style="width:100%;">
-                  <i data-lucide="log-out"></i> Sign Out
+              <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border-default);">
+                <button class="btn btn-danger" id="settings-signout-btn" style="width:100%;max-width:240px;">
+                  <i data-lucide="log-out"></i> Sign Out of Account
                 </button>
               </div>
             </div>

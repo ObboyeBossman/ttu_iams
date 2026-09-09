@@ -9,23 +9,28 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 420px;
-  padding: 48px 24px;
+  width: 100%;
+  padding: 48px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   text-align: center;
   gap: 16px;
 }
 .report-gate-icon {
   width: 72px; height: 72px;
   border-radius: 50%;
-  background: rgba(240, 165, 0, 0.12);
-  border: 1.5px solid rgba(240, 165, 0, 0.3);
+  background: var(--ttu-gold-surface);
+  border: 1.5px solid var(--ttu-gold-border);
   display: flex; align-items: center; justify-content: center;
   color: var(--ttu-gold);
   margin: 0 auto 8px;
+  box-shadow: 0 4px 16px rgba(240, 165, 0, 0.15);
 }
 .report-gate-icon svg { width: 32px; height: 32px; }
-.report-gate h2 { font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0; }
-.report-gate p  { font-size: 13.5px; color: var(--text-secondary); max-width: 420px; line-height: 1.6; margin: 0; }
+.report-gate h2 { font-size: 22px; font-weight: 800; color: var(--text-primary); margin: 0; }
+.report-gate p  { font-size: 14px; color: var(--text-secondary); max-width: 440px; line-height: 1.6; margin: 0; }
 
 /* ── Path selection ──────────────────────────────────────────────────────── */
 .report-path-grid {

@@ -28,6 +28,8 @@ export function applyStoredTheme() {
 
 // ── Settings init ─────────────────────────────────────────────────────────────
 export async function initSettings() {
+  if (window.lucide) window.lucide.createIcons();
+
   // Wire settings tabs
   document.querySelectorAll('[data-stab]').forEach(btn => {
     btn.addEventListener('click', () => {

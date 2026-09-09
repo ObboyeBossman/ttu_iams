@@ -250,12 +250,78 @@
 }
 
 
-/* Metric card (dashboard stats) */
+/* Metric & Stat cards (dashboard stats) */
 .metric-card {
   background: var(--bg-prefix);
   border-radius: var(--radius-md);
   padding: var(--space-lg);
 }
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-raised);
+  border-color: var(--border-strong);
+}
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+.stat-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.stat-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-prefix);
+  color: var(--ttu-blue);
+  flex-shrink: 0;
+}
+.stat-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.stat-card.accent-blue { border-top: 3px solid var(--ttu-blue); }
+.stat-card.accent-blue .stat-card-icon { background: var(--ttu-blue-surface); color: var(--ttu-blue); }
+.stat-card.accent-gold { border-top: 3px solid var(--ttu-gold); }
+.stat-card.accent-gold .stat-card-icon { background: var(--bg-gold); color: var(--ttu-gold-dark); }
+.stat-card.accent-green { border-top: 3px solid var(--green); }
+.stat-card.accent-green .stat-card-icon { background: var(--bg-success); color: var(--green); }
+.stat-card.accent-red { border-top: 3px solid var(--ttu-red); }
+.stat-card.accent-red .stat-card-icon { background: var(--bg-danger); color: var(--ttu-red); }
+
+[data-theme="dark"] .stat-card.accent-blue .stat-card-icon { background: rgba(26, 58, 140, 0.3); color: #60A5FA; }
+[data-theme="dark"] .stat-card.accent-gold .stat-card-icon { background: rgba(240, 165, 0, 0.2); color: var(--ttu-gold); }
+[data-theme="dark"] .stat-card.accent-green .stat-card-icon { background: rgba(26, 122, 74, 0.25); color: #4ADE80; }
+[data-theme="dark"] .stat-card.accent-red .stat-card-icon { background: rgba(192, 57, 43, 0.25); color: #F87171; }
 
 /* --- Avatar --- */
 .avatar {

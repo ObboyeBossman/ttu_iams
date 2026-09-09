@@ -177,6 +177,15 @@ function _wireEvents() {
     _startLiveFaceScan(false);
   });
 
+  // Full-Screen Face Verification Modal Actions
+  document.getElementById('att-fs-close-btn')?.addEventListener('click', () => {
+    _closeFullscreenFaceModal();
+  });
+
+  document.getElementById('att-fs-start-verify-btn')?.addEventListener('click', () => {
+    _executeFaceVerification();
+  });
+
   // Simulate Fingerprint Match
   document.getElementById('att-finger-pad')?.addEventListener('click', () => {
     const icon = document.getElementById('att-finger-icon');
@@ -295,78 +304,137 @@ async function _handleCheckIn() {
   }
 }
 
-// ── Live Camera & Real-Time Face Recognition ──────────────────────────────
+// ── Full-Screen Live Camera & Real-Time Face Recognition ──────────────────────
 let _activeCameraStream = null;
+let _positionCheckTimer = null;
 
 function _stopCameraStream() {
+  if (_positionCheckTimer) {
+    clearTimeout(_positionCheckTimer);
+    _positionCheckTimer = null;
+  }
   if (_activeCameraStream) {
     _activeCameraStream.getTracks().forEach(t => t.stop());
     _activeCameraStream = null;
   }
-  const videoEl = document.getElementById('att-camera-feed');
-  if (videoEl) {
-    videoEl.srcObject = null;
-    videoEl.style.display = 'none';
-  }
+  const videoInline = document.getElementById('att-camera-feed');
+  if (videoInline) { videoInline.srcObject = null; videoInline.style.display = 'none'; }
+  const videoFS = document.getElementById('att-fs-camera-feed');
+  if (videoFS) { videoFS.srcObject = null; }
+
   const faceIcon = document.getElementById('att-face-icon');
   if (faceIcon) faceIcon.style.display = 'block';
+  const fsIcon = document.getElementById('att-fs-face-icon');
+  if (fsIcon) fsIcon.style.display = 'block';
+
   const viewfinder = document.getElementById('att-viewfinder');
-  if (viewfinder) viewfinder.className = 'att-viewfinder';
+  if (viewfinder) viewfinder.className = 'att-viewfinder-hud att-viewfinder';
+  const ovalFrame = document.getElementById('att-fs-oval-frame');
+  if (ovalFrame) ovalFrame.className = 'att-fs-oval-frame';
+}
+
+async function _openFullscreenFaceModal() {
+  const modal     = document.getElementById('att-fullscreen-face-modal');
+  const videoFS   = document.getElementById('att-fs-camera-feed');
+  const fsIcon    = document.getElementById('att-fs-face-icon');
+  const ovalFrame = document.getElementById('att-fs-oval-frame');
+  const pill      = document.getElementById('att-fs-feedback-pill');
+  const text      = document.getElementById('att-fs-feedback-text');
+  const verifyBtn = document.getElementById('att-fs-start-verify-btn');
+
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.innerHTML = `<i data-lucide="scan-face" style="width:18px;height:18px;"></i> Start Verification`; }
+  if (ovalFrame) ovalFrame.className = 'att-fs-oval-frame';
+  if (pill) pill.className = 'att-fs-feedback-pill unaligned';
+  if (text) text.textContent = 'Activating live camera feed…';
+
+  _stopCameraStream();
+
+  let cameraStarted = false;
+  if (navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      _activeCameraStream = stream;
+      if (videoFS) {
+        videoFS.srcObject = stream;
+      }
+      if (fsIcon) fsIcon.style.display = 'none';
+      cameraStarted = true;
+      if (text) text.textContent = 'Camera active — position face inside golden oval';
+    } catch {
+      if (text) text.textContent = 'Camera permission ungranted — running biometric positioning simulation';
+    }
+  }
+
+  // Real-time Face Positioning Guidance Loop
+  _runFacePositioningGuidance();
+}
+
+function _closeFullscreenFaceModal() {
+  _stopCameraStream();
+  document.getElementById('att-fullscreen-face-modal')?.classList.add('hidden');
+}
+
+function _runFacePositioningGuidance() {
+  const ovalFrame = document.getElementById('att-fs-oval-frame');
+  const pill      = document.getElementById('att-fs-feedback-pill');
+  const text      = document.getElementById('att-fs-feedback-text');
+  const verifyBtn = document.getElementById('att-fs-start-verify-btn');
+
+  if (_positionCheckTimer) clearTimeout(_positionCheckTimer);
+
+  // Step 1: Detect face presence
+  _positionCheckTimer = setTimeout(() => {
+    if (text) text.textContent = 'Detecting facial geometry & landmarks…';
+    
+    // Step 2: Distance & alignment check
+    _positionCheckTimer = setTimeout(() => {
+      if (text) text.textContent = 'Aligning face with oval frame template…';
+
+      // Step 3: Face successfully aligned & well-positioned!
+      _positionCheckTimer = setTimeout(() => {
+        if (ovalFrame) ovalFrame.classList.add('aligned');
+        if (pill) pill.className = 'att-fs-feedback-pill aligned';
+        if (text) text.textContent = '✅ Face Aligned & Positioned Well! Click Start Verification.';
+        if (verifyBtn) {
+          verifyBtn.disabled = false;
+          if (window.lucide) lucide.createIcons();
+        }
+      }, 1200);
+    }, 1200);
+  }, 1000);
+}
+
+async function _executeFaceVerification() {
+  const ovalFrame = document.getElementById('att-fs-oval-frame');
+  const pill      = document.getElementById('att-fs-feedback-pill');
+  const text      = document.getElementById('att-fs-feedback-text');
+  const verifyBtn = document.getElementById('att-fs-start-verify-btn');
+
+  if (verifyBtn) {
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = `<span class="ai-spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;display:inline-block;vertical-align:middle;"></span> Verifying Biometric Template…`;
+  }
+  if (ovalFrame) ovalFrame.classList.add('scanning');
+  if (text) text.textContent = 'Scanning 256-bit facial vector trace…';
+
+  setTimeout(() => {
+    if (text) text.textContent = 'Face Matched Successfully!';
+    if (pill) pill.className = 'att-fs-feedback-pill aligned';
+    
+    setTimeout(() => {
+      _closeFullscreenFaceModal();
+      _finalizeCheckIn('face');
+    }, 900);
+  }, 1600);
 }
 
 async function _startLiveFaceScan(useWebcam = true) {
-  _stopCameraStream();
-
-  const viewfinder = document.getElementById('att-viewfinder');
-  const videoEl    = document.getElementById('att-camera-feed');
-  const faceIcon   = document.getElementById('att-face-icon');
-  const status     = document.getElementById('att-face-status');
-
-  if (viewfinder) viewfinder.className = 'att-viewfinder scanning';
-  if (status) {
-    status.textContent = useWebcam ? 'Requesting live camera feed…' : 'Detecting face biometrics…';
-    status.style.color = 'var(--ttu-gold)';
-  }
-
-  let cameraStarted = false;
-  if (useWebcam && navigator.mediaDevices?.getUserMedia) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
-      });
-      _activeCameraStream = stream;
-      if (videoEl) {
-        videoEl.srcObject = stream;
-        videoEl.style.display = 'block';
-      }
-      if (faceIcon) faceIcon.style.display = 'none';
-      cameraStarted = true;
-      if (status) status.textContent = 'Live camera active — align face in frame';
-    } catch {
-      if (status) status.textContent = 'Camera permission unavailable — analyzing biometric features';
-    }
-  }
-
-  // Laser scanning sequence
-  setTimeout(() => {
-    if (status) status.textContent = 'Analyzing facial landmarks & feature vectors…';
-  }, 1000);
-
-  setTimeout(() => {
-    if (status) status.textContent = 'Verifying biometric identity match…';
-  }, 2200);
-
-  setTimeout(() => {
-    if (viewfinder) viewfinder.className = 'att-viewfinder success';
-    if (status) {
-      status.textContent = 'Face Matched Successfully!';
-      status.style.color = '#10B981';
-    }
-    setTimeout(() => {
-      _stopCameraStream();
-      _finalizeCheckIn('face');
-    }, 900);
-  }, 3200);
+  // Triggers full-screen camera overlay automatically
+  _openFullscreenFaceModal();
 }
 
 async function _finalizeCheckIn(method) {

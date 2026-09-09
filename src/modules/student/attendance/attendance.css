@@ -284,10 +284,10 @@
 }
 
 /* ── FULL-SCREEN BIOMETRIC FACE MODAL ── */
-#view-attendance .att-fullscreen-modal {
+.att-fullscreen-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 99999 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,20 +297,20 @@
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-#view-attendance .att-fullscreen-modal:not(.hidden) {
+.att-fullscreen-modal:not(.hidden) {
   opacity: 1;
   visibility: visible;
 }
 
-#view-attendance .att-fs-overlay-bg {
+.att-fs-overlay-bg {
   position: absolute;
   inset: 0;
-  background: rgba(5, 12, 30, 0.92);
+  background: rgba(5, 12, 30, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 
-#view-attendance .att-fs-modal-content {
+.att-fs-modal-content {
   position: relative;
   z-index: 10;
   width: 100%;
@@ -324,7 +324,7 @@
   color: #FFFFFF;
 }
 
-#view-attendance .att-fs-close-btn {
+.att-fs-close-btn {
   position: absolute;
   top: 18px;
   right: 18px;
@@ -341,13 +341,13 @@
   transition: all 0.2s ease;
 }
 
-#view-attendance .att-fs-close-btn:hover {
+.att-fs-close-btn:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #EF4444;
   border-color: #EF4444;
 }
 
-#view-attendance .att-fs-badge {
+.att-fs-badge {
   font-size: 10px;
   font-weight: 800;
   background: var(--ttu-gold);
@@ -362,7 +362,7 @@
   margin-bottom: 10px;
 }
 
-#view-attendance .att-fs-title {
+.att-fs-title {
   font-size: 22px;
   font-weight: 800;
   color: #FFFFFF;
@@ -370,20 +370,20 @@
   margin-bottom: 6px;
 }
 
-#view-attendance .att-fs-subtitle {
+.att-fs-subtitle {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 24px;
 }
 
 /* Viewfinder Oval Container */
-#view-attendance .att-fs-viewfinder-container {
+.att-fs-viewfinder-container {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
 }
 
-#view-attendance .att-fs-oval-frame {
+.att-fs-oval-frame {
   position: relative;
   width: 220px;
   height: 270px;
@@ -395,19 +395,19 @@
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-#view-attendance .att-fs-oval-frame.aligned {
+.att-fs-oval-frame.aligned {
   border-color: #10B981 !important;
   box-shadow: 0 0 35px rgba(16, 185, 129, 0.5) !important;
 }
 
-#view-attendance .att-fs-oval-frame video {
+.att-fs-oval-frame video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
 }
 
-#view-attendance .att-fs-laser-beam {
+.att-fs-laser-beam {
   position: absolute;
   top: 0;
   left: 0;
@@ -419,7 +419,7 @@
   z-index: 10;
 }
 
-#view-attendance .att-fs-oval-frame.scanning .att-fs-laser-beam {
+.att-fs-oval-frame.scanning .att-fs-laser-beam {
   display: block;
   animation: fsLaserScan 1.4s ease-in-out infinite alternate;
 }
@@ -430,7 +430,7 @@
 }
 
 /* Feedback Pill */
-#view-attendance .att-fs-feedback-pill {
+.att-fs-feedback-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -442,19 +442,19 @@
   transition: all 0.3s ease;
 }
 
-#view-attendance .att-fs-feedback-pill.unaligned {
+.att-fs-feedback-pill.unaligned {
   background: rgba(245, 158, 11, 0.15);
   border: 1px solid rgba(245, 158, 11, 0.4);
   color: #F59E0B;
 }
 
-#view-attendance .att-fs-feedback-pill.aligned {
+.att-fs-feedback-pill.aligned {
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.4);
   color: #10B981;
 }
 
-#view-attendance .pulse-dot {
+.att-fullscreen-modal .pulse-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -469,7 +469,7 @@
 }
 
 /* Start Verification Button */
-#view-attendance .att-fs-verify-btn {
+.att-fs-verify-btn {
   width: 100%;
   height: 48px;
   font-size: 15px;
@@ -479,14 +479,14 @@
   transition: all 0.25s ease;
 }
 
-#view-attendance .att-fs-verify-btn:disabled {
+.att-fs-verify-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   filter: grayscale(0.8);
   box-shadow: none;
 }
 
-#view-attendance .att-fs-verify-btn:not(:disabled) {
+.att-fs-verify-btn:not(:disabled) {
   background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
   border-color: #10B981 !important;
   color: #FFFFFF !important;

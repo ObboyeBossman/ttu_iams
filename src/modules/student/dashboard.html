@@ -850,47 +850,48 @@
               
               <div class="panel-card">
                 
-                <!-- Premium Header Info -->
-                <div class="logbook-header-panel">
+                <!-- Clean Header Panel -->
+                <div class="logbook-header-panel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid var(--border-default); padding-bottom:16px; margin-bottom:20px;">
                   <div>
-                    <div style="display:flex; align-items:center; gap:var(--space-sm);">
-                      <span class="current-day-label">Industrial Attachment logbook</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                      <span style="font-size:11px; font-weight:800; color:var(--ttu-gold); text-transform:uppercase; letter-spacing:0.06em;">Industrial Attachment Logbook</span>
                       <div class="db-indicator" id="autosaveIndicator">
                         <i data-lucide="database" style="width:12px; height:12px;"></i>
                         <span id="autosaveStatusText">IndexedDB Locked ✔</span>
                       </div>
                     </div>
-                    <h2 class="current-day-title" id="weekRangeLabel" style="margin-top: 4px;">Week Logbook Entry</h2>
+                    <h2 style="font-size:22px; font-weight:800; color:var(--text-primary); margin:0;" id="weekRangeLabel">Week 1 Logbook Entry</h2>
                   </div>
-                  
-                  <div class="status-timeline">
-                    <span class="timeline-step" id="stepDraft">Draft</span>
-                    <span class="timeline-step" id="stepSubmitted">Submitted</span>
-                    <span class="timeline-step" id="stepLocked">Locked</span>
-                    <span class="timeline-step" id="stepFinalized">Finalized</span>
+
+                  <!-- Active Week Status Badge -->
+                  <div id="lbWeekStatusBadge">
+                    <span class="badge-status" style="background:rgba(245,158,11,0.15); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); font-weight:700; padding:6px 14px; border-radius:20px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                      <span style="width:8px; height:8px; border-radius:50%; background:#F59E0B;"></span> Draft Mode (Editable)
+                    </span>
                   </div>
                 </div>
 
-                <!-- tab selectors for week cycle selection -->
-                <div class="workspace-tabs" id="lb-week-chips">
-                  <!-- dynamically generated week tabs -->
-                </div>
-                <div class="workspace-tabs" style="border-top: 1px solid var(--border-default); padding-top: var(--space-sm);">
-                  <button class="tab-btn" id="btn-tab-monthly"><i data-lucide="file-text" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Monthly Summaries</button>
+                <!-- Horizontal Week Switcher & Monthly Tab -->
+                <div style="margin-bottom: 24px;" id="lb-week-chips">
+                  <!-- dynamically generated week pills -->
                 </div>
 
                 <div id="weeklyFormContainer">
-                  <!-- Daily activity logs dynamically populated by script -->
-                  <div class="weekly-log-layout" id="dailyLogsInputs"></div>
+                  <!-- Daily activity logs cards dynamically populated by script -->
+                  <div class="weekly-log-layout" id="dailyLogsInputs" style="margin-bottom: 24px;"></div>
 
                   <!-- Week Metadata fields -->
-                  <div class="week-meta-panel">
-                    <div class="meta-field-group">
+                  <div class="week-meta-panel" style="background:var(--bg-prefix); border:1px solid var(--border-default); border-radius:var(--radius-lg); padding:20px; margin-bottom:20px;">
+                    <h4 style="font-size:14.5px; font-weight:800; color:var(--text-primary); margin:0 0 14px 0; display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="file-signature" style="width:16px;height:16px;color:var(--ttu-gold);"></i>
+                      <span>Weekly Reflection &amp; Department Section</span>
+                    </h4>
+                    <div class="meta-field-group" style="margin-bottom:16px;">
                       <label class="meta-field-label">Assigned Department / Section</label>
-                      <input type="text" id="weekDeptField" class="day-textarea" style="min-height:42px;" placeholder="e.g. Drilling, Reservoir Management...">
+                      <input type="text" id="weekDeptField" class="day-textarea" style="min-height:42px; background:var(--bg-card);" placeholder="e.g. Drilling &amp; Offshore Maintenance, IT Infrastructure...">
                     </div>
                     <div class="meta-field-group">
-                      <label class="meta-field-label">Student Weekly Remarks &amp; Key Lessons</label>
+                      <label class="meta-field-label">Student Weekly Summary &amp; Key Technical Lessons Learned</label>
                       <div class="textarea-wrapper">
                         <div class="formatting-toolbar" id="toolbar-weekRemarksField">
                           <button class="format-btn" onclick="applyFormatting('weekRemarksField', 'bold')" title="Bold"><i data-lucide="bold"></i></button>
@@ -899,30 +900,30 @@
                           <button class="format-btn" onclick="applyFormatting('weekRemarksField', 'code')" title="Code"><i data-lucide="code"></i></button>
                           <button class="format-btn" onclick="applyFormatting('weekRemarksField', 'clear')" title="Clear"><i data-lucide="trash-2"></i></button>
                         </div>
-                        <textarea id="weekRemarksField" class="day-textarea" style="min-height:42px;" placeholder="Summarize your main technical learnings and achievements..."></textarea>
+                        <textarea id="weekRemarksField" class="day-textarea" style="min-height:75px; background:var(--bg-card);" placeholder="Summarize your overall technical learnings and achievements for this week..."></textarea>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Supervisor certification view inside the week -->
-                  <div class="supervisor-cert-card" id="supervisorCertBox">
+                  <!-- Supervisor certification status -->
+                  <div class="supervisor-cert-card" id="supervisorCertBox" style="margin-bottom:24px;">
                     <div style="display:flex; align-items:center; gap:var(--space-md);">
                       <i data-lucide="shield-alert" id="certIcon" style="color:var(--text-muted);"></i>
                       <div>
                         <h4 style="font-size:13.5px; font-weight:700;" id="certTitle">Weekly Certification Pending</h4>
-                        <p style="font-size:11.5px; color:var(--text-secondary);" id="certDescription">This week is in draft state. Fill out your entries and submit.</p>
+                        <p style="font-size:11.5px; color:var(--text-secondary);" id="certDescription">This week is in draft state. Fill out your daily entries and submit for supervisor review.</p>
                       </div>
                     </div>
                   </div>
 
                   <!-- Action operations row -->
-                  <div class="attendance-actions" style="margin-top: 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                  <div class="attendance-actions" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div style="display:flex; gap:12px;">
-                      <button class="btn btn-primary" id="btnSubmitWeek">
-                        <i data-lucide="send"></i> Submit Week
+                      <button class="btn btn-primary" id="btnSubmitWeek" style="height:44px; padding:0 24px; font-weight:700;">
+                        <i data-lucide="send"></i> Submit Week for Verification
                       </button>
-                      <button class="btn btn-outline" id="btnExportPdf">
-                        <i data-lucide="file-down"></i> Local PDF Export
+                      <button class="btn btn-outline" id="btnExportPdf" style="height:44px; padding:0 20px;">
+                        <i data-lucide="file-down"></i> Export Local PDF
                       </button>
                     </div>
                     <span style="font-size:12px; color:var(--text-muted);" id="lastSyncStamp">Not synced to server</span>

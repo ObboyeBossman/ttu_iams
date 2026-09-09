@@ -236,126 +236,96 @@ function _renderMonthWeekDrilldown() {
   const container = document.getElementById('lb-week-chips');
   if (!container) return;
 
-  if (!_lb._dotStatus) _lb._dotStatus = {};
-  const months = _groupWeeksByMonth();
-
-  // ── On first render, auto-snap to the month containing the active / current week ──
-  if (_lb.weeks.length && _drilldown.openMonths.size === 0) {
-    const aw = _lb.weeks[_lb.activeWeekIdx];
-    if (aw) {
-      const d   = new Date(aw.week_start);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const idx = months.findIndex(m => m.key === key);
-      if (idx >= 0) _drilldown.carouselIndex = idx;
-      _drilldown.openMonths.add(key);
-      _drilldown.openWeeks.add(aw.id);
-    }
+  if (!_lb.weeks || _lb.weeks.length === 0) {
+    container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); padding:8px 0;">No active weeks found</div>`;
+    return;
   }
 
-  // Clamp index in case months list shrank
-  _drilldown.carouselIndex = Math.max(0, Math.min(_drilldown.carouselIndex, months.length - 1));
-  const ci = _drilldown.carouselIndex;
+  const isMonthlyActive = !document.getElementById('monthlySummaryContainer')?.classList.contains('hidden');
 
-  // ── Build dot indicators ──
-  const dotsHtml = months.map((m, i) =>
-    `<span class="lb-cdot${i === ci ? ' lb-cdot-active' : ''}" data-cidx="${i}" title="${m.label}"></span>`
-  ).join('');
+  let html = `
+    <div class="lb-week-pills-strip" style="display:flex; align-items:center; gap:8px; overflow-x:auto; padding:4px 0 10px 0; scrollbar-width:thin;">
+  `;
 
-  // ── Build slide HTML for every month ──
-  let slidesHtml = '';
-  for (const month of months) {
-    const isOpen  = _drilldown.openMonths.has(month.key);
-    const status   = _monthStatus(month.weeks);
-    const iconCls  = status === 'done' ? 'lb-month-icon-done' : status === 'active' ? 'lb-month-icon-active' : 'lb-month-icon-upcoming';
-    const badgeCls = status === 'done' ? 'lb-badge-done' : status === 'active' ? 'lb-badge-active' : 'lb-badge-upcoming';
-    const badgeTxt = status === 'done' ? 'Complete' : status === 'active' ? 'In progress' : 'Upcoming';
+  _lb.weeks.forEach((week, idx) => {
+    const isActive = !isMonthlyActive && idx === _lb.activeWeekIdx;
+    const isCertified = week.status === 'certified';
+    const isSubmitted = week.status === 'submitted';
 
-    let weeksHtml = '';
-    for (const week of month.weeks) {
-      const wOpen    = _drilldown.openWeeks.has(week.id);
-      const isActive = week === _lb.weeks[_lb.activeWeekIdx];
-      const wStatus  = week.status === 'certified' ? 'certified' : week.status === 'submitted' ? 'submitted' : 'draft';
-      const pct      = _weekPct(week);
-      const wStart   = new Date(week.week_start);
-      const wEnd     = new Date(wStart); wEnd.setDate(wEnd.getDate() + 6);
-      const dateRange = `${wStart.toLocaleDateString('en-GH',{month:'short',day:'numeric'})} – ${wEnd.toLocaleDateString('en-GH',{month:'short',day:'numeric'})}`;
-
-      weeksHtml += `
-        <div class="lb-week-block" data-weekid="${week.id}">
-          <button class="lb-week-row${wOpen ? ' lb-week-open' : ''}${isActive ? ' lb-week-active' : ''}" data-weekid="${week.id}">
-            <div class="lb-week-left">
-              <i data-lucide="calendar-days" style="width:14px;height:14px;color:var(--text-muted);"></i>
-              <div>
-                <div class="lb-week-num">Week ${week.week_number}
-                  ${wStatus === 'certified' ? '<i data-lucide="shield-check" style="width:11px;height:11px;color:var(--green);vertical-align:middle;margin-left:4px;"></i>' : ''}
-                  ${wStatus === 'submitted' ? '<i data-lucide="send" style="width:11px;height:11px;color:var(--amber);vertical-align:middle;margin-left:4px;"></i>' : ''}
-                </div>
-                <div class="lb-week-dates">${dateRange}</div>
-              </div>
-            </div>
-            <div class="lb-week-right">
-              <div class="lb-week-dots">${_weekDots(week)}</div>
-              <span class="lb-week-pct">${pct}%</span>
-              <i data-lucide="${wOpen ? 'chevron-up' : 'chevron-down'}" style="width:13px;height:13px;color:var(--text-muted);"></i>
-            </div>
-          </button>
-          <div class="lb-week-detail${wOpen ? ' lb-week-detail-open' : ''}" id="lb-wd-${week.id}">
-            ${wOpen ? _buildDayGrid(week) : ''}
-          </div>
-        </div>`;
+    let iconHtml = '';
+    if (isCertified) {
+      iconHtml = `<i data-lucide="shield-check" style="width:13px;height:13px;color:#10B981;"></i>`;
+    } else if (isSubmitted) {
+      iconHtml = `<i data-lucide="clock" style="width:13px;height:13px;color:#F59E0B;"></i>`;
+    } else {
+      iconHtml = `<span style="width:6px;height:6px;border-radius:50%;background:${isActive ? 'var(--ttu-gold)' : 'var(--text-muted)'};"></span>`;
     }
 
-    slidesHtml += `
-      <div class="lb-month-slide">
-        <div class="lb-month-block${isOpen ? ' lb-open' : ''}" data-mkey="${month.key}">
-          <button class="lb-month-header" data-mkey="${month.key}" aria-expanded="${isOpen}">
-            <div class="lb-month-left">
-              <span class="lb-month-icon ${iconCls}">
-                <i data-lucide="calendar" style="width:16px;height:16px;"></i>
-              </span>
-              <div>
-                <div class="lb-month-name">${month.label}</div>
-                <div class="lb-month-meta">${month.weeks.length} week${month.weeks.length !== 1 ? 's' : ''}</div>
-              </div>
-            </div>
-            <div class="lb-month-right">
-              <span class="lb-badge ${badgeCls}">${badgeTxt}</span>
-              <i data-lucide="${isOpen ? 'chevron-up' : 'chevron-down'}" class="lb-chevron" style="width:16px;height:16px;"></i>
-            </div>
-          </button>
-          <div class="lb-month-body${isOpen ? ' lb-month-body-open' : ''}">
-            <div class="lb-week-list">${weeksHtml}</div>
-          </div>
-        </div>
-      </div>`;
-  }
+    html += `
+      <button type="button" class="lb-week-pill-btn ${isActive ? 'active' : ''}" data-weekidx="${idx}" style="
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 15px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        border: 1px solid ${isActive ? 'var(--ttu-gold)' : 'var(--border-default)'};
+        background: ${isActive ? 'rgba(240, 165, 0, 0.15)' : 'var(--bg-prefix)'};
+        color: ${isActive ? 'var(--ttu-gold)' : 'var(--text-secondary)'};
+        box-shadow: ${isActive ? '0 0 10px rgba(240, 165, 0, 0.15)' : 'none'};
+      ">
+        ${iconHtml}
+        <span>Week ${week.week_number}</span>
+      </button>
+    `;
+  });
 
-  // Only show nav controls if there is more than one month
-  const showNav = months.length > 1;
-  const currentLabel = months[ci]?.label ?? '';
-
-  const html = `
-    <div class="lb-carousel-shell">
-      ${showNav ? `
-      <div class="lb-carousel-nav">
-        <button class="lb-carousel-arrow" id="lb-car-prev" aria-label="Previous month" ${ci === 0 ? 'disabled' : ''}>
-          <i data-lucide="chevron-left" style="width:16px;height:16px;"></i>
-        </button>
-        <span class="lb-carousel-title">${currentLabel}</span>
-        <button class="lb-carousel-arrow" id="lb-car-next" aria-label="Next month" ${ci === months.length - 1 ? 'disabled' : ''}>
-          <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
-        </button>
-      </div>
-      <div class="lb-carousel-dots">${dotsHtml}</div>` : ''}
-      <div class="lb-carousel-viewport">
-        <div class="lb-carousel-track" id="lb-car-track" style="transform: translateX(-${ci * 100}%)">
-          ${slidesHtml}
-        </div>
-      </div>
-    </div>`;
+  // Monthly summary tab pill button
+  html += `
+    <button type="button" class="lb-week-pill-btn ${isMonthlyActive ? 'active' : ''}" id="btn-tab-monthly-pill" style="
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 15px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      border: 1px solid ${isMonthlyActive ? 'var(--ttu-gold)' : 'var(--border-default)'};
+      background: ${isMonthlyActive ? 'rgba(240, 165, 0, 0.15)' : 'var(--bg-prefix)'};
+      color: ${isMonthlyActive ? 'var(--ttu-gold)' : 'var(--text-secondary)'};
+      margin-left: auto;
+    ">
+      <i data-lucide="file-text" style="width:13px;height:13px;"></i>
+      <span>Monthly Summaries</span>
+    </button>
+  </div>`;
 
   container.innerHTML = html;
-  _attachDrilldownListeners();
+
+  // Bind click handlers
+  container.querySelectorAll('.lb-week-pill-btn[data-weekidx]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.weekidx);
+      await _selectWeek(idx);
+    });
+  });
+
+  const monthlyPill = document.getElementById('btn-tab-monthly-pill');
+  if (monthlyPill) {
+    monthlyPill.addEventListener('click', () => {
+      document.getElementById('weeklyFormContainer')?.classList.add('hidden');
+      document.getElementById('monthlySummaryContainer')?.classList.remove('hidden');
+      _renderMonthWeekDrilldown();
+    });
+  }
+
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -708,44 +678,37 @@ function _renderWeekChips() { _renderMonthWeekDrilldown(); }
 // ── Timeline status bar ───────────────────────────────────────────────────────
 function evaluateTimelineState() {
   const week = _lb.weeks[_lb.activeWeekIdx];
-  const draftStep = document.getElementById('stepDraft');
-  const submittedStep = document.getElementById('stepSubmitted');
-  const lockedStep = document.getElementById('stepLocked');
-  const finalizedStep = document.getElementById('stepFinalized');
+  const badgeContainer = document.getElementById('lbWeekStatusBadge');
+  if (!badgeContainer) return;
 
-  if (!draftStep || !submittedStep || !lockedStep || !finalizedStep) return;
-
-  draftStep.className = "timeline-step";
-  submittedStep.className = "timeline-step";
-  lockedStep.className = "timeline-step";
-  finalizedStep.className = "timeline-step";
-
-  if (_lb.logbookFinalized) {
-    finalizedStep.className = "timeline-step active";
-    draftStep.className = "timeline-step completed";
-    submittedStep.className = "timeline-step completed";
-    lockedStep.className = "timeline-step completed";
-    return;
-  }
-
-  // Monthly summary tab active
   if (document.getElementById('weeklyFormContainer')?.classList.contains('hidden')) {
-    draftStep.className = "timeline-step active";
+    badgeContainer.innerHTML = `
+      <span class="badge-status" style="background:rgba(139,92,246,0.15); color:#8B5CF6; border:1px solid rgba(139,92,246,0.3); font-weight:700; padding:5px 12px; border-radius:20px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <i data-lucide="file-text" style="width:13px;height:13px;"></i> Monthly Summary View
+      </span>`;
+    if (window.lucide) window.lucide.createIcons();
     return;
   }
 
   if (!week) return;
 
   if (week.status === 'certified') {
-    lockedStep.className = "timeline-step active";
-    draftStep.className = "timeline-step completed";
-    submittedStep.className = "timeline-step completed";
+    badgeContainer.innerHTML = `
+      <span class="badge-status" style="background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3); font-weight:700; padding:5px 12px; border-radius:20px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <i data-lucide="shield-check" style="width:13px;height:13px;"></i> Certified by Supervisor
+      </span>`;
   } else if (week.status === 'submitted') {
-    submittedStep.className = "timeline-step active";
-    draftStep.className = "timeline-step completed";
+    badgeContainer.innerHTML = `
+      <span class="badge-status" style="background:rgba(245,158,11,0.15); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); font-weight:700; padding:5px 12px; border-radius:20px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <i data-lucide="clock" style="width:13px;height:13px;"></i> Submitted (Awaiting Verification)
+      </span>`;
   } else {
-    draftStep.className = "timeline-step active";
+    badgeContainer.innerHTML = `
+      <span class="badge-status" style="background:rgba(37,99,235,0.15); color:#3B82F6; border:1px solid rgba(37,99,235,0.3); font-weight:700; padding:5px 12px; border-radius:20px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+        <span style="width:7px; height:7px; border-radius:50%; background:#3B82F6;"></span> Draft Mode (Editable)
+      </span>`;
   }
+  if (window.lucide) window.lucide.createIcons();
 }
 
 // ── Supervisor cert box ───────────────────────────────────────────────────────

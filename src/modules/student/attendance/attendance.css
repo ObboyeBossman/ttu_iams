@@ -171,9 +171,42 @@
 }
 
 #view-attendance .att-biometric-overlay.active {
-  max-height: 500px;
+  max-height: 550px;
   opacity: 1;
   margin-top: 12px;
+}
+
+/* Live Camera Laser Scanner */
+#view-attendance .att-scan-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--ttu-gold), #10B981, transparent);
+  box-shadow: 0 0 12px var(--ttu-gold);
+  display: none;
+  z-index: 10;
+}
+
+#view-attendance .att-viewfinder.scanning .att-scan-laser {
+  display: block;
+  animation: attLaserScan 1.5s ease-in-out infinite alternate;
+}
+
+#view-attendance .att-viewfinder.scanning {
+  border-color: var(--ttu-gold) !important;
+  box-shadow: 0 0 25px rgba(240, 165, 0, 0.45) !important;
+}
+
+#view-attendance .att-viewfinder.success {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.5) !important;
+}
+
+@keyframes attLaserScan {
+  0% { top: 5%; }
+  100% { top: 90%; }
 }
 
 #view-attendance .att-select {

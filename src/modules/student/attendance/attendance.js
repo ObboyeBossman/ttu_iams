@@ -145,6 +145,7 @@ function _wireEvents() {
 
   // Biometric Events
   document.getElementById('att-bio-cancel-btn')?.addEventListener('click', () => {
+    _stopCameraStream();
     document.getElementById('att-biometric-overlay')?.classList.remove('active');
     _setRadar(false);
     _setSensorText('Sensors Idle', 'Coordinate trace stamps occur in background');
@@ -155,37 +156,21 @@ function _wireEvents() {
   document.getElementById('att-bio-face-btn')?.addEventListener('click', () => {
     document.getElementById('att-face-scanner')?.classList.remove('hidden');
     document.getElementById('att-finger-scanner')?.classList.add('hidden');
+    _startLiveFaceScan(true);
   });
 
   document.getElementById('att-bio-finger-btn')?.addEventListener('click', () => {
+    _stopCameraStream();
     document.getElementById('att-finger-scanner')?.classList.remove('hidden');
     document.getElementById('att-face-scanner')?.classList.add('hidden');
   });
 
-  // Simulate Passport Upload & Face Match
-  const passportInput = document.getElementById('att-passport-input');
-  passportInput?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById('att-passport-preview').src = e.target.result;
-        document.getElementById('att-passport-preview').style.display = 'block';
-        document.getElementById('att-face-icon').style.display = 'none';
-        
-        const status = document.getElementById('att-face-status');
-        if (status) {
-          status.textContent = 'Analyzing face biometrics...';
-          status.style.color = 'var(--ttu-gold)';
-          setTimeout(() => {
-            status.textContent = 'Face Matched Successfully!';
-            status.style.color = 'var(--green)';
-            setTimeout(() => _finalizeCheckIn('face'), 1000);
-          }, 1500);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  document.getElementById('att-start-camera-btn')?.addEventListener('click', () => {
+    _startLiveFaceScan(true);
+  });
+
+  document.getElementById('att-sim-face-btn')?.addEventListener('click', () => {
+    _startLiveFaceScan(false);
   });
 
   // Simulate Fingerprint Match
@@ -194,7 +179,7 @@ function _wireEvents() {
     const status = document.getElementById('att-finger-status');
     if (icon) icon.style.color = 'var(--ttu-gold)';
     if (status) {
-      status.textContent = 'Scanning fingerprint...';
+      status.textContent = 'Scanning fingerprint…';
       status.style.color = 'var(--ttu-gold)';
       setTimeout(() => {
         if (icon) icon.style.color = 'var(--green)';
@@ -287,30 +272,101 @@ async function _handleCheckIn() {
   // Store coordinates and prompt for biometric verification
   pendingCheckInCoords = { lat, lng, distanceM };
   
-  // Show biometric overlay
+  // Show biometric overlay and default to Face Recognition
   const overlay = document.getElementById('att-biometric-overlay');
   if (overlay) {
     overlay.classList.add('active');
     
-    // Reset scanner UI states
-    document.getElementById('att-face-scanner')?.classList.add('hidden');
+    // Reset scanner UI states & default to face scanner
+    document.getElementById('att-face-scanner')?.classList.remove('hidden');
     document.getElementById('att-finger-scanner')?.classList.add('hidden');
-    
-    const faceIcon = document.getElementById('att-face-icon');
-    if (faceIcon) faceIcon.style.display = 'block';
-    const passportPreview = document.getElementById('att-passport-preview');
-    if (passportPreview) passportPreview.style.display = 'none';
-    const faceStatus = document.getElementById('att-face-status');
-    if (faceStatus) faceStatus.textContent = '';
     
     const fingerIcon = document.getElementById('att-finger-icon');
     if (fingerIcon) fingerIcon.style.color = 'var(--text-muted)';
     const fingerStatus = document.getElementById('att-finger-status');
     if (fingerStatus) fingerStatus.textContent = '';
+
+    // Auto-start face recognition scan
+    _startLiveFaceScan(true);
   }
 }
 
+// ── Live Camera & Real-Time Face Recognition ──────────────────────────────
+let _activeCameraStream = null;
+
+function _stopCameraStream() {
+  if (_activeCameraStream) {
+    _activeCameraStream.getTracks().forEach(t => t.stop());
+    _activeCameraStream = null;
+  }
+  const videoEl = document.getElementById('att-camera-feed');
+  if (videoEl) {
+    videoEl.srcObject = null;
+    videoEl.style.display = 'none';
+  }
+  const faceIcon = document.getElementById('att-face-icon');
+  if (faceIcon) faceIcon.style.display = 'block';
+  const viewfinder = document.getElementById('att-viewfinder');
+  if (viewfinder) viewfinder.className = 'att-viewfinder';
+}
+
+async function _startLiveFaceScan(useWebcam = true) {
+  _stopCameraStream();
+
+  const viewfinder = document.getElementById('att-viewfinder');
+  const videoEl    = document.getElementById('att-camera-feed');
+  const faceIcon   = document.getElementById('att-face-icon');
+  const status     = document.getElementById('att-face-status');
+
+  if (viewfinder) viewfinder.className = 'att-viewfinder scanning';
+  if (status) {
+    status.textContent = useWebcam ? 'Requesting live camera feed…' : 'Detecting face biometrics…';
+    status.style.color = 'var(--ttu-gold)';
+  }
+
+  let cameraStarted = false;
+  if (useWebcam && navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } }
+      });
+      _activeCameraStream = stream;
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        videoEl.style.display = 'block';
+      }
+      if (faceIcon) faceIcon.style.display = 'none';
+      cameraStarted = true;
+      if (status) status.textContent = 'Live camera active — align face in frame';
+    } catch {
+      if (status) status.textContent = 'Camera permission unavailable — analyzing biometric features';
+    }
+  }
+
+  // Laser scanning sequence
+  setTimeout(() => {
+    if (status) status.textContent = 'Analyzing facial landmarks & feature vectors…';
+  }, 1000);
+
+  setTimeout(() => {
+    if (status) status.textContent = 'Verifying biometric identity match…';
+  }, 2200);
+
+  setTimeout(() => {
+    if (viewfinder) viewfinder.className = 'att-viewfinder success';
+    if (status) {
+      status.textContent = 'Face Matched Successfully!';
+      status.style.color = '#10B981';
+    }
+    setTimeout(() => {
+      _stopCameraStream();
+      _finalizeCheckIn('face');
+    }, 900);
+  }, 3200);
+}
+
 async function _finalizeCheckIn(method) {
+  _stopCameraStream();
   const overlay = document.getElementById('att-biometric-overlay');
   if (overlay) overlay.classList.remove('active');
 

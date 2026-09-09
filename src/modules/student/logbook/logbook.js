@@ -48,6 +48,73 @@ function _flashSaved() {
   }, 600);
 }
 
+// ── Cache deletion warning for non-tech savvy students ───────────────────────
+function _wireAutoSaveWarningListeners() {
+  const elements = [
+    document.getElementById('autosaveIndicator'),
+    document.getElementById('lbStatSyncStatus'),
+    ...document.querySelectorAll('.db-indicator, .lb-autosave-info-trigger')
+  ].filter(Boolean);
+
+  elements.forEach(el => {
+    if (el.dataset.warningWired) return;
+    el.dataset.warningWired = '1';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to view important browser cache warning';
+
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      _showCacheWarningModal();
+    });
+  });
+}
+
+function _showCacheWarningModal() {
+  let modal = document.getElementById('lb-cache-warning-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'lb-cache-warning-modal';
+    modal.className = 'lb-modal-wrap';
+    modal.style.zIndex = '10000';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+      <div class="lb-modal" style="max-width: 440px; padding: 28px 24px; border-radius: 20px; text-align: center; background: var(--bg-card); border: 1.5px solid var(--ttu-gold); box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+        <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); color: var(--ttu-gold); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+          <i data-lucide="shield-alert" style="width: 26px; height: 26px;"></i>
+        </div>
+        <h3 style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin: 0 0 8px 0;">Device Auto-Save Notice</h3>
+        <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px;">
+          Your logbook entries automatically save directly to <strong>this web browser on your phone or laptop</strong>.
+        </p>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 14px; margin-bottom: 20px; text-align: left;">
+          <div style="font-size: 12.5px; font-weight: 800; color: #EF4444; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="alert-triangle" style="width: 14px; height: 14px;"></i> Do Not Delete Browser History or Cache!
+          </div>
+          <p style="font-size: 12px; color: var(--text-primary); margin: 0; line-height: 1.4;">
+            Please <strong>do not clear your browser history, cache, or site data</strong> before submitting your week, otherwise your unsubmitted drafts will be lost!
+          </p>
+        </div>
+        <button type="button" class="btn btn-primary" id="lb-close-cache-modal" style="width: 100%; height: 42px; font-weight: 700; border-radius: 10px;">
+          Understood, Keep My Drafts Safe
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+    document.getElementById('lb-close-cache-modal')?.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => modal.classList.add('lb-modal-open'));
+  if (window.lucide) window.lucide.createIcons();
+}
+
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 let _lb = {
@@ -161,6 +228,8 @@ function _updateTelemetryStats() {
   if (syncStatusEl) {
     syncStatusEl.textContent = _lb.isOnline ? 'Saved on device ✔' : 'Working offline ⚠️';
   }
+
+  _wireAutoSaveWarningListeners();
 }
 
 // ── Month/Week drill-down accordion ───────────────────────────────────────────
@@ -1601,4 +1670,6 @@ export async function initLogbook(studentId, seasonId, placement) {
   // PDF Export Binding
   const btnExportPdf = document.getElementById('btnExportPdf');
   if (btnExportPdf) btnExportPdf.onclick = exportPdf;
+
+  _wireAutoSaveWarningListeners();
 }
